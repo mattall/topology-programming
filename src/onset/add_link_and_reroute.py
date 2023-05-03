@@ -11,7 +11,7 @@ Inputs.
 1. Attack traffic matrix. 
 2. Congestion file.
 '''
-from utilities.write_gml import write_gml
+from onset.utilities.write_gml import write_gml
 from collections import defaultdict
 from os import path
 import pandas

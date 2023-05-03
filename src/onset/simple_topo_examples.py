@@ -32,13 +32,13 @@ import networkx as nx
 from networkx.algorithms.centrality.reaching import local_reaching_centrality
 
 # creating traffic matrices
-from utilities.tmg import rand_gravity_matrix
+from onset.utilities.tmg import rand_gravity_matrix
 from attacker import read_tm_to_tc, Attacker
 
 # json writing utilities
-from utilities.matrix_to_json_flows import write_flows_to_json
-from utilities.paths_to_json import convert_paths_onset_to_json
-from utilities.write_gml import write_gml
+from onset.utilities.matrix_to_json_flows import write_flows_to_json
+from onset.utilities.paths_to_json import convert_paths_onset_to_json
+from onset.utilities.write_gml import write_gml
 
 def get_linear_topo(n_links:int) -> nx.Graph:
     # creates and returns linear topology with n_links

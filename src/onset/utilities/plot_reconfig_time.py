@@ -6,8 +6,8 @@ import sys
 
 from numpy import Infinity
 
-from utilities.plotters import plot_timeseries
-from utilities.post_process import read_result_val
+from onset.utilities.plotters import plot_timeseries
+from onset.utilities.post_process import read_result_val
 
 plotted = False
 

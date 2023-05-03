@@ -1,3 +1,0 @@
-[submodule ".venv/src/tmgen"]
-	path = .venv/src/tmgen
-	url = https://github.com/progwriter/TMgen

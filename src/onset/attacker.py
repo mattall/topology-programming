@@ -32,10 +32,10 @@ from sys import argv
 from math import inf
 from os import path
 from typing import Counter, DefaultDict
-from utilities.tmg import rand_gravity_matrix
+from onset.utilities.tmg import rand_gravity_matrix
 from utilities import SCRIPT_HOME, ZERO_INDEXED, parse_edges
-from utilities.matrix_to_json_flows import read_tm_to_tc
-from utilities.paths_to_json import convert_paths_onset_to_json, get_paths
+from onset.utilities.matrix_to_json_flows import read_tm_to_tc
+from onset.utilities.paths_to_json import convert_paths_onset_to_json, get_paths
 from tmgen.models import modulated_gravity_tm
 
 def save_mtrx_to_txt(matrix, name):
@@ -793,7 +793,7 @@ if __name__ == "__main__":
             attacker.mixed_rolling_attacks()
 
     if 0: # Coremelt One Link, Both directions Link!
-        from utilities.tmg import rand_gravity_matrix
+        from onset.utilities.tmg import rand_gravity_matrix
         network = "Abilene"
         # benign_traffic = 100E9
         benign_traffic = 0
@@ -821,7 +821,7 @@ if __name__ == "__main__":
         np.savetxt(outfile, continuous_series.astype(int), fmt='%i')
     
     if 0: # Coremelt Every Link Version2!
-        from utilities.tmg import rand_gravity_matrix
+        from onset.utilities.tmg import rand_gravity_matrix
         network = "Comcast"
         # benign_traffic = 100E9
         benign_traffic = 0
@@ -865,7 +865,7 @@ if __name__ == "__main__":
             fob.write(meta_str)
 
     if 0: # Coremelt Every Link!
-        from utilities.tmg import rand_gravity_matrix
+        from onset.utilities.tmg import rand_gravity_matrix
         network = "Azure"
         # benign_traffic = 100E9
         benign_traffic = 0
@@ -890,7 +890,7 @@ if __name__ == "__main__":
         np.savetxt(outfile, continuous_series.astype(int), fmt='%i')
 
     if 0: # Crossfire Every Node!
-        from utilities.tmg import rand_gravity_matrix
+        from onset.utilities.tmg import rand_gravity_matrix
 
         network = "sprint"
         test_paths = SCRIPT_HOME + "/data/paths/" + network + ".json"

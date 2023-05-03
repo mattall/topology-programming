@@ -17,8 +17,8 @@ from tqdm import tqdm
 from onset.utilities import SCRIPT_HOME
 
 # customs
-from utilities.plot_reconfig_time import calc_haversine
-from utilities.link_on_path import link_on_path
+from onset.utilities.plot_reconfig_time import calc_haversine
+from onset.utilities.link_on_path import link_on_path
 
 def work_log(identifier, total, candidate_link_list, G, network):
     with open("./data/paths/optimization/{}_original.json".format(network), 'r') as fob:

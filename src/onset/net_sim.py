@@ -6,7 +6,7 @@
 #   2) Run YATES over the adaptive graph.
 from unittest import result
 from networkx.relabel import relabel_nodes
-from alpwolf import AlpWolf
+from onset.alpwolf import AlpWolf
 import argparse
 import traceback
 
