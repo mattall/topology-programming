@@ -303,7 +303,7 @@ def calc_percent_diff(old: float, new: float) -> float:
     return ((new - old) / old)
 
 
-def get_candidate_links(network, circuits,method, attack_proportion="") -> list:
+def get_candidate_links(network, circuits, candidate_link_choice_method, attack_proportion="") -> list:
     """Gives a list of candidate links to add to the base network. The links returned are verified to not increase the max link congestion in the network when the given number of circuits are given to the link. 
 
     NOTE: The circuits returned are indexed from 0 - they DO NOT map to congestion and other metrics collected
@@ -312,7 +312,7 @@ def get_candidate_links(network, circuits,method, attack_proportion="") -> list:
     Args:
         network (str): name of the network.
         circuits (int): number of circuits to provide on the candidate links
-        method (str): "all" or "heuristic" determines the set of data from which to choose the candidates
+        candidate_link_choice_method (str): "all" or "heuristic" determines the set of data from which to choose the candidates
     Returns:
         list: [(percent_diff, node, node), ...] 3-tuples showing max congestion percent change for each candidate link (node, node). 
     """
@@ -322,9 +322,9 @@ def get_candidate_links(network, circuits,method, attack_proportion="") -> list:
     candidate_links = []  # list of 3-tiples, (percent_diff, node, node)
     data_root = path.join(SCRIPT_HOME, "data", "results")
     if attack_proportion: 
-        iteration_tag = network + "_add_circuit_" + method + "_" + str(circuits) + "_" + attack_proportion
+        iteration_tag = network + "_add_circuit_" + candidate_link_choice_method + "_" + str(circuits) + "_" + attack_proportion
     else:
-        iteration_tag = network + "_add_circuit_" + method + "_" + str(circuits)
+        iteration_tag = network + "_add_circuit_" + candidate_link_choice_method + "_" + str(circuits)
     circuit_regex = re.compile('^[0-9]+_[0-9]+$')
     circuit_tags = [tag for tag in listdir(
         path.join(data_root, iteration_tag)) if circuit_regex.match(tag)]
