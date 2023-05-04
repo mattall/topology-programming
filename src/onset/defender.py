@@ -12,16 +12,16 @@ from onset.utilities import SCRIPT_HOME, ZERO_INDEXED, parse_edges, find_target_
 
 
 class Defender():
-    def __init__(self, network: str, bandwidth: str, method: str, use_heuristic: str, tag="", attack_proportion="") -> None:
+    def __init__(self, network: str, bandwidth: str, candidate_link_choice_method: str, use_heuristic: str, tag="", attack_proportion="") -> None:
         self.network = network
         self.fallow_transponders = bandwidth
-        self.method = method
+        self.defense_method = candidate_link_choice_method
         self.use_heuristic = use_heuristic
         self.attack_proportion = attack_proportion
         self.tag = tag if not attack_proportion else tag + "_" + attack_proportion
-        self.candidate_links = get_candidate_links(network, bandwidth, method, attack_proportion)
+        self.candidate_links = get_candidate_links(network, bandwidth, candidate_link_choice_method, attack_proportion)
         self.cached_sims_root = self.edge_congestion_file = path.join(SCRIPT_HOME, 'data', 'results', '{}_add_circuit_{}_{}_{}'.format(
-            self.network, self.method, self.fallow_transponders, self.attack_proportion))
+            self.network, self.defense_method, self.fallow_transponders, self.attack_proportion))
         if tag == "":
             self.path_file = path.join(
                 self.cached_sims_root, '__0', "paths", "ecmp_0")
@@ -109,7 +109,7 @@ class Defender():
         return edge_congestion
 
     def get_strategic_circuit(self):
-        if self.method == 'heuristic':
+        if self.defense_method == 'heuristic':
             if self.use_heuristic == '1':  # Link that reduces the congestion on most congested edge
                 edge_congestion = self.get_edge_congestion(
                     self.edge_congestion_file)

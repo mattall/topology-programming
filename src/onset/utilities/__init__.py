@@ -1,7 +1,7 @@
 from collections import defaultdict
 from os.path import realpath, curdir
 import os
-SCRIPT_HOME = os.path.join(os.path.expanduser('~'), "network_stability_sim")
+SCRIPT_HOME = os.path.join(os.path.expanduser('~'), "topology_programming")
 USER_HOME = os.path.join(os.path.expanduser('~'))
 ZERO_INDEXED = False
 
