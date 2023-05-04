@@ -1,0 +1,16 @@
+{
+    "workbench.colorTheme": "Default Light+ Experimental",
+    "esbonio.sphinx.confDir": "",
+    "cSpell.words": [
+        "btwness",
+        "destringizer",
+        "nclass",
+        "nhops",
+        "popable"
+    ],
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter",
+      },
+    "editor.rulers": [80,120]
+    
+}
