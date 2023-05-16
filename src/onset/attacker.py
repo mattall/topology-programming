@@ -22,6 +22,7 @@ About Matrix encodings for input/output files:
 #  is written as A = [ 0,0  0,1  0,2  1,0  1,1  1,2  2,0  2,1  2,1 ]
 """
 
+from collections import defaultdict
 import json
 from webbrowser import get
 import numpy as np
@@ -32,12 +33,13 @@ from sys import argv
 from math import inf
 from os import path
 from typing import Counter, DefaultDict
+from onset.utilities import ZERO_INDEXED
+from onset.utilities.graph import get_paths, parse_edges
 from onset.utilities.tmg import rand_gravity_matrix
-from utilities import SCRIPT_HOME, ZERO_INDEXED, parse_edges
-from onset.utilities.matrix_to_json_flows import read_tm_to_tc
-from onset.utilities.paths_to_json import (
+from utilities import SCRIPT_HOME, ZERO_INDEXED
+from onset.utilities.flows import read_tm_to_tc
+from onset.utilities.graph import (
     convert_paths_onset_to_json,
-    get_paths,
 )
 from tmgen.models import modulated_gravity_tm
 
@@ -1196,3 +1198,39 @@ if __name__ == "__main__":
         )
         print("Saving traffic matrix to: {}".format(outfile))
         np.savetxt(outfile, continuous_series.astype(int), fmt="%i")
+
+
+def find_target_link(path_file):
+    """Finds a target link from a path file. Returns the number of times a link appears in a path, and the flows that target
+        each link
+    Args:
+        path_file (str): absolute path to a the path file
+    Returns:
+        tuple: (0. edge_use:dict (edge:pair -> count:int), 1. edge_flows:dict (edge:pair -> flows:list:pair), 2. most_used_edge:int)
+    """
+    with open(path_file, "r") as fob:
+        edge_use = defaultdict(int)
+        edge_flows = defaultdict(list)
+        most_used_edge = 0
+        a, b = None, None
+        for line in fob:
+            if line.startswith("h"):
+                host_line = line.split(" -> ")
+                a, b = [h.strip(" \n:") for h in host_line]
+                if ZERO_INDEXED:  # zero indexed nodes
+                    a = str(int(a.strip("h")) - 1)
+                    b = str(int(b.strip("h")) - 1)
+                else:  # one indexed nodes
+                    a = a.strip("h")
+                    b = b.strip("h")
+
+            if line.startswith("["):  # line contains a path
+                path, percent = line.strip().split("@")
+                path_edges = parse_edges(path)
+                for edge in path_edges:
+                    edge_use[edge] += 1
+                    edge_flows[edge].append((a, b))
+                    if edge_use[edge] == max(edge_use.values()):
+                        most_used_edge = edge
+
+    return edge_use, edge_flows, most_used_edge

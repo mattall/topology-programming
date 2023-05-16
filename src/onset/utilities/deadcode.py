@@ -1,4 +1,4 @@
-'''
+"""
 def print_g(G, pos, node_color_map, folder, start_clean=False, title=None):
     #
     # DEPRICATED --- Moved into class FiberGraph as method
@@ -125,4 +125,4 @@ def export_vid(folder):
     system("ffmpeg -r 1 -i %00d.png -vcodec mpeg4 -y {}.mp4".format(movie_name))
     chdir(SCRIPT_HOME)
 
-'''
+"""

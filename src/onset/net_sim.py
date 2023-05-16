@@ -5,7 +5,7 @@
 #   1) Run YATES over the plain network graph.
 #   2) Run YATES over the adaptive graph.
 
-from onset.utilities.sanitize_magnitude import sanitize_magnitude
+from onset.utilities.flows import sanitize_magnitude
 from onset.simulator import Simulation
 import argparse
 from onset.utilities.logger import logger
