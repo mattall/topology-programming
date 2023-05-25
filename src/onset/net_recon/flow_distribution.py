@@ -4,7 +4,7 @@ import pickle
 from sys import argv, exit
 from numpy import array
 
-from onset.net_recon.network_model import Network
+from onset.network_model import Network
 from onset.utilities.recon_utils import  fdN_plt, cdf_plt
 from onset.utilities.sysUtils import postfix_str
 from onset.utilities.graph import write_json_graph
