@@ -12,7 +12,7 @@ class network_model_test(unittest.TestCase):
 
         for node in G.nodes():                        
             if G.nodes[node]["node_type"] == "Router":
-                self.assertEqual(G.nodes[node]["router_id"], node)
+                self.assertEqual(G.nodes[node]["router_id"], f"router_{node}")
                 self.assertEqual(G.nodes[node]["client_id"], f"client_{node}")
 
             if G.nodes[node]["node_type"] == "Client":

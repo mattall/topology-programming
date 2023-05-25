@@ -187,7 +187,7 @@ class Network:
             self.remove_available_interface(client_interface)
             node_attr = {
                 "node_type": self.node_types[3],
-                "router_id": str(node),
+                "router_id": f"router_{str(node)}",
                 "interface_map": {},
                 "virtual_router_list": [],
                 # "total_transponders": total_transponders,
