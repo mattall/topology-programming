@@ -51,7 +51,7 @@ import networkx as nx
 import numpy as np
 
 # customs
-from onset.net_recon.flow_distribution import calc_flow_distribution
+from onset.utilities.flow_distribution import calc_flow_distribution
 from onset.utilities.flows import tm_to_flows
 from onset.simulator import Simulation
 

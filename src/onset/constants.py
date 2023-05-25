@@ -3,6 +3,7 @@ import os
 
 CLEAN_START = True
 SEED = 0
+PLOT_DIR = "data/plots/"
 
 IPV4 = ipaddress.IPv4Address._ALL_ONES
 IPV4LENGTH = 32

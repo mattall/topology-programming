@@ -1,8 +1,9 @@
-from onset.net_recon.network_model import IPV4
 from onset.utilities.graph import read_json_graph, write_json_graph
 from onset.utilities.sysUtils import postfix_str
 from onset.utilities import logger
+
 from onset.constants import SEED
+from onset.constants import IPV4
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -58,14 +59,14 @@ class Network:
         # if not output_file:
         #   output_file = self.graph_file + '_netout' + '.gml'
         if not output_file:
-            output_file = postfix_str(self.graph_file, "_netout")
+            output_file = postfix_str(self.graph_file, "_modeled")
 
         self.output_file = output_file
         self.graph = self.import_graph(self.graph_file)
 
         self.init_client_links()
-        write_json_graph(self.graph, output_file)
-
+        
+    
     def init_client_links(self):
         G = self.graph
         for node in self.get_router_nodes():

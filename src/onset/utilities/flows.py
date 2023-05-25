@@ -11,6 +11,9 @@ from onset.utilities.logger import logger
 from onset.utilities.sysUtils import make_dir
 from onset.utilities.graph import read_json_graph
 
+from onset.network_model import Network
+
+
 def generate_flows(file_path_in, min_tf, max_tf, file_path_out=""):
     """
     file_path (str): path to topology file.
@@ -26,26 +29,19 @@ def generate_flows(file_path_in, min_tf, max_tf, file_path_out=""):
     logger.debug(f"min_tf:          {min_tf}")
     logger.debug(f"min_tf:          {max_tf}")
     logger.debug(f"file_path_out:   {file_path_out}")
-    
+
+    network = Network(file_path_in)
+
+    G = network.graph
     flows = []
-    if file_path_in.endswith(".gml"):
-        G = nx.read_gml(file_path_in, label="id")
-    elif file_path_in.endswith(".json"):
-        G = read_json_graph(file_path_in)
-    else:
-        logger.error(
-            "Expected file to be .gml or .json -- Got %s",
-            file_path_in,
-            exc_info=1,
-        )
-        raise BaseException("Expected file to be .gml or .json")
 
     nodes = G.nodes()
     for i, j in product(nodes, repeat=2):
         if i == j:
             continue
-        n_flows = random.randint(min_tf, max_tf)
-        flows.append((f"client_{i}", f"client_{j}", n_flows))
+        if "client" in i and "client" in j:
+            n_flows = random.randint(min_tf, max_tf)
+            flows.append((i, j, n_flows))
 
     if file_path_out == "":
         pass
@@ -201,7 +197,11 @@ def read_flows(flows_file):
         for line in fp:
             flow_str = line.strip().split(",")
             # flow = tuple(eval(val) for val in flow_str)
-            flow = (flow_str[0].strip(), flow_str[1].strip(), eval(flow_str[2]))
+            flow = (
+                flow_str[0].strip(),
+                flow_str[1].strip(),
+                eval(flow_str[2]),
+            )
             flows.append(flow)
     return flows
 

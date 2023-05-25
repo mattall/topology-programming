@@ -6,6 +6,8 @@ from ..constants import SCRIPT_HOME
 from .config import user, host
 import re
 
+from onset.constants import PLOT_DIR
+
 
 def count_lines(file_name):
     """counts number of lines in a files using 'wc -l' subprocess
@@ -112,7 +114,9 @@ def postfix_str(str_in, postfix):
 
 
 def save_raw_data(X, Y, outfile="data", xlabel="", ylabel=""):
-    with open(outfile + ".csv", "w") as fob:
+    base_file, _ = path.splitext(path.basename(outfile))
+    final_outfile = path.join(PLOT_DIR, base_file)
+    with open(final_outfile + ".csv", "w") as fob:
         if xlabel and ylabel:
             fob.write(f"{xlabel},{ylabel}\n")
         else:

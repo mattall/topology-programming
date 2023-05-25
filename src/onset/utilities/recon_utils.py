@@ -1,12 +1,18 @@
+import json
 import random
 import ipaddress
-import matplotlib.pyplot as plt
-import networkx as nx
-import shutil
-from sys import argv, exit
-from os import path, makedirs, listdir, remove, rmdir
-import json
+
 import numpy as np
+import networkx as nx
+import matplotlib.pyplot as plt
+
+from os import path
+
+from onset.utilities.sysUtils import save_raw_data
+from onset.constants import PLT_BASE
+from onset.constants import PLT_HIGHT
+from onset.constants import IPV4
+from onset.constants import PLOT_DIR
 
 plt.rcParams.update(
     {
@@ -26,11 +32,6 @@ plt.rcParams.update(
         "lines.linewidth": 2,
     }
 )
-PLT_BASE = 3
-PLT_HIGHT = 1.854
-
-IPV4 = ipaddress.IPv4Address._ALL_ONES
-IPV4LENGTH = 32
 
 def random_ipv4():
     """
@@ -73,7 +74,6 @@ def write_flows(flows, output_file="output_tracing_flows.csv"):
             fp.write("\n")
     print(f"file written to: {output_file}")
 
-
 def read_flows(flows_file):
     """
     flow_file (str): Path to flows_file.
@@ -95,10 +95,12 @@ def new_figure(scale=1):
 
 def fdN_plt(G, output_file="fdN_plt"):
     """
-    G: Graph to get node flow denisty of.
+    G: Graph to get node flow density of.
     output_file: plot output file name.
     Outputs plot for flow density for each node.
     """
+    
+    output_file = path.join(PLOT_DIR, output_file)
     fdNs = nx.get_node_attributes(G, "fdN")
     fdN_sorted = {
         node: node_fdN
@@ -107,17 +109,19 @@ def fdN_plt(G, output_file="fdN_plt"):
         )
         if "client" not in node
     }
-    nodes = list(fdN_sorted.keys())
+    labels = nodes = list(fdN_sorted.keys())
     nodes_fdN = list(fdN_sorted.values())
     fig, ax = new_figure(scale=6)
     ax.bar(range(len(nodes)), nodes_fdN)
-    ax.set_xticks(range(len(nodes)), nodes, rotation=45, ha="right")
+    ax.set_xticks(range(len(nodes)))
+    ax.set_xticklabels(labels, rotation=45, ha="right")
     ax.set_xlabel("Logical Nodes")
     ax.set_ylabel("Flow Density")
     ax.set_title(f"Leakage: {max(nodes_fdN) - min(nodes_fdN)}")
     fig.savefig(output_file + ".jpg")
     fig.savefig(output_file + ".pdf")
     fig.clf()
+    save_raw_data(labels, nodes_fdN, output_file,"Interface", "Flow Density")
     json.dump(fdN_sorted, open(f"{output_file}.json", "w"), indent=4)
 
     return None
@@ -133,6 +137,7 @@ def cdf_plt(
     ax=False,
     label="",
 ):
+    output_file = path.join(PLOT_DIR, output_file)
     s = float(distribution.sum())
     cdf = distribution.cumsum(0) / s
     # sort the data:
@@ -155,7 +160,7 @@ def cdf_plt(
         ax.set_xlim([0, 1])
         # ax.set_ybound(lower=0)
         ax.set_xticks([0.0, 0.25, 0.50, 0.75, 1.0])
-        ax.set_yticks([0, 10, 20, 30])
+        # ax.set_yticks([0, 10, 20, 30])
         save_raw_data(X, Y, output_file, ylabel, xlabel)
     else:
         ylabel = "CDF"
@@ -169,7 +174,7 @@ def cdf_plt(
     ax.legend()
     ax.set_ylabel(ylabel)
     ax.set_xlabel(xlabel)
-    ax.set_yticks([0, 10, 20, 30])
+    # ax.set_yticks([0, 10, 20, 30])
     fig.savefig(output_file + ".jpg")
     fig.savefig(output_file + ".pdf")
     if clear_fig:
