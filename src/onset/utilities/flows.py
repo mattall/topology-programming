@@ -1,7 +1,6 @@
 import json
 from numpy import load, loadtxt, sqrt
 from os import path
-from onset.utilities.graph import read_json_graph
 
 import networkx as nx
 
@@ -9,9 +8,10 @@ import random
 from itertools import product
 
 from onset.utilities.logger import logger
+from onset.utilities.sysUtils import make_dir
+from onset.utilities.graph import read_json_graph
 
-
-def generate_flows(file_path, min_tf, max_tf):
+def generate_flows(file_path_in, min_tf, max_tf, file_path_out=""):
     """
     file_path (str): path to topology file.
     min_tf (int|float): minimum amount of tracing flows.
@@ -22,10 +22,10 @@ def generate_flows(file_path, min_tf, max_tf):
     flows = []
     print("Generating flows for undirected graph.")
 
-    if file_path.endswith(".gml"):
-        G = nx.read_gml(file_path, label="id")
-    elif file_path.endswith(".json"):
-        G = read_json_graph(file_path)
+    if file_path_in.endswith(".gml"):
+        G = nx.read_gml(file_path_in, label="id")
+    elif file_path_in.endswith(".json"):
+        G = read_json_graph(file_path_in)
     else:
         raise BaseException("Expected file to be .gml or .json")
 
@@ -36,9 +36,31 @@ def generate_flows(file_path, min_tf, max_tf):
         n_flows = random.randint(min_tf, max_tf)
         flows.append((f"client_{i}", f"client_{j}", n_flows))
 
+    if file_path_out == "":
+        pass
+    else:
+        write_flows_to_file(flows, file_path_out)
+        
     return flows
 
+def write_flows_to_file(flows, file_path_out):
+    """ writes a list of flows, [(source, dest, value)] to file_path_out
 
+    Args:
+        flows (List[Tuple[str, str, float]]): List of flows, 
+                                        [("client_i", "client_j", float),...]
+        file_path_out (PathLike[AnyStr]): path to write flows to.
+    """
+    dir_out = path.dirname(file_path_out)
+    if path.exists(dir_out):
+        pass
+    else: 
+        make_dir(dir_out)
+        
+    with open(file_path_out, 'w') as fob:            
+        for s, t, v in flows:
+            fob.write(f"{s}, {t}, {v}\n")
+        
 def tm_to_flows(tm_path):
     """
     file_path (str): path to topology file.
