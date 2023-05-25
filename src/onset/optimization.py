@@ -14,7 +14,7 @@ from gurobipy import Model, GRB, quicksum, min_, max_, Env
 import networkx as nx
 import numpy as np
 from tqdm import tqdm
-from onset.utilities import SCRIPT_HOME
+from onset.constants import SCRIPT_HOME
 
 # customs
 from onset.utilities.plot_reconfig_time import calc_haversine

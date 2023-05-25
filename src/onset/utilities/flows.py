@@ -11,14 +11,15 @@ from onset.utilities.logger import logger
 from onset.utilities.sysUtils import make_dir
 from onset.utilities.graph import read_json_graph
 
-
 def generate_flows(file_path_in, min_tf, max_tf, file_path_out=""):
     """
     file_path (str): path to topology file.
     min_tf (int|float): minimum amount of tracing flows.
     max_tf (int|float): maximum amount of tracing flows.
-    Output: flow_li (List[tuple]): [(src, dest, tracing flows), ...]
-    NOTE could be improved to be better.
+    Output: Tuple[
+                flow_list (List[tuple]): [(src, dest, tracing flows), ...],
+                G (nx.Graph)
+            ]
     """
     logger.info("Generating flows for undirected graph.")
     logger.debug(f"file_path_in:    {file_path_in}")
@@ -51,7 +52,7 @@ def generate_flows(file_path_in, min_tf, max_tf, file_path_out=""):
     else:
         write_flows_to_file(flows, file_path_out)
 
-    return flows
+    return G, flows
 
 
 def write_flows_to_file(flows, file_path_out):
@@ -200,7 +201,7 @@ def read_flows(flows_file):
         for line in fp:
             flow_str = line.strip().split(",")
             # flow = tuple(eval(val) for val in flow_str)
-            flow = (flow_str[0], flow_str[1], eval(flow_str[2]))
+            flow = (flow_str[0].strip(), flow_str[1].strip(), eval(flow_str[2]))
             flows.append(flow)
     return flows
 

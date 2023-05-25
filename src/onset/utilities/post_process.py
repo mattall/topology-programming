@@ -13,7 +13,8 @@ from unittest import result
 from matplotlib.pyplot import plot, xlabel
 from numpy import exp, result_type
 import sys
-from onset.utilities import SCRIPT_HOME, ZERO_INDEXED
+from onset.constants import SCRIPT_HOME
+from onset.constants import ZERO_INDEXED
 from onset.utilities.plotters import (
     congestion_multi_cdf,
     plot_points,

@@ -2,7 +2,7 @@ from os import listdir, chdir, makedirs, path, system, remove, rmdir
 from pprint import pprint
 import shutil
 from subprocess import check_output, Popen, PIPE
-from . import SCRIPT_HOME
+from ..constants import SCRIPT_HOME
 from .config import user, host
 import re
 

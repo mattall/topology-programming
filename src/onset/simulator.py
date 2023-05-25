@@ -1,8 +1,9 @@
 from onset.alpwolf import AlpWolf
+from onset.constants import SCRIPT_HOME
 from onset.defender import Defender
 from onset.utilities.config import CROSSFIRE
 from onset.optimization import Link_optimization
-from onset.utilities import SCRIPT_HOME, USER_HOME
+from onset.constants import USER_HOME
 from onset.utilities.diff_compare import diff_compare
 from onset.utilities.gml_to_dot import Gml_to_dot
 from onset.utilities.logger import formatter, logger

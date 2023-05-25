@@ -6,6 +6,7 @@ from os import path
 
 from networkx.algorithms.centrality.betweenness import edge_betweenness
 from onset.attacker import find_target_link
+from onset.constants import SCRIPT_HOME
 from onset.utilities.graph import parse_edges
 from onset.utilities.sysUtils import cast_pair_to_int, reindex_down, reindex_up
 from onset.utilities.logger import logger
@@ -14,7 +15,7 @@ from onset.utilities.post_process import (
     get_candidate_links,
     read_result_val,
 )
-from onset.utilities import SCRIPT_HOME, ZERO_INDEXED
+from onset.constants import ZERO_INDEXED
 
 
 class Defender:

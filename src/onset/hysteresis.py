@@ -21,7 +21,7 @@ from pprint import pprint
 from onset.utilities.links_as_nodes import verbose_transform_link_to_node
 from onset.utilities.logger import logger
 from onset.utilities.sysUtils import delete_dir, export_vid, test_ssh
-from onset.utilities import SCRIPT_HOME
+from onset.constants import SCRIPT_HOME
 
 
 def _sanitize(u):

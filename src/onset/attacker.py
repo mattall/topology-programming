@@ -33,10 +33,11 @@ from sys import argv
 from math import inf
 from os import path
 from typing import Counter, DefaultDict
-from onset.utilities import ZERO_INDEXED
+from onset.constants import SCRIPT_HOME
+from onset.constants import ZERO_INDEXED
 from onset.utilities.graph import get_paths, parse_edges
 from onset.utilities.tmg import rand_gravity_matrix
-from utilities import SCRIPT_HOME, ZERO_INDEXED
+from onset.constants import ZERO_INDEXED
 from onset.utilities.flows import read_tm_to_tc
 from onset.utilities.graph import (
     convert_paths_onset_to_json,

@@ -1,12 +1,4 @@
-from os.path import realpath, curdir
-import os
 import matplotlib.pyplot as plt
-
-
-SCRIPT_HOME = os.path.join(os.path.expanduser("~"), "topology_programming")
-USER_HOME = os.path.join(os.path.expanduser("~"))
-ZERO_INDEXED = False
-
 
 plt.rcParams.update(
     {
@@ -26,5 +18,4 @@ plt.rcParams.update(
         "lines.linewidth": 2,
     }
 )
-PLT_BASE = 3
-PLT_HIGHT = 1.854
+

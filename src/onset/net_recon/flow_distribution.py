@@ -1,15 +1,17 @@
 import networkx as nx
 import matplotlib.pyplot as plt
 import pickle
-
 from sys import argv, exit
+from numpy import array
+
 from onset.net_recon.network_model import Network
 from onset.utilities.recon_utils import  fdN_plt, cdf_plt
 from onset.utilities.sysUtils import postfix_str
 from onset.utilities.graph import write_json_graph
 from onset.utilities.flows import read_flows
+from onset.utilities.logger import logger
 
-from numpy import array
+from onset.constants import CLEAN_START
 
 def calc_flow_distribution(G, flows):
     """
@@ -23,13 +25,13 @@ def calc_flow_distribution(G, flows):
     for src, dest, tracing_flows in flows:
         shortest_paths = list(nx.all_shortest_paths(G, src, dest))
         num_shortest_paths = len(shortest_paths)
-        print(f"{num_shortest_paths} paths between {src} and {dest}")
+        logger.debug(f"{num_shortest_paths} paths between {src} and {dest}")
         for path in shortest_paths:
-            print(path)
+            logger.debug(path)
             path_len = len(path)            
             # if there multiple shortest paths.
             path_tf = tracing_flows // num_shortest_paths
-            print(f"path flow: {path_tf}")
+            logger.debug(f"path flow: {path_tf}")
             # path_tf = tracing_flows
             # first node will always be the source node.
             # incoming_node = src # first node is the source
@@ -88,7 +90,7 @@ def main(argv):
         topology_file = argv[1]
         flows_file = argv[2]
     except:
-        print(f"usage: python {argv[0]} topology_file flows_file")
+        logger.error(f"usage: python {argv[0]} TopologyFile FlowsFile")
         exit()
         
     try:
@@ -96,8 +98,12 @@ def main(argv):
     except:
         descriptor = ""
 
-    output_file = f"{topology_file.split('.')[:-1][0]}_attacker_view"
-    ground_truth_file = f"{topology_file}_ground_truth_view"
+    
+    # output_file = f"{topology_file.split('.')[:-1][0]}_attacker_view"
+    
+    ground_truth_file = postfix_str(topology_file, "modeled")
+    output_file = postfix_str(topology_file, "outsider_view")
+    
     if topology_file.endswith(".pkl"):
         with open(topology_file, 'rb') as fob:
             network = pickle.load(fob)
