@@ -74,7 +74,7 @@ class Network:
 
             client_node_attr = {
                 "node_type": self.node_types[5],
-                "router_id": client_id,
+                "router_id": f"router_{node}",
                 "virtual_router_list": [],
             }
             G.add_node(client_id, **client_node_attr)
@@ -142,7 +142,7 @@ class Network:
                 If there aren't any interfaces available None is returned.
         """
         try:
-            interface = random.choice(self.get_available_interfaces())
+            interface = random.choice(self.get_available_interfaces())        
             return interface
         except:
             print("No interface(s) available.")
@@ -169,12 +169,12 @@ class Network:
                 f"Expected file of type .gml or .json. Got: {file_path}"
             )
 
-        nx.relabel_nodes(
-            G,
-            {n: str(i) for n, i in zip(G.nodes(), range(len(G.nodes())))},
-            copy=False,
-        )
-        # nx.relabel_nodes(G, lambda x: str(x), copy=False)
+        # nx.relabel_nodes(
+        #     G,
+        #     {n: str(n) for n, _ in zip(G.nodes(), range(len(G.nodes())))},
+        #     copy=False,
+        # )
+        nx.relabel_nodes(G, lambda x: str(x), copy=False)
         nodes_attr = (
             {}
         )  # attributes that will be added for each node. {node : {attribute : value, ...} }
@@ -187,7 +187,7 @@ class Network:
             self.remove_available_interface(client_interface)
             node_attr = {
                 "node_type": self.node_types[3],
-                "router_id": str(self.router_count),
+                "router_id": str(node),
                 "interface_map": {},
                 "virtual_router_list": [],
                 # "total_transponders": total_transponders,
@@ -206,6 +206,7 @@ class Network:
         optical_links = []
 
         for u, v in links:
+            assert u != v, "BAD GRAPH!!"
             link_attr = {
                 "link_type": self.link_types[3],
                 "layer3_id": self.layer3_link_count,
@@ -756,3 +757,11 @@ class Network:
         fig_name = f"{out_file}_plot.jpg"
         plt.savefig(fig_name)
         plt.clf()
+
+
+def main():    
+    topology_file = "data/graphs/json/campus/campus_ground_truth.json"
+    Network(topology_file)
+    
+if __name__ == "__main__":
+    main()
