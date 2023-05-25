@@ -11,6 +11,7 @@ from onset.utilities.logger import logger
 from onset.utilities.sysUtils import make_dir
 from onset.utilities.graph import read_json_graph
 
+
 def generate_flows(file_path_in, min_tf, max_tf, file_path_out=""):
     """
     file_path (str): path to topology file.
@@ -19,14 +20,23 @@ def generate_flows(file_path_in, min_tf, max_tf, file_path_out=""):
     Output: flow_li (List[tuple]): [(src, dest, tracing flows), ...]
     NOTE could be improved to be better.
     """
+    logger.info("Generating flows for undirected graph.")
+    logger.debug(f"file_path_in:    {file_path_in}")
+    logger.debug(f"min_tf:          {min_tf}")
+    logger.debug(f"min_tf:          {max_tf}")
+    logger.debug(f"file_path_out:   {file_path_out}")
+    
     flows = []
-    print("Generating flows for undirected graph.")
-
     if file_path_in.endswith(".gml"):
         G = nx.read_gml(file_path_in, label="id")
     elif file_path_in.endswith(".json"):
         G = read_json_graph(file_path_in)
     else:
+        logger.error(
+            "Expected file to be .gml or .json -- Got %s",
+            file_path_in,
+            exc_info=1,
+        )
         raise BaseException("Expected file to be .gml or .json")
 
     nodes = G.nodes()
@@ -40,27 +50,29 @@ def generate_flows(file_path_in, min_tf, max_tf, file_path_out=""):
         pass
     else:
         write_flows_to_file(flows, file_path_out)
-        
+
     return flows
 
+
 def write_flows_to_file(flows, file_path_out):
-    """ writes a list of flows, [(source, dest, value)] to file_path_out
+    """writes a list of flows, [(source, dest, value)] to file_path_out
 
     Args:
-        flows (List[Tuple[str, str, float]]): List of flows, 
+        flows (List[Tuple[str, str, float]]): List of flows,
                                         [("client_i", "client_j", float),...]
         file_path_out (PathLike[AnyStr]): path to write flows to.
     """
     dir_out = path.dirname(file_path_out)
     if path.exists(dir_out):
         pass
-    else: 
+    else:
         make_dir(dir_out)
-        
-    with open(file_path_out, 'w') as fob:            
+
+    with open(file_path_out, "w") as fob:
         for s, t, v in flows:
             fob.write(f"{s}, {t}, {v}\n")
-        
+
+
 def tm_to_flows(tm_path):
     """
     file_path (str): path to topology file.
