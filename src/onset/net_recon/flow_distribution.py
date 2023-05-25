@@ -4,8 +4,11 @@ import pickle
 
 from sys import argv, exit
 from onset.net_recon.network_model import Network
-from onset.utilities.recon_utils import write_flows, read_flows, fdN_plt, write_json_graph, postfix_str, cdf_plt
-from pprint import pprint as pp
+from onset.utilities.recon_utils import  fdN_plt, cdf_plt
+from onset.utilities.sysUtils import postfix_str
+from onset.utilities.graph import write_json_graph
+from onset.utilities.flows import read_flows
+
 from numpy import array
 
 def calc_flow_distribution(G, flows):
@@ -85,7 +88,7 @@ def main(argv):
         topology_file = argv[1]
         flows_file = argv[2]
     except:
-        print("usage: python3 attacker.py topology_file flows_file")
+        print(f"usage: python {argv[0]} topology_file flows_file")
         exit()
         
     try:
