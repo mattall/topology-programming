@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import pickle
 
 from sys import argv, exit
-from network_model import Network
+from onset.net_recon.network_model import Network
 from onset.utilities.recon_utils import write_flows, read_flows, fdN_plt, write_json_graph, postfix_str, cdf_plt
 from pprint import pprint as pp
 from numpy import array

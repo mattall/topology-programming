@@ -11,7 +11,8 @@ import matplotlib.pyplot as plt
 import ipaddress
 from sys import argv, exit
 from os import path
-from onset.utilities.recon_utils import clear_dir, make_dir, read_json_graph, postfix_str, write_json_graph
+from onset.utilities.sysUtils import postfix_str
+from onset.utilities.graph import read_json_graph, write_json_graph
 import pprint
 import json
 from collections import defaultdict

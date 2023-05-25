@@ -32,18 +32,6 @@ PLT_HIGHT = 1.854
 IPV4 = ipaddress.IPv4Address._ALL_ONES
 IPV4LENGTH = 32
 
-
-def postfix_str(str_in, postfix):
-    if "." in str_in:
-        s = str_in.split(".")
-        prefix = "".join(s[:-1])
-        extension = s[-1]
-        new_str = f"{prefix}_{postfix}.{extension}"
-    else:
-        new_str = f"{str_in}_{postfix}"
-    return new_str
-
-
 def random_ipv4():
     """
     Generates random IPV4 address.
@@ -73,29 +61,6 @@ def random_ipv4_interface(ip_address_space):
     # print(list(network.hosts()))
     host = str(random.choice(list(network.hosts())))
     return host
-
-
-def make_dir(directory):
-    """
-    Create directory if doesn't already exist.
-    """
-    if not path.exists(directory):
-        makedirs(directory)
-
-
-def clear_dir(dir_path):
-    """
-    Clears directory.
-    Input:  dir_path: directory to clear.
-    """
-    for content in listdir(dir_path):
-        content_path = path.join(dir_path, content)
-        if path.isfile(content_path):
-            # print(f'Removing: {file_path}')
-            remove(content_path)
-        elif path.isdir(content_path):
-            shutil.rmtree(content_path)
-
 
 def write_flows(flows, output_file="output_tracing_flows.csv"):
     """
@@ -212,20 +177,7 @@ def cdf_plt(
         return None
     else:
         return fig, ax
-
-
-def save_raw_data(X, Y, outfile="data", xlabel="", ylabel=""):
-    with open(outfile + ".csv", "w") as fob:
-        if xlabel and ylabel:
-            fob.write(f"{xlabel},{ylabel}\n")
-        else:
-            fob.write("X,Y\n")
-        for x, y in zip(X, Y):
-            fob.write(f"{x},{y}\n")
-
-    return
-
-
+    
 def calculate_fdL(G, flows):
     """
     flows (List[tuple]): [(src, dest, tracing_flows), ...]
