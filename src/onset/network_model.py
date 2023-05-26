@@ -194,6 +194,7 @@ class Network:
                 # "transponder_list": [],
                 "client_interface": str(client_interface),
                 "fdN": 0,  # flow density for the node. Set when calculate_fdN is called.
+                "flows": set() 
             }
             nodes_attr[node] = node_attr
             self.router_count += 1
@@ -216,6 +217,7 @@ class Network:
                 "fdL": defaultdict(
                     float
                 ),  # Flow density of link {(src, dest): fd}. Set when calculate_fdL is called.
+                "flows": set()
             }
             links_attr[(u, v)] = link_attr
             self.layer3_link_count += 1

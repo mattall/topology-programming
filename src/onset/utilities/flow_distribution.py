@@ -61,21 +61,25 @@ def calc_flow_distribution(G, flows):
                 # node_interface = G[path[i-1]]['interface_map'][prev_ip]
 
                 link = (prev_interface_addr, interface_addr)
-                if "client" in link[0] or "client" in link[1]:
-                    continue
+                # if "client" in link[0] or "client" in link[1]:
+                #     continue
                 # print(H.nodes.data())
                 # print(link)
                 if H.has_node(interface_addr):
                     try:  # a node can already exist but no fdN value for it has been set.
                         H.nodes[interface_addr]["fdN"] += path_tf
+                        H.nodes[interface_addr]["flows"].add((src, dest))
                     except:
                         H.nodes[interface_addr]["fdN"] = path_tf
+                        H.nodes[interface_addr]["flows"].add((src, dest))
                 else:
                     node_attr = {
                         "fdN": path_tf,
+                        "flows": set()
                         # "client_interface": node_interface,
                         # "interface_map": {incoming_node_ip: dest}
                     }
+                    node_attr["flows"].add((src, dest))
                     H.add_node(interface_addr, **node_attr)
 
                 if H.has_edge(prev_interface_addr, interface_addr):
@@ -83,19 +87,33 @@ def calc_flow_distribution(G, flows):
                         H[prev_interface_addr][interface_addr]["fdL"][
                             str(link)
                         ] += path_tf
+                        H[prev_interface_addr][interface_addr]["flows"].add(
+                            (src, dest)
+                        )
                     except KeyError as e:
                         # Since in networkx H[u][v] = H[v][u],
                         # in the case there isn't no tracing flow for (v,u).
                         H[prev_interface_addr][interface_addr]["fdL"][
                             str(link)
-                        ] = path_tf
+                        ] = path_tf                        
+                        H[prev_interface_addr][interface_addr]["flows"].add(
+                            (src, dest)
+                        )
 
                 else:
-                    link_attr = {"fdL": {}}
+                    link_attr = {"fdL": {}, "flows":set()}
                     link_attr["fdL"][str(link)] = path_tf
+                    link_attr["flows"].add((src, dest))
                     H.add_edge(
                         prev_interface_addr, interface_addr, **link_attr
                     )
+                    if "flows" not in H.nodes[prev_interface_addr]:
+                        H.nodes[prev_interface_addr]["flows"] = set()
+                        H.nodes[prev_interface_addr]["flows"].add((src, dest))                        
+                    if "flows" not in H.nodes[interface_addr]:
+                        H.nodes[interface_addr]["flows"] = set()
+                        H.nodes[interface_addr]["flows"].add((src, dest))
+                    
 
     fdL = nx.get_edge_attributes(H, "fdL")
     fdN = nx.get_node_attributes(H, "fdN")
@@ -144,6 +162,7 @@ def main(argv):
         complement=True,
         label=descriptor,
     )
-    
+
+
 if __name__ == "__main__":
     main(argv)
