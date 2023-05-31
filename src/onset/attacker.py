@@ -35,11 +35,11 @@ from os import path
 from typing import Counter, DefaultDict
 from onset.constants import SCRIPT_HOME
 from onset.constants import ZERO_INDEXED
-from onset.utilities.graph import get_paths, parse_edges
+from onset.utilities.graph_utils import get_paths, parse_edges
 from onset.utilities.tmg import rand_gravity_matrix
 from onset.constants import ZERO_INDEXED
 from onset.utilities.flows import read_tm_to_tc
-from onset.utilities.graph import (
+from onset.utilities.graph_utils import (
     convert_paths_onset_to_json,
 )
 from tmgen.models import modulated_gravity_tm

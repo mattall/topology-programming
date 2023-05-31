@@ -18,7 +18,7 @@ from onset.constants import SCRIPT_HOME
 
 # customs
 from onset.utilities.plot_reconfig_time import calc_haversine
-from onset.utilities.graph import link_on_path
+from onset.utilities.graph_utils import link_on_path
 
 
 def work_log(identifier, total, candidate_link_list, G, network):

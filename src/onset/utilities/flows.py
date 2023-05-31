@@ -9,7 +9,7 @@ from itertools import product
 
 from onset.utilities.logger import logger
 from onset.utilities.sysUtils import make_dir
-from onset.utilities.graph import read_json_graph
+from onset.utilities.graph_utils import read_json_graph
 
 from onset.network_model import Network
 

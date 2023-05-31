@@ -1,4 +1,4 @@
-from onset.utilities.graph import read_json_graph, write_json_graph
+from onset.utilities.graph_utils import read_json_graph, write_json_graph
 from onset.utilities.sysUtils import postfix_str
 from onset.utilities import logger
 

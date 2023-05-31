@@ -11,14 +11,14 @@ Inputs.
 1. Attack traffic matrix. 
 2. Congestion file.
 """
-from onset.utilities.graph import write_gml
+from onset.utilities.graph_utils import write_gml
 from collections import defaultdict
 from os import path
 import pandas
 import networkx as nx
 import json
 
-from onset.utilities.graph import is_subpath
+from onset.utilities.graph_utils import is_subpath
 
 
 def main():

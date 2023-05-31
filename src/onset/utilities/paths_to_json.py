@@ -19,7 +19,7 @@
 import json
 from os import makedirs, path
 
-from onset.utilities.graph import convert_paths_onset_to_json
+from onset.utilities.graph_utils import convert_paths_onset_to_json
 
 if __name__ == "__main__":
     if 0:  # Base Paths

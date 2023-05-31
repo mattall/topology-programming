@@ -8,7 +8,7 @@ from sys import argv, exit
 from numpy import array
 
 from onset.network_model import Network
-from onset.utilities.graph import write_json_graph
+from onset.utilities.graph_utils import write_json_graph
 from onset.utilities.flows import read_flows
 from onset.utilities.logger import logger
 from onset.utilities.sysUtils import postfix_str

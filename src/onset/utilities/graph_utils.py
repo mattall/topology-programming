@@ -10,6 +10,12 @@ import json
 from networkx import read_gml
 from networkx.classes.function import get_edge_attributes
 
+def read_json_graph(input_file):
+    with open(input_file, "r") as fob:
+        jobj = json.load(fob)
+
+    G = nx.adjacency_graph(jobj, multigraph=False)
+    return G
 
 def write_json_graph(G, output_file):
     if not output_file.endswith(".json"):
@@ -19,7 +25,6 @@ def write_json_graph(G, output_file):
     with open(output_file, "w") as fob:
         json.dump(jobj, fob, indent=4)
     return None
-
 
 class Gml_to_dot:
     def __init__(self, gml, outFile):
@@ -274,15 +279,6 @@ def convert_paths_onset_to_json(source_file, target_file):
     with open(target_file, "w") as fob:
         json.dump({"paths": paths, "npath": len(paths)}, fob, indent=4)
 
-
-def read_json_graph(input_file):
-    with open(input_file, "r") as fob:
-        jobj = json.load(fob)
-
-    G = nx.adjacency_graph(jobj, multigraph=False)
-    return G
-
-
 def parse_edges(path):
     path = path.strip().strip("[]")
     edges = path.split(", ")[1:-1]
@@ -335,3 +331,4 @@ def is_subpath(a, b, input_path, distance=1):
         if first + distance == second:
             return True
     return False
+
