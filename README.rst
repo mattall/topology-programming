@@ -23,19 +23,21 @@
         :alt: Twitter
         :target: https://twitter.com/topology-programming
 
-.. image:: https://img.shields.io/badge/-PyScaffold-005CA0?logo=pyscaffold
-    :alt: Project generated with PyScaffold
-    :target: https://pyscaffold.org/
+.. .. image:: https://img.shields.io/badge/-PyScaffold-005CA0?logo=pyscaffold
+..     :alt: Project generated with PyScaffold
+..     :target: https://pyscaffold.org/
 
-|
+.. |
 
 ====================
 topology-programming
 ====================
 
+install package with `pip install .`
 
-    Add a short description here!
+Note: **use pip version 22.3.1**, *do not use 23.1.2*.
 
+with 23.1.2, One dependency, tmgen will not install. 
 
 A longer description of your project goes here...
 
