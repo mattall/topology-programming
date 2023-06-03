@@ -2,84 +2,31 @@ import json
 
 from collections import defaultdict
 from sys import argv
+from typing import DefaultDict
 
 import networkx as nx
 
-from onset.utilities.graph_utils import read_json_graph, get_edge_flows
+from onset.utilities.graph_utils import read_json_graph
+from onset.utilities.graph_utils import import_gml_graph
+from onset.utilities.plotters import cdf_plt
+# from onset.utilities.graph_utils import get_edge_flows
 
 
 def main(argv):
     try:
         G_path = argv[1]
     except:
-        G_path = "/home/matt/src/topology-programming/data/graphs/json/campus/campus_ground_truth.json"
-        H_path = "/home/matt/src/topology-programming/data/graphs/json/campus/campus_reconstruction.json"
+        G_path = "data/graphs/json/campus/campus_ground_truth.json"
+        H_path = "data/graphs/json/campus/campus_reconstruction.json"
 
     G = read_json_graph(G_path, stringify=True)
     H = read_json_graph(H_path, stringify=True)
 
-    G_btwness = nx.edge_betweenness_centrality(G, normalized=False)
-    H_btwness = nx.edge_betweenness_centrality(H, normalized=False)
-    sorted_btwness = lambda btwness: sorted(
-        btwness, key=btwness.get, reverse=True
-    )
+    accuracy = my_accuracy_method(G, H)
 
-    sorted_btwness_G = sorted_btwness(G_btwness)
-    sorted_btwness_H = sorted_btwness(H_btwness)
-
-    print("e_G\te_H\tbetweenness(e_G))\tbetweenness(e_H)\tdifference")
-    for e_G, e_H in zip(sorted_btwness_G, sorted_btwness_H):
-        max_betweenness = G_btwness[e_G]
-        min_betweenness = H_btwness[e_H]
-        print(f"{e_G}\t{e_H}\t{max_betweenness}\t{min_betweenness}", end="\t")
-        if e_G == e_H:
-            print(f"{G_btwness[e_G] - H_btwness[e_H]}")
-        else:
-            print("inf")
-
-    # n_G_paths = count_paths(G)
-    # n_H_paths = count_paths(H)
-
-    # print(sum([G_btwness[b] for b in G_btwness]), n_G_paths)
-    # print(sum([H_btwness[b] for b in H_btwness]), n_H_paths)
-    # p = nx.shortest_path(G)
-    # print(p)
-
-    my_G_btwness = my_betweenness_method(G, normalize=True)
-    my_H_btwness = my_betweenness_method(H, normalize=True)
-
-    my_sorted_btwness_G = sorted_btwness(my_G_btwness)
-    my_sorted_btwness_H = sorted_btwness(my_H_btwness)
-
-    print("e_G\te_H\tbtwness(e_G))\tbtwness(e_H)\tdifference")
-    for e_G, e_H in zip(my_sorted_btwness_G, my_sorted_btwness_H):
-        print(
-            f"{e_G}\t{e_H}\t{my_G_btwness[e_G]:.3f}\t{my_H_btwness[e_H]:.3f}",
-            end="\t",
-        )
-        if e_G == e_H:
-            print(f"{my_G_btwness[e_G] - my_H_btwness[e_H]:.3f}")
-        else:
-            print("inf")
-
-    # print(x, y, p[x][y])
-
-    # print(sum(len(path for nx.shortest_path(G))))
-    # print(len(nx.shortest_path(H)))
-
-    accuracy = 0
-
-    # union = 0
-    # intersection = 0
-    # for e_G in my_G_btwness:
-    #     b_G = my_G_btwness[e_G]
-    #     if e_G in my_H_btwness:
-    #         b_H = my_H_btwness[e_H]
-    #         intersection += abs(my_H_btwness)
-
-    my_accuracy_method(G, H)
-
-
+    jac_sim_dist = [accuracy[e]["Jaccard similarity"] for e in accuracy]
+    cdf_plt()
+    
 def count_paths(G):
     count = 0
     for x in G.nodes():
@@ -93,8 +40,18 @@ def count_paths(G):
 
     return count
 
+def my_betweenness_method(G, normalize=False) -> dict:
+    """ 
+        WIP Betweenness
+        $ g(e) = \sum{(s \neq t)}{\sigma_{st)(e)  }} $
 
-def my_betweenness_method(G, normalize=False):
+    Args:
+        G (_type_): _description_
+        normalize (bool, optional): _description_. Defaults to False.
+
+    Returns:
+        dict: _description_
+    """    
     d = defaultdict(int)
     count = 0
     for x in G.nodes():
@@ -104,7 +61,7 @@ def my_betweenness_method(G, normalize=False):
             paths = nx.all_shortest_paths(G, x, y)
             for p in paths:
                 for u, v in zip(p, p[1:]):
-                    key = str(sorted([u, v]))
+                    key = tuple(sorted((u, v)))
                     d[key] += 1
                 count += 1
 
@@ -114,32 +71,26 @@ def my_betweenness_method(G, normalize=False):
 
     return d
 
+def read_paths(path_file: str) -> dict:
+    if path_file.endswith(".json"):
+        return read_json_paths(path_file)
 
-def key_to_json(data):
-    if data is None or isinstance(data, (bool, int, float, str)):
-        return data
-    if isinstance(data, (tuple, frozenset)):
-        return str(data)
-    raise TypeError
-
-
-def to_json(data):
-    if data is None or isinstance(
-        data, (bool, int, float, tuple, range, str, list)
-    ):
-        return data
-    if isinstance(data, (set, frozenset)):
-        return sorted(data)
-    if isinstance(data, dict):
-        return {key_to_json(key): to_json(data[key]) for key in data}
-    raise TypeError
-
+def read_json_paths(input_file):
+    with open(input_file, "r") as fob:
+        jobj = json.load(fob)
+    if "paths" in jobj:          
+        return jobj["paths"]
+    else:
+        return jobj
 
 def my_accuracy_method(G, H):
     accuracy_record = {}
     all_edges = set(G.edges()).union(set(H.edges()))
     G_edge_flows = get_edge_flows(G)
     H_edge_flows = get_edge_flows(H)
+    my_G_btwness = path_normalized_betweenness_method(G, normalize=True)
+    my_H_btwness = path_normalized_betweenness_method(H, normalize=True)
+
     for an_edge in all_edges:
         e = tuple(sorted(an_edge))
         if e in G.edges():
@@ -148,7 +99,7 @@ def my_accuracy_method(G, H):
             G_e_flows = set()
         if e in H.edges():
             H_e_flows = H_edge_flows[e]
-        elif e not in G.edges():
+        else:
             H_e_flows = set()
         e_union = G_e_flows.union(H_e_flows)
         e_intersection = G_e_flows.intersection(H_e_flows)
@@ -159,30 +110,66 @@ def my_accuracy_method(G, H):
         H_e_flow_weights = get_e_flow_weights(H, H_e_flows)
         sum_G_flow_weights = sum([v for v in G_e_flow_weights.values()])
         sum_H_flow_weights = sum([v for v in H_e_flow_weights.values()])
+
         accuracy_record[e] = {
-            "Jaccard": jaccard_similarity(G_e_flows, H_e_flows),
-            "overlap": overlap_coefficient(G_e_flows, H_e_flows),
-            "G_flows": G_e_flows,
-            "num_G_flows": len(G_e_flows),
-            "H_flows": H_e_flows,
-            "num_H_flows": len(H_e_flows),
+            "G flows": G_e_flows,
+            "num G flows": len(G_e_flows),
+            "H flows": H_e_flows,
+            "num H flows": len(H_e_flows),
             "union": e_union,
-            "size_union": len(e_union),
+            "size union": len(e_union),
             "intersection": e_intersection,
-            "size_intersection": len(e_intersection),
-            "G_flow_weights": G_e_flow_weights,
-            "H_flow_weights": H_e_flow_weights,
-            "sum_G_flow_weights": sum_G_flow_weights,
-            "sum_H_flow_weights": sum_H_flow_weights,
-            "Jaccard_weighted": jaccard_similarity(
+            "size intersection": len(e_intersection),
+            "G betweenness": my_G_btwness[e],
+            "H betweenness": my_H_btwness[e],
+            "Jaccard similarity": jaccard_similarity(G_e_flows, H_e_flows),
+            "overlap coefficient": overlap_coefficient(G_e_flows, H_e_flows),
+            "G flow_weights": G_e_flow_weights,
+            "H flow weights": H_e_flow_weights,
+            "sum G flow_weights": sum_G_flow_weights,
+            "sum H flow_weights": sum_H_flow_weights,
+            "Jaccard weighted": jaccard_similarity(
                 G_e_flows, H_e_flows, G_e_flow_weights, H_e_flow_weights
             ),
-            "overlap_weighted": overlap_coefficient(
+            "overlap weighted": overlap_coefficient(
                 G_e_flows, H_e_flows, G_e_flow_weights, H_e_flow_weights
             ),
         }
-    with open("accuracy.json", "w") as fob:
-        json.dump(to_json(accuracy_record), fob)
+    
+    # with open("accuracy.json", "w") as fob:
+    #     json.dump(to_json(accuracy_record), fob)
+    csv_keys = [
+            "G flows",
+            "num G flows",
+            "H flows",
+            "num H flows",
+            "union",
+            "size union",
+            "intersection",
+            "size intersection",
+            "G betweenness",
+            "H betweenness",
+            "Jaccard similarity",
+            "overlap coefficient",
+            "G flow_weights",
+            "H flow weights",
+            "sum G flow_weights",
+            "sum H flow_weights",
+            "Jaccard weighted",
+            "overlap weighted",
+    ]
+    
+    with open("accuracy.csv", "w") as fob:                
+        for k in csv_keys:
+            fob.write(f"{k};")
+        fob.write("\n")
+        for e in accuracy_record:
+            fob.write(f"{e};")
+            for k in csv_keys[1:]:
+                fob.write(f"{accuracy_record[e][k]};")
+            fob.write("\n")
+    
+    return 
 
 
 def jaccard_similarity(

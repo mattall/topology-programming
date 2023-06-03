@@ -209,13 +209,14 @@ def get_edge_flows(G, paths=None):
     edge_flows = DefaultDict(set)
     
     for net_path in paths:
-        a = paths[net_path]["src"]
-        b = paths[net_path]["dst"]
+        src = paths[net_path]["src"]
+        dst = paths[net_path]["dst"]
         hops = paths[net_path]["hops"]
         for u, v in zip(hops[:], hops[1:]):
             edge = tuple(sorted((u, v)))
-            edge_flows[edge].add(edge)
+            edge_flows[edge].add(tuple(sorted((src, dst))))
     return edge_flows
+
 
 def read_paths(path_file: str) -> dict:
     if path_file.endswith(".json"):

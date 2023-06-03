@@ -1,3 +1,4 @@
+from os import path
 from matplotlib import lines
 import numpy as np
 from numpy import linspace, sort, absolute, arange
@@ -14,9 +15,29 @@ from matplotlib.font_manager import FontProperties
 from networkx import draw
 import pandas as pd
 import seaborn as sns
+from onset.constants import PLOT_DIR
 
 from onset.utilities.recon_utils import PLT_BASE, PLT_HIGHT
+from onset.utilities.sysUtils import save_raw_data
 
+plt.rcParams.update(
+    {
+        "figure.constrained_layout.use": True,
+        "font.size": 26,
+        "axes.spines.right": False,
+        "axes.spines.top": False,
+        "axes.linewidth": 2,
+        "xtick.major.size": 12,
+        "ytick.major.size": 12,
+        "xtick.major.width": 2,
+        "ytick.major.width": 2,
+        "xtick.minor.size": 6,
+        "ytick.minor.size": 6,
+        "xtick.minor.width": 2,
+        "ytick.minor.width": 2,
+        "lines.linewidth": 2,
+    }
+)
 
 def draw_graph(
     G, name, node_color="white", with_labels=True, edge_color="black"
@@ -793,3 +814,60 @@ def set_size(width, fraction=1):
     fig_dim = (fig_width_in, fig_height_in)
 
     return fig_dim
+
+def cdf_plt(
+    distribution,
+    xlabel="X",
+    output_file="cdf",
+    complement=False,
+    clear_fig=True,
+    fig=False,
+    ax=False,
+    label="",
+):
+    output_file = path.join(PLOT_DIR, output_file)
+    s = float(distribution.sum())
+    cdf = distribution.cumsum(0) / s
+    # sort the data:
+    data_sorted = np.sort(distribution)
+
+    # calculate the proportional values of samples
+    p = 1.0 * np.arange(len(distribution)) / (len(distribution) - 1)
+
+    if fig and ax:
+        pass
+    else:
+        fig, ax = new_figure(scale=3)
+
+    if complement:
+        ccdf = 1 - p
+        ylabel = xlabel
+        xlabel = "CCDF"
+        X = ccdf
+        Y = data_sorted
+        ax.set_xlim([0, 1])
+        # ax.set_ybound(lower=0)
+        ax.set_xticks([0.0, 0.25, 0.50, 0.75, 1.0])
+        # ax.set_yticks([0, 10, 20, 30])
+        save_raw_data(X, Y, output_file, ylabel, xlabel)
+    else:
+        ylabel = "CDF"
+        Y = cdf
+        X = data_sorted
+        ax.set_ylim([0, 1])
+        save_raw_data(X, Y, output_file, xlabel, ylabel)
+
+    ax.plot(X, Y, label=label)
+    ax.grid()
+    ax.legend()
+    ax.set_ylabel(ylabel)
+    ax.set_xlabel(xlabel)
+    # ax.set_yticks([0, 10, 20, 30])
+    fig.savefig(output_file + ".jpg")
+    fig.savefig(output_file + ".pdf")
+    if clear_fig:
+        plt.clf()
+        return None
+    else:
+        return fig, ax
+

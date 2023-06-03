@@ -13,7 +13,7 @@ from onset.utilities.flows import read_flows
 from onset.utilities.logger import logger
 from onset.utilities.sysUtils import postfix_str
 from onset.utilities.sysUtils import save_raw_data
-from onset.utilities.recon_utils import cdf_plt
+from onset.utilities.plotters import cdf_plt
 from onset.utilities.recon_utils import fdN_plt
 
 
