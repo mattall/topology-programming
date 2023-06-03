@@ -4,18 +4,29 @@ from sys import exit
 from typing import DefaultDict
 import networkx as nx
 
-
 import json
 
 from networkx import read_gml
 from networkx.classes.function import get_edge_attributes
 
-def read_json_graph(input_file):
+
+def read_json_paths(input_file):
+    with open(input_file, "r") as fob:
+        jobj = json.load(fob)
+    if "paths" in jobj:          
+        return jobj["paths"]
+    else:
+        return jobj
+
+def read_json_graph(input_file, stringify=False):
     with open(input_file, "r") as fob:
         jobj = json.load(fob)
 
     G = nx.adjacency_graph(jobj, multigraph=False)
+    if stringify:
+        nx.relabel_nodes(G, lambda i: str(i), copy=False)
     return G
+
 
 def write_json_graph(G, output_file):
     if not output_file.endswith(".json"):
@@ -25,6 +36,7 @@ def write_json_graph(G, output_file):
     with open(output_file, "w") as fob:
         json.dump(jobj, fob, indent=4)
     return None
+
 
 class Gml_to_dot:
     def __init__(self, gml, outFile):
@@ -171,6 +183,45 @@ def link_on_path(path, link):
     return _link_on_path(path, link) or _link_on_path(path, l2)
 
 
+def get_edge_flows(G, paths=None):
+    """
+    returns dictionary mapping each edge to the set of source and destination
+    pairs whose shortest-path traverse the edge.
+
+    e.g.,
+        G:  1---2---3
+                |
+            4---5---6
+
+     >>> get_edge_flows(G)
+    {
+        (1,2): {(1,2),(1,3),(1,4),(1,5),(1,6)},
+        (2,3): {(1,3),(2,3),(3,4),(3,5),(3,6)},
+        (2,5): {(1,4),(1,5),(1,6),(2,4),(2,5),(2,6),(3,4),(3,5),(3,6)},
+        (4,5): {(1,4),(2,4),(3,4),(4,5),(4,6)},
+        (5,6): {(1,6),(2,6),(3,6),(4,6),(5,6)},
+    }
+    """
+    if isinstance(paths, str):
+        paths = read_paths(paths)
+    else:
+        paths = get_paths(G)
+    edge_flows = DefaultDict(set)
+    
+    for net_path in paths:
+        a = paths[net_path]["src"]
+        b = paths[net_path]["dst"]
+        hops = paths[net_path]["hops"]
+        for u, v in zip(hops[:], hops[1:]):
+            edge = tuple(sorted((u, v)))
+            edge_flows[edge].add(edge)
+    return edge_flows
+
+def read_paths(path_file: str) -> dict:
+    if path_file.endswith(".json"):
+        return read_json_paths(path_file)
+
+
 def import_gml_graph(path):  # , label=None, destringizer=None):
     # G = read_gml(path, label, destringizer)
     G = nx.read_gml(path, label="id")
@@ -199,55 +250,40 @@ def import_gml_graph(path):  # , label=None, destringizer=None):
     return G
 
 
-def get_paths(source_gml_file, target_json_file):
-    G = import_gml_graph(source_gml_file)
-    new_graph_file = None
-    # G = nx.read_gml(source_gml_file)
-    source_dir = path.dirname(source_gml_file)
-    source_base_file = path.basename(source_gml_file)
+def get_paths(source: nx.Graph | str, target_json_file=""):
+    if isinstance(source, str) and source.endswith(".gml"):
+        G = import_gml_graph(source)
+    elif isinstance(source, nx.Graph):
+        G = source
+    else:
+        raise Exception("BAD SOURCE. Expected.gml file or nx.Graph instance")
 
-    target_dir = path.dirname(target_json_file)
-    target_base_file = path.basename(target_json_file)
-
-    if not nx.is_connected(G):
-        LCC = max(nx.strongly_connected_components(G.to_directed()), key=len)
-        G = G.subgraph(LCC)
-        new_graph_file = path.join(source_dir, "connected_" + source_base_file)
-        node_label_map = {
-            i: str(j + 1) for (i, j) in zip(G.nodes(), range(len(G.nodes())))
-        }
-        G = nx.relabel_nodes(G, node_label_map)
-        write_gml(G, new_graph_file)
-        target_json_file = path.join(
-            target_dir, "connected_" + target_base_file
-        )
-
-    pid = 0
+    assert nx.is_connected(G)
+    path_id = 0
     source_nodes = G.nodes()
     target_nodes = G.nodes()
     path_dict = DefaultDict(dict)
-    for source in source_nodes:
-        for target in target_nodes:
-            if source != target:
-                s_t_paths = nx.all_shortest_paths(G, source, target)
+    for s in source_nodes:
+        for t in target_nodes:
+            if s != t:
+                s_t_paths = nx.all_shortest_paths(G, s, t)
                 for s_t_path in s_t_paths:
-                    path_dict["path{}".format(pid)]["src"] = "s{}".format(
-                        source
-                    )
-                    path_dict["path{}".format(pid)]["dst"] = "s{}".format(
-                        target
-                    )
-                    path_dict["path{}".format(pid)]["nhop"] = len(s_t_path)
-                    path_dict["path{}".format(pid)]["hops"] = [
-                        "s{}".format(node) for node in s_t_path
+                    path_dict["path{}".format(path_id)]["src"] = f"{s}"
+                    path_dict["path{}".format(path_id)]["dst"] = f"{t}"
+                    path_dict["path{}".format(path_id)]["nhop"] = len(s_t_path)
+                    path_dict["path{}".format(path_id)]["hops"] = [
+                        f"{node}" for node in s_t_path
                     ]
-                    pid += 1
-    with open(target_json_file, "w") as fob:
-        json.dump({"paths": path_dict, "npath": len(path_dict)}, fob, indent=4)
-        print("Saved JSON Paths to: {}".format(target_json_file))
+                    path_id += 1
 
-    return target_json_file, len(G.nodes)
+    if isinstance(target_json_file, str) and target_json_file.endswith(".json"):
+        with open(target_json_file, "w") as fob:
+            json.dump(
+                {"paths": path_dict, "npath": len(path_dict)}, fob, indent=4
+            )
+            print(f"Saved JSON Paths to: {target_json_file}")
 
+    return path_dict
 
 def convert_paths_onset_to_json(source_file, target_file):
     paths = {}
@@ -279,6 +315,7 @@ def convert_paths_onset_to_json(source_file, target_file):
     with open(target_file, "w") as fob:
         json.dump({"paths": paths, "npath": len(paths)}, fob, indent=4)
 
+
 def parse_edges(path):
     path = path.strip().strip("[]")
     edges = path.split(", ")[1:-1]
@@ -297,7 +334,6 @@ def parse_edges(path):
         edge_list.append((a, b))
 
     return edge_list
-
 
 def write_gml(G, name):
     with open(name, "w") as fob:
@@ -331,4 +367,3 @@ def is_subpath(a, b, input_path, distance=1):
         if first + distance == second:
             return True
     return False
-
