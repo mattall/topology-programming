@@ -1,3 +1,4 @@
+from itertools import product
 import json
 
 from collections import defaultdict
@@ -9,7 +10,7 @@ import networkx as nx
 from onset.utilities.graph_utils import read_json_graph
 from onset.utilities.graph_utils import import_gml_graph
 from onset.utilities.plotters import cdf_plt
-# from onset.utilities.graph_utils import get_edge_flows
+from onset.utilities.graph_utils import get_edge_flows
 
 
 def main(argv):
@@ -24,8 +25,194 @@ def main(argv):
 
     accuracy = my_accuracy_method(G, H)
 
+    x_label = "Similarity Distribution"
     jac_sim_dist = [accuracy[e]["Jaccard similarity"] for e in accuracy]
-    cdf_plt()
+    jac_norm_sim_dist = [accuracy[e]["Jaccard weighted"] for e in accuracy]
+    fig, ax = cdf_plt(
+        jac_sim_dist, xlabel=x_label, label="Jaccard", clear_fig=False
+    )
+    cdf_plt(
+        jac_norm_sim_dist,
+        xlabel=x_label,
+        label="Jaccard Weighted",
+        fig=fig,
+        ax=ax,
+        output_file="Jaccard_Similarity",
+    )
+
+    x_label = "Overlap Distribution"
+    dist_1 = [accuracy[e]["overlap coefficient"] for e in accuracy]
+    dist_2 = [accuracy[e]["overlap weighted"] for e in accuracy]
+    fig, ax = cdf_plt(dist_1, xlabel=x_label, label="Overlap", clear_fig=False)
+    cdf_plt(
+        dist_2,
+        xlabel=x_label,
+        label="Overlap Weighted",
+        fig=fig,
+        ax=ax,
+        output_file="Overlap_similarity",
+    )
+
+    G_btwness = [accuracy[e]["G betweenness"] for e in accuracy]
+    H_btwness = [accuracy[e]["H betweenness"] for e in accuracy]
+    x_label = "Betweenness Centrality Distribution"
+    fig, ax = cdf_plt(
+        G_btwness, xlabel=x_label, label="Ground Truth", clear_fig=False
+    )
+    cdf_plt(
+        H_btwness,
+        xlabel=x_label,
+        label="Ricci Reconstruction",
+        fig=fig,
+        ax=ax,
+        output_file="Betweenness_centrality",
+    )
+    GB = nx.edge_betweenness_centrality(G)
+
+    most_central = max(GB, key=GB.get)
+    least_central = min(GB, key=GB.get)
+
+    J = G.copy()
+    print(f"most central edge:{most_central}")
+    J.remove_edge(*most_central)
+
+    if (least_central[0], most_central[0]) not in J.edges():
+        print(f"adding edges{(least_central[0], most_central[0])}")
+        J.add_edge(least_central[0], most_central[0])
+
+    mutated_accuracy = my_accuracy_method(G, J)
+    x_label = "Similarity Distribution for Mutated Graph"
+    jac_sim_dist = [
+        mutated_accuracy[e]["Jaccard similarity"] for e in mutated_accuracy
+    ]
+    jac_norm_sim_dist = [
+        mutated_accuracy[e]["Jaccard weighted"] for e in mutated_accuracy
+    ]
+    fig, ax = cdf_plt(
+        jac_sim_dist, xlabel=x_label, label="Jaccard", clear_fig=False
+    )
+    cdf_plt(
+        jac_norm_sim_dist,
+        xlabel=x_label,
+        label="Jaccard Weighted",
+        fig=fig,
+        ax=ax,
+        output_file="Jaccard_Similarity_mute",
+    )
+
+    x_label = "Overlap Distribution for Mutated Graph"
+    dist_1 = [
+        mutated_accuracy[e]["overlap coefficient"] for e in mutated_accuracy
+    ]
+    dist_2 = [
+        mutated_accuracy[e]["overlap weighted"] for e in mutated_accuracy
+    ]
+    fig, ax = cdf_plt(dist_1, xlabel=x_label, label="Overlap", clear_fig=False)
+    cdf_plt(
+        dist_2,
+        xlabel=x_label,
+        label="Overlap Weighted",
+        fig=fig,
+        ax=ax,
+        output_file="Overlap_similarity_mute",
+    )
+
+    G_btwness = [
+        mutated_accuracy[e]["G betweenness"] for e in mutated_accuracy
+    ]
+    H_btwness = [
+        mutated_accuracy[e]["H betweenness"] for e in mutated_accuracy
+    ]
+    x_label = "Betweenness Centrality Distribution"
+    fig, ax = cdf_plt(
+        G_btwness, xlabel=x_label, label="Ground Truth", clear_fig=False
+    )
+    cdf_plt(
+        H_btwness,
+        xlabel=x_label,
+        label="Mutated Graph",
+        fig=fig,
+        ax=ax,
+        output_file="Betweenness_centrality_mute",
+    )
+    
+    mutated_vs_ricci_accuracy = my_accuracy_method(H, J)
+    
+    # Similarity GT v. Ricci, Ricci v. Mute, Mute v. GT
+    
+    x_label = "Overlap Distribution"
+    dist_1 = [
+        accuracy[e]["overlap weighted"] for e in accuracy
+    ]
+    dist_2 = [
+        mutated_accuracy[e]["overlap weighted"] for e in mutated_accuracy
+    ]
+    dist_3 = [
+        mutated_vs_ricci_accuracy[e]["overlap weighted"] for e in mutated_vs_ricci_accuracy
+    ]
+    
+    fig, ax = cdf_plt(dist_1, xlabel=x_label, label="$G(t_0)$ vs. Ricci($t_0$)", clear_fig=False)
+    fig, ax = cdf_plt(dist_2, xlabel=x_label, label="$G(t_0)$ vs. $G(t_1)$", clear_fig=False, fig=fig, ax=ax)
+    cdf_plt(
+        dist_3,
+        xlabel=x_label,
+        label="$G(t_1)$ vs. Ricci($t_0$)",
+        fig=fig,
+        ax=ax,
+        output_file="Overlap_similarity_3-way_weighted",
+    )
+    
+    # Similarity GT v. Ricci, Ricci v. Mute, Mute v. GT
+    
+    x_label = "Jaccard Similarity Distribution"
+    metric = "Jaccard weighted"
+    dist_1 = [
+        accuracy[e][metric] for e in accuracy
+    ]
+    dist_2 = [
+        mutated_accuracy[e][metric] for e in mutated_accuracy
+    ]
+    dist_3 = [
+        mutated_vs_ricci_accuracy[e][metric] for e in mutated_vs_ricci_accuracy
+    ]
+    
+    fig, ax = cdf_plt(dist_1, xlabel=x_label, label="$G(t_0)$ vs. Ricci($t_0$)", clear_fig=False)
+    fig, ax = cdf_plt(dist_2, xlabel=x_label, label="$G(t_0)$ vs. $G(t_1)$", clear_fig=False, fig=fig, ax=ax)
+    cdf_plt(
+        dist_3,
+        xlabel=x_label,
+        label="$G(t_1)$ vs. Ricci($t_0$)",
+        fig=fig,
+        ax=ax,
+        output_file="Jaccard_similarity_3-way_weighted",
+    )
+    
+    # Similarity GT v. Ricci, Ricci v. Mute, Mute v. GT
+    
+    x_label = "Edge Betweenness Distribution ($\sigma(*)$)"
+    metric = "G betweenness"
+    dist_1 = [
+        accuracy[e][metric] for e in accuracy
+    ]
+    metric = "H betweenness"
+    dist_2 = [
+        accuracy[e][metric] for e in accuracy
+    ]
+    dist_3 = [
+        mutated_vs_ricci_accuracy[e][metric] for e in mutated_vs_ricci_accuracy
+    ]
+    
+    fig, ax = cdf_plt(dist_1, xlabel=x_label, label="$\sigma(G(t_0))$", clear_fig=False)
+    fig, ax = cdf_plt(dist_2, xlabel=x_label, label="$\sigma$(Ricci($t_0$))", clear_fig=False, fig=fig, ax=ax)
+    cdf_plt(
+        dist_3,
+        xlabel=x_label,
+        label="$\sigma(G(t_1))$",
+        fig=fig,
+        ax=ax,
+        output_file="betweenness_3-way_weighted",
+    )
+    
     
 def count_paths(G):
     count = 0
@@ -40,57 +227,67 @@ def count_paths(G):
 
     return count
 
-def my_betweenness_method(G, normalize=False) -> dict:
-    """ 
-        WIP Betweenness
-        $ g(e) = \sum{(s \neq t)}{\sigma_{st)(e)  }} $
 
+def path_normalized_betweenness_method(G, normalize=False) -> dict:
+    """
+    Betweenness for edges, scaled by total number of paths in a network
+        rather than by the number of source/destination pairs
     Args:
         G (_type_): _description_
         normalize (bool, optional): _description_. Defaults to False.
 
     Returns:
         dict: _description_
-    """    
+    """
     d = defaultdict(int)
     count = 0
-    for x in G.nodes():
-        for y in G.nodes():
-            if x == y:
-                continue
-            paths = nx.all_shortest_paths(G, x, y)
-            for p in paths:
-                for u, v in zip(p, p[1:]):
-                    key = tuple(sorted((u, v)))
-                    d[key] += 1
-                count += 1
-
+    for x, y in product(G.nodes(), repeat=2):
+        if x == y:
+            continue
+        paths = nx.all_shortest_paths(G, x, y)
+        for p in paths:
+            for u, v in zip(p, p[1:]):
+                key = tuple(sorted((u, v)))
+                d[key] += 1
+            count += 1
     if normalize:
         for key in d:
             d[key] = d[key] / count
-
     return d
+
 
 def read_paths(path_file: str) -> dict:
     if path_file.endswith(".json"):
         return read_json_paths(path_file)
 
+
 def read_json_paths(input_file):
     with open(input_file, "r") as fob:
         jobj = json.load(fob)
-    if "paths" in jobj:          
+    if "paths" in jobj:
         return jobj["paths"]
     else:
         return jobj
+
+
+def re_key(d):
+    new_d = defaultdict(int)
+    for key in d.keys():
+        new_key = tuple(sorted(key))
+        new_d[new_key] = d[key]
+    return new_d
+
 
 def my_accuracy_method(G, H):
     accuracy_record = {}
     all_edges = set(G.edges()).union(set(H.edges()))
     G_edge_flows = get_edge_flows(G)
     H_edge_flows = get_edge_flows(H)
-    my_G_btwness = path_normalized_betweenness_method(G, normalize=True)
-    my_H_btwness = path_normalized_betweenness_method(H, normalize=True)
+    # my_G_btwness = path_normalized_betweenness_method(G, normalize=True)
+    # my_H_btwness = path_normalized_betweenness_method(H, normalize=True)
 
+    my_G_btwness = re_key(nx.edge_betweenness_centrality(G))
+    my_H_btwness = re_key(nx.edge_betweenness_centrality(H))
     for an_edge in all_edges:
         e = tuple(sorted(an_edge))
         if e in G.edges():
@@ -135,31 +332,31 @@ def my_accuracy_method(G, H):
                 G_e_flows, H_e_flows, G_e_flow_weights, H_e_flow_weights
             ),
         }
-    
+
     # with open("accuracy.json", "w") as fob:
     #     json.dump(to_json(accuracy_record), fob)
     csv_keys = [
-            "G flows",
-            "num G flows",
-            "H flows",
-            "num H flows",
-            "union",
-            "size union",
-            "intersection",
-            "size intersection",
-            "G betweenness",
-            "H betweenness",
-            "Jaccard similarity",
-            "overlap coefficient",
-            "G flow_weights",
-            "H flow weights",
-            "sum G flow_weights",
-            "sum H flow_weights",
-            "Jaccard weighted",
-            "overlap weighted",
+        "G flows",
+        "num G flows",
+        "H flows",
+        "num H flows",
+        "union",
+        "size union",
+        "intersection",
+        "size intersection",
+        "G betweenness",
+        "H betweenness",
+        "Jaccard similarity",
+        "overlap coefficient",
+        "G flow_weights",
+        "H flow weights",
+        "sum G flow_weights",
+        "sum H flow_weights",
+        "Jaccard weighted",
+        "overlap weighted",
     ]
-    
-    with open("accuracy.csv", "w") as fob:                
+
+    with open("accuracy.csv", "w") as fob:
         for k in csv_keys:
             fob.write(f"{k};")
         fob.write("\n")
@@ -168,8 +365,8 @@ def my_accuracy_method(G, H):
             for k in csv_keys[1:]:
                 fob.write(f"{accuracy_record[e][k]};")
             fob.write("\n")
-    
-    return 
+
+    return accuracy_record
 
 
 def jaccard_similarity(
@@ -179,14 +376,14 @@ def jaccard_similarity(
         try:
             return len(A.intersection(B)) / len(A.union(B))
         except ZeroDivisionError as e:
-            return "nan"
+            return float("NaN")
     else:
         U_size = weighted_union(A, B, A_weights, B_weights)
         I_size = weighted_intersection(A, B, A_weights, B_weights)
         try:
             return I_size / U_size
         except ZeroDivisionError:
-            return "nan"
+            return float("NaN")
 
 
 def overlap_coefficient(
@@ -196,7 +393,7 @@ def overlap_coefficient(
         try:
             return len(A.intersection(B)) / min(len(A), len(B))
         except ZeroDivisionError:
-            return "nan"
+            return float("NaN")
     else:
         A_size = sum([v for v in A_weights.values()])
         B_size = sum([v for v in B_weights.values()])
@@ -204,7 +401,7 @@ def overlap_coefficient(
         try:
             return I_size / min(A_size, B_size)
         except ZeroDivisionError:
-            return "nan"
+            return float("NaN")
 
 
 def weighted_union(A, B, A_weights, B_weights):

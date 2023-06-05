@@ -17,7 +17,7 @@ import pandas as pd
 import seaborn as sns
 from onset.constants import PLOT_DIR
 
-from onset.utilities.recon_utils import PLT_BASE, PLT_HIGHT
+from onset.constants import PLT_BASE, PLT_HIGHT
 from onset.utilities.sysUtils import save_raw_data
 
 plt.rcParams.update(
@@ -824,9 +824,13 @@ def cdf_plt(
     fig=False,
     ax=False,
     label="",
-):
+):    
+    if not isinstance(distribution, np.ndarray):
+        distribution = np.array(distribution)        
+        distribution[np.isnan(distribution)] = 0
+        
     output_file = path.join(PLOT_DIR, output_file)
-    s = float(distribution.sum())
+    s = distribution.sum()
     cdf = distribution.cumsum(0) / s
     # sort the data:
     data_sorted = np.sort(distribution)
@@ -865,6 +869,7 @@ def cdf_plt(
     # ax.set_yticks([0, 10, 20, 30])
     fig.savefig(output_file + ".jpg")
     fig.savefig(output_file + ".pdf")
+    print(f"saved plot to {output_file}.jpg")
     if clear_fig:
         plt.clf()
         return None
