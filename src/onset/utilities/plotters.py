@@ -856,7 +856,7 @@ def cdf_plt(
         save_raw_data(X, Y, output_file, ylabel, xlabel)
     else:
         ylabel = "CDF"
-        Y = cdf
+        Y = p
         X = data_sorted
         ax.set_ylim([0, 1])
         save_raw_data(X, Y, output_file, xlabel, ylabel)

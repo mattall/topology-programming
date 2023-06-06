@@ -17,8 +17,8 @@ def main(argv):
     try:
         G_path = argv[1]
     except:
-        G_path = "data/graphs/json/campus/campus_ground_truth.json"
-        H_path = "data/graphs/json/campus/campus_reconstruction.json"
+        G_path = "data/graphs/json/regional/ground_truth_regional.json"
+        H_path = "data/graphs/json/regional/reconstruction_regional.json"
 
     G = read_json_graph(G_path, stringify=True)
     H = read_json_graph(H_path, stringify=True)
@@ -53,8 +53,8 @@ def main(argv):
         output_file="Overlap_similarity",
     )
 
-    G_btwness = [accuracy[e]["G betweenness"] for e in accuracy]
-    H_btwness = [accuracy[e]["H betweenness"] for e in accuracy]
+    G_btwness = [accuracy[e]["G betweenness"] for e in accuracy if accuracy[e]["G betweenness"] > 0]
+    H_btwness = [accuracy[e]["H betweenness"] for e in accuracy if accuracy[e]["H betweenness"] > 0]
     x_label = "Betweenness Centrality Distribution"
     fig, ax = cdf_plt(
         G_btwness, xlabel=x_label, label="Ground Truth", clear_fig=False
@@ -118,10 +118,10 @@ def main(argv):
     )
 
     G_btwness = [
-        mutated_accuracy[e]["G betweenness"] for e in mutated_accuracy
+        mutated_accuracy[e]["G betweenness"] for e in mutated_accuracy if accuracy[e]["G betweenness"] > 0
     ]
     H_btwness = [
-        mutated_accuracy[e]["H betweenness"] for e in mutated_accuracy
+        mutated_accuracy[e]["H betweenness"] for e in mutated_accuracy if accuracy[e]["H betweenness"] > 0
     ]
     x_label = "Betweenness Centrality Distribution"
     fig, ax = cdf_plt(
@@ -192,14 +192,14 @@ def main(argv):
     x_label = "Edge Betweenness Distribution ($\sigma(*)$)"
     metric = "G betweenness"
     dist_1 = [
-        accuracy[e][metric] for e in accuracy
+        accuracy[e][metric] for e in accuracy  if accuracy[e][metric] > 0
     ]
     metric = "H betweenness"
     dist_2 = [
-        accuracy[e][metric] for e in accuracy
+        accuracy[e][metric] for e in accuracy if accuracy[e][metric] > 0
     ]
     dist_3 = [
-        mutated_vs_ricci_accuracy[e][metric] for e in mutated_vs_ricci_accuracy
+        mutated_vs_ricci_accuracy[e][metric] for e in mutated_vs_ricci_accuracy if mutated_vs_ricci_accuracy[e][metric] > 0
     ]
     
     fig, ax = cdf_plt(dist_1, xlabel=x_label, label="$\sigma(G(t_0))$", clear_fig=False)
