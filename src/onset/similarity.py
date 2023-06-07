@@ -3,6 +3,7 @@ import json
 
 from collections import defaultdict
 from sys import argv
+from os import devnull
 from typing import DefaultDict
 
 import networkx as nx
@@ -23,9 +24,131 @@ def main(argv):
     G = read_json_graph(G_path, stringify=True)
     H = read_json_graph(H_path, stringify=True)
 
-    accuracy = my_accuracy_method(G, H)
+    accuracy = my_accuracy_method(G, H)    
+    J = suggest_mutation(G)
+    if J is None:
+        exit()
+    mutated_accuracy = my_accuracy_method(G, J)
+    mutated_vs_ricci_accuracy = my_accuracy_method(H, J)
+    
+    plot_similarity(accuracy, mutated_accuracy, mutated_vs_ricci_accuracy)
+    
+    
+def plot_similarity(accuracy, mutated_accuracy, mutated_vs_ricci_accuracy):
+    plot_jaccard_vs_weighted_jaccard(accuracy, output_file="Jaccard_Similarity")
+    plot_overlap_vs_overlap_weighted(accuracy, output_file="Overlap_Similarity")
+    plot_betweenness_comparison(accuracy, output_file="Betweenness_Similarity")
+    
+    x_label = "Similarity Distribution for Mutated Graph"
+    output_file = "Jaccard_Similarity_mute"
+    plot_jaccard_vs_weighted_jaccard(mutated_accuracy, x_label=x_label, 
+                                     output_file=output_file)
+    x_label = "Overlap Distribution for Mutated Graph"
+    output_file = "Overlap_Similarity_mute"
+    plot_jaccard_vs_weighted_jaccard(mutated_accuracy, x_label=x_label, 
+                                     output_file=output_file)
+    
+    x_label = "Betweenness Centrality Distribution"
+    output_file = "Betweenness_centrality_mute"
+    plot_betweenness_comparison(mutated_accuracy, x_label=x_label, 
+                                     output_file=output_file)
 
-    x_label = "Similarity Distribution"
+    metric = "overlap weighted"
+    dist_1, dist_2, dist_3 = get_tri_series_metric(accuracy, mutated_accuracy, mutated_vs_ricci_accuracy, metric)    
+    label_1 = "$G(t_0)$ vs. Ricci($t_0$)"
+    label_2 = "$G(t_0)$ vs. $G(t_1)$"    
+    label_3 = "$G(t_1)$ vs. Ricci($t_0$)"
+    x_label = "Weighted Overlap"
+    output_file = "Overlap_similarity_3-way_weighted"    
+    three_way_distribution_plot(dist_1, dist_2, dist_3, label_1, label_2, label_3, x_label, output_file)
+        
+    metric = "Jaccard weighted"
+    dist_1, dist_2, dist_3 = get_tri_series_metric(accuracy, mutated_accuracy, mutated_vs_ricci_accuracy, metric)    
+    output_file = "Jaccard_similarity_3-way_weighted"
+    x_label = "Weighted Jaccard Similarity"
+    three_way_distribution_plot(dist_1, dist_2, dist_3, label_1, label_2, label_3, x_label, output_file)
+    
+    # CANNOT USE THE SAME get_tri_series_metric FUNCTION HERE. 2 metrics.
+    metric = "G betweenness"
+    dist_1 = [accuracy[e][metric] for e in accuracy  if accuracy[e][metric] > 0]
+    metric = "H betweenness"
+    dist_2 = [accuracy[e][metric] for e in accuracy if accuracy[e][metric] > 0]
+    dist_3 = [mutated_vs_ricci_accuracy[e][metric] for e in mutated_vs_ricci_accuracy if mutated_vs_ricci_accuracy[e][metric] > 0]
+    label_1="$\sigma(G(t_0))$"
+    label_2="$\sigma$(Ricci($t_0$))"
+    label_3="$\sigma(G(t_1))$"
+    output_file="betweenness_3-way"
+    x_label = "Edge Betweenness Distribution ($\sigma(*)$)"
+    three_way_distribution_plot(dist_1, dist_2, dist_3, label_1, label_2, label_3, x_label, output_file)
+
+def get_tri_series_metric(d_1, d_2, d_3, metric):
+    
+    # Similarity GT v. Ricci, Ricci v. Mute, Mute v. GT    
+    dist_1 = [
+        d_1[e]["overlap weighted"] for e in d_1
+    ]
+    dist_2 = [
+        d_2[e]["overlap weighted"] for e in d_2
+    ]
+    dist_3 = [
+        d_3[e]["overlap weighted"] for e in d_3
+    ]
+    return (dist_1, dist_2, dist_3)
+
+
+def three_way_distribution_plot(dist_1, dist_2, dist_3, label_1, label_2, label_3, x_label, output_file=None):    
+    if output_file is None:
+        output_file = devnull
+    fig, ax = cdf_plt(dist_1, xlabel=x_label, label=label_1, clear_fig=False)
+    fig, ax = cdf_plt(dist_2, xlabel=x_label, label=label_2, clear_fig=False, fig=fig, ax=ax)
+    cdf_plt(
+        dist_3,
+        xlabel=x_label,
+        label=label_3,
+        fig=fig,
+        ax=ax,
+        output_file=output_file,
+    )
+    return
+
+def plot_betweenness_comparison(accuracy, x_label="Betweenness Centrality Distribution", output_file=None):
+    if output_file is None:
+        output_file = devnull        
+    G_btwness = [accuracy[e]["G betweenness"] for e in accuracy if accuracy[e]["G betweenness"] > 0]
+    H_btwness = [accuracy[e]["H betweenness"] for e in accuracy if accuracy[e]["H betweenness"] > 0]
+    fig, ax = cdf_plt(
+        G_btwness, xlabel=x_label, label="Ground Truth", clear_fig=False
+    )
+    cdf_plt(
+        H_btwness,
+        xlabel=x_label,
+        label="Ricci Reconstruction",
+        fig=fig,
+        ax=ax,
+        output_file=output_file,
+    )
+    return
+    
+def plot_overlap_vs_overlap_weighted(accuracy, x_label="Overlap Distribution", output_file=None):
+    if output_file is None:
+        output_file = devnull        
+    dist_1 = [accuracy[e]["overlap coefficient"] for e in accuracy]
+    dist_2 = [accuracy[e]["overlap weighted"] for e in accuracy]
+    fig, ax = cdf_plt(dist_1, xlabel=x_label, label="Overlap", clear_fig=False)
+    cdf_plt(
+        dist_2,
+        xlabel=x_label,
+        label="Overlap Weighted",
+        fig=fig,
+        ax=ax,
+        output_file=output_file,
+    )
+    return
+
+def plot_jaccard_vs_weighted_jaccard(accuracy_dict, x_label="Jaccard Similarity Distribution", output_file=None):
+    if output_file is None:
+        output_file = devnull        
+    accuracy = accuracy_dict
     jac_sim_dist = [accuracy[e]["Jaccard similarity"] for e in accuracy]
     jac_norm_sim_dist = [accuracy[e]["Jaccard weighted"] for e in accuracy]
     fig, ax = cdf_plt(
@@ -37,182 +160,9 @@ def main(argv):
         label="Jaccard Weighted",
         fig=fig,
         ax=ax,
-        output_file="Jaccard_Similarity",
+        output_file=output_file,
     )
-
-    x_label = "Overlap Distribution"
-    dist_1 = [accuracy[e]["overlap coefficient"] for e in accuracy]
-    dist_2 = [accuracy[e]["overlap weighted"] for e in accuracy]
-    fig, ax = cdf_plt(dist_1, xlabel=x_label, label="Overlap", clear_fig=False)
-    cdf_plt(
-        dist_2,
-        xlabel=x_label,
-        label="Overlap Weighted",
-        fig=fig,
-        ax=ax,
-        output_file="Overlap_similarity",
-    )
-
-    G_btwness = [accuracy[e]["G betweenness"] for e in accuracy if accuracy[e]["G betweenness"] > 0]
-    H_btwness = [accuracy[e]["H betweenness"] for e in accuracy if accuracy[e]["H betweenness"] > 0]
-    x_label = "Betweenness Centrality Distribution"
-    fig, ax = cdf_plt(
-        G_btwness, xlabel=x_label, label="Ground Truth", clear_fig=False
-    )
-    cdf_plt(
-        H_btwness,
-        xlabel=x_label,
-        label="Ricci Reconstruction",
-        fig=fig,
-        ax=ax,
-        output_file="Betweenness_centrality",
-    )
-    GB = nx.edge_betweenness_centrality(G)
-
-    most_central = max(GB, key=GB.get)
-    least_central = min(GB, key=GB.get)
-
-    J = G.copy()
-    print(f"most central edge:{most_central}")
-    J.remove_edge(*most_central)
-
-    if (least_central[0], most_central[0]) not in J.edges():
-        print(f"adding edges{(least_central[0], most_central[0])}")
-        J.add_edge(least_central[0], most_central[0])
-
-    mutated_accuracy = my_accuracy_method(G, J)
-    x_label = "Similarity Distribution for Mutated Graph"
-    jac_sim_dist = [
-        mutated_accuracy[e]["Jaccard similarity"] for e in mutated_accuracy
-    ]
-    jac_norm_sim_dist = [
-        mutated_accuracy[e]["Jaccard weighted"] for e in mutated_accuracy
-    ]
-    fig, ax = cdf_plt(
-        jac_sim_dist, xlabel=x_label, label="Jaccard", clear_fig=False
-    )
-    cdf_plt(
-        jac_norm_sim_dist,
-        xlabel=x_label,
-        label="Jaccard Weighted",
-        fig=fig,
-        ax=ax,
-        output_file="Jaccard_Similarity_mute",
-    )
-
-    x_label = "Overlap Distribution for Mutated Graph"
-    dist_1 = [
-        mutated_accuracy[e]["overlap coefficient"] for e in mutated_accuracy
-    ]
-    dist_2 = [
-        mutated_accuracy[e]["overlap weighted"] for e in mutated_accuracy
-    ]
-    fig, ax = cdf_plt(dist_1, xlabel=x_label, label="Overlap", clear_fig=False)
-    cdf_plt(
-        dist_2,
-        xlabel=x_label,
-        label="Overlap Weighted",
-        fig=fig,
-        ax=ax,
-        output_file="Overlap_similarity_mute",
-    )
-
-    G_btwness = [
-        mutated_accuracy[e]["G betweenness"] for e in mutated_accuracy if accuracy[e]["G betweenness"] > 0
-    ]
-    H_btwness = [
-        mutated_accuracy[e]["H betweenness"] for e in mutated_accuracy if accuracy[e]["H betweenness"] > 0
-    ]
-    x_label = "Betweenness Centrality Distribution"
-    fig, ax = cdf_plt(
-        G_btwness, xlabel=x_label, label="Ground Truth", clear_fig=False
-    )
-    cdf_plt(
-        H_btwness,
-        xlabel=x_label,
-        label="Mutated Graph",
-        fig=fig,
-        ax=ax,
-        output_file="Betweenness_centrality_mute",
-    )
-    
-    mutated_vs_ricci_accuracy = my_accuracy_method(H, J)
-    
-    # Similarity GT v. Ricci, Ricci v. Mute, Mute v. GT
-    
-    x_label = "Overlap Distribution"
-    dist_1 = [
-        accuracy[e]["overlap weighted"] for e in accuracy
-    ]
-    dist_2 = [
-        mutated_accuracy[e]["overlap weighted"] for e in mutated_accuracy
-    ]
-    dist_3 = [
-        mutated_vs_ricci_accuracy[e]["overlap weighted"] for e in mutated_vs_ricci_accuracy
-    ]
-    
-    fig, ax = cdf_plt(dist_1, xlabel=x_label, label="$G(t_0)$ vs. Ricci($t_0$)", clear_fig=False)
-    fig, ax = cdf_plt(dist_2, xlabel=x_label, label="$G(t_0)$ vs. $G(t_1)$", clear_fig=False, fig=fig, ax=ax)
-    cdf_plt(
-        dist_3,
-        xlabel=x_label,
-        label="$G(t_1)$ vs. Ricci($t_0$)",
-        fig=fig,
-        ax=ax,
-        output_file="Overlap_similarity_3-way_weighted",
-    )
-    
-    # Similarity GT v. Ricci, Ricci v. Mute, Mute v. GT
-    
-    x_label = "Jaccard Similarity Distribution"
-    metric = "Jaccard weighted"
-    dist_1 = [
-        accuracy[e][metric] for e in accuracy
-    ]
-    dist_2 = [
-        mutated_accuracy[e][metric] for e in mutated_accuracy
-    ]
-    dist_3 = [
-        mutated_vs_ricci_accuracy[e][metric] for e in mutated_vs_ricci_accuracy
-    ]
-    
-    fig, ax = cdf_plt(dist_1, xlabel=x_label, label="$G(t_0)$ vs. Ricci($t_0$)", clear_fig=False)
-    fig, ax = cdf_plt(dist_2, xlabel=x_label, label="$G(t_0)$ vs. $G(t_1)$", clear_fig=False, fig=fig, ax=ax)
-    cdf_plt(
-        dist_3,
-        xlabel=x_label,
-        label="$G(t_1)$ vs. Ricci($t_0$)",
-        fig=fig,
-        ax=ax,
-        output_file="Jaccard_similarity_3-way_weighted",
-    )
-    
-    # Similarity GT v. Ricci, Ricci v. Mute, Mute v. GT
-    
-    x_label = "Edge Betweenness Distribution ($\sigma(*)$)"
-    metric = "G betweenness"
-    dist_1 = [
-        accuracy[e][metric] for e in accuracy  if accuracy[e][metric] > 0
-    ]
-    metric = "H betweenness"
-    dist_2 = [
-        accuracy[e][metric] for e in accuracy if accuracy[e][metric] > 0
-    ]
-    dist_3 = [
-        mutated_vs_ricci_accuracy[e][metric] for e in mutated_vs_ricci_accuracy if mutated_vs_ricci_accuracy[e][metric] > 0
-    ]
-    
-    fig, ax = cdf_plt(dist_1, xlabel=x_label, label="$\sigma(G(t_0))$", clear_fig=False)
-    fig, ax = cdf_plt(dist_2, xlabel=x_label, label="$\sigma$(Ricci($t_0$))", clear_fig=False, fig=fig, ax=ax)
-    cdf_plt(
-        dist_3,
-        xlabel=x_label,
-        label="$\sigma(G(t_1))$",
-        fig=fig,
-        ax=ax,
-        output_file="betweenness_3-way_weighted",
-    )
-    
+    return 
     
 def count_paths(G):
     count = 0
@@ -433,5 +383,34 @@ def weighted_intersection(A, B, A_weights, B_weights):
     return weighted_i
 
 
+def suggest_mutation(G, G_betweenness=None):
+    if G_betweenness is None:
+        GB = nx.edge_betweenness_centrality(G)
+    else:
+        GB = G_betweenness
+        
+    most_central = max(GB, key=GB.get)
+    least_central = min(GB, key=GB.get)
+
+    J = G.copy()
+    print(f"most central edge:{most_central}")
+    J.remove_edge(*most_central)
+
+    candidates = product(least_central, most_central)
+    for u, v in candidates: 
+        if u == v:
+            continue
+        if (u, v) not in J.edges():
+            print(f"adding edges{(least_central[0], most_central[0])}")
+            J.add_edge(least_central[0], most_central[0])
+            break
+        if (u, v) == candidates[-1]:
+            print(f"Error - no suggestion")
+            return None
+    
+    return J
+
+
 if __name__ == "__main__":
     main(argv)
+
