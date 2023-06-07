@@ -7,6 +7,7 @@ from os import devnull
 from typing import DefaultDict
 
 import networkx as nx
+import pandas as pd 
 
 from onset.utilities.graph_utils import read_json_graph
 from onset.utilities.graph_utils import import_gml_graph
@@ -318,6 +319,28 @@ def my_accuracy_method(G, H):
 
     return accuracy_record
 
+def calc_accuracy_as_dataframe(G, H):
+    # TODO WRITE DICTIONARY TO DATAFRAME. Key is a row, and every element of
+    # the dictionary's dictionary is also a row
+    # 
+    # D = {'e1':
+    #               "a": 4,
+    #               "b": 3},
+    #      'e2':     
+    #               "a": 4,
+    #               "b": 12}} 
+    # Produces
+    # df = KEY  "a" "b"
+    #      'e1'  4   3
+    #      'e2'  4  12
+    # .
+    D = my_accuracy_method(G, H)    
+    df = pd.DataFrame.from_dict(D, orient='index')
+    df = df.reset_index()  # Reset index to create a column for the keys
+    df = df.rename(columns={'index': 'KEY'})  # Rename the column
+
+    return df
+    
 
 def jaccard_similarity(
     A: set, B: set, A_weights: dict = 1, B_weights: dict = 1
