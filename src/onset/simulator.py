@@ -20,7 +20,7 @@ from onset.utilities.post_process import (
 )
 from onset.utilities.sysUtils import count_lines
 from onset.utilities.tmg import rand_gravity_matrix
-from onset.utilities.write_gml import write_gml
+from onset.utilities.graph_utils import write_gml
 from networkx.relabel import relabel_nodes
 import traceback
 from copy import deepcopy
