@@ -17,7 +17,7 @@ from networkx.algorithms.centrality.betweenness import (
 )
 from networkx.algorithms.centrality.betweenness import betweenness_centrality
 from onset.utilities.logger import logger
-
+from onset.utilities.graph_utils import read_json_graph
 # from pprint import pprint
 
 
@@ -34,7 +34,7 @@ class AlpWolf:
     def __init__(
         self,
         base_graph_file: str,
-        fallow_transponders=5,
+        fallow_transponders=0,
         fallow_tx_allocation_strategy="static",
         fallow_tx_allocation_file="",
     ) -> None:
@@ -51,7 +51,7 @@ class AlpWolf:
         self.circuit_bandwidth = 100  # Gb/s
         self.transponders_per_degree = 1
         self.base_graph_file = base_graph_file
-        self.base_graph = self.import_gml_graph(base_graph_file)
+        self.base_graph = self.import_graph(base_graph_file)
         self.logical_graph = Graph()
         self.n_nodes = len(self.base_graph.nodes())
         # node-pair (u,v) -> num_circuits (int)
@@ -60,6 +60,7 @@ class AlpWolf:
         self.fallow_tx_allocation_strategy = fallow_tx_allocation_strategy
         self.fallow_tx_allocation_file = fallow_tx_allocation_file
         self.n_super_nodes = ceil(self.n_nodes * 0.1)
+        self.import_capacity = False
         self.commands = {
             "list nodes": "shows all nodes",
             "list links": "shows all point-to-point fiber links",
@@ -74,6 +75,15 @@ class AlpWolf:
         self._init_transponders()
         self._init_position()
 
+    def import_graph(self, path):
+        if path.endswith(".gml"):
+            return self.import_gml_graph(path)
+        elif path.endswith(".json"):
+            return self.import_json_graph(path)
+        else:
+            logger.error(f"Unknown graph type: {path}")
+            exit(-1)
+    
     def import_gml_graph(self, path):  # , label=None, destringizer=None):
         # MOVING THIS TO UTILITIES
         # self.G = read_gml(path, label, destringizer)
@@ -121,7 +131,53 @@ class AlpWolf:
 
         set_node_attributes(self.G, color, "color")
         return self.G
+    
+    def import_json_graph(self, path):  # , label=None, destringizer=None):
+        G = self.G = read_json_graph(path)
+        # Note: Because of something weird in read_gml, must remake node IDs into strings manually.
+        # Note about note: Not sure if this still applies, but leaving it alone.
+        node_list = list(G.nodes())
+        if not isinstance(node_list[0], str) and min(G.nodes) == 0:
+            node_to_str_map = {node: str(node + 1) for (node) in G.nodes}
+            # node_to_str_map = {node: ("sw" + str(node)) for (node) in G.nodes}
+            relabel_nodes(G, node_to_str_map, copy=False)
+        
+        position = {}
+        for node in G.nodes():
+            try:
+                position[node] = (
+                    G.nodes()[node]["Longitude"],
+                    G.nodes()[node]["Latitude"],
+                )
+            except KeyError:
+                from numpy.random import random
 
+                logger.error(
+                    "Key Error for position of node. Generating Random position label"
+                )
+                long, lat = [int(x) for x in random(2) * 100]
+                logger.info(
+                    "Setting (Longitude, Latitude) of Node, {}, to ({}, {})".format(
+                        node, long, lat
+                    )
+                )
+                (
+                    G.nodes()[node]["Longitude"],
+                    G.nodes()[node]["Latitude"],
+                ) = (long, lat)
+                position[node] = (
+                    G.nodes()[node]["Longitude"],
+                    G.nodes()[node]["Latitude"],
+                )
+
+        set_node_attributes(G, position, "position")
+        color = {}
+        for node in G.nodes():
+            color[node] = "blue"
+
+        set_node_attributes(G, color, "color")
+        return G
+    
     def _init_transponders(self):
         """Initializes transponders in the input graph.
 
@@ -186,7 +242,7 @@ class AlpWolf:
             for node_n in self.base_graph.nodes:
                 # node_n gets as many transponders needed to connect to adjacent nodes
                 #   : self.transponders_per_degree * (self.base_graph.degree(node_n)
-                # plust as many as needed to make connections based on ftx_alloc_dict
+                # plus as many as needed to make connections based on ftx_alloc_dict
                 #   : self.transponders_per_degree * ftx_alloc_dict[node_n].
                 self.base_graph.nodes[node_n]["transponder"] = {}
                 transponder_count = self.transponders_per_degree * (
@@ -194,7 +250,21 @@ class AlpWolf:
                 )
                 for i in range(transponder_count):
                     self.base_graph.nodes[node_n]["transponder"][i] = -1
-
+                    
+        elif self.fallow_tx_allocation_strategy == "read_capacity":
+            self.import_capacity = True            
+            for node_n in self.base_graph.nodes:
+                self.base_graph.nodes[node_n]["transponder"] = {}
+                assert self.transponders_per_degree == 1
+                assert self.fallow_transponders == 0
+                
+                transponder_count = (
+                    self.transponders_per_degree
+                    * self.base_graph.degree(node_n)                
+                )
+                for i in range(transponder_count):
+                    self.base_graph.nodes[node_n]["transponder"][i] = -1
+            
         else:
             raise ("Undefined")
 
@@ -206,8 +276,14 @@ class AlpWolf:
                 trans_v = self.get_available_transponder(
                     self.base_graph.nodes[v]["transponder"]
                 )
+                
+                if self.import_capacity is True and "capacity" in self.base_graph.edges[(u,v)]:
+                    capacity = self.base_graph.edges[(u,v)]["capacity"]
+                else:
+                    capacity = self.circuit_bandwidth
+                    
                 if trans_u >= 0 and trans_v >= 0:
-                    self.add_circuit(u, v, trans_u, trans_v)
+                    self.add_circuit(u, v, trans_u, trans_v, capacity=capacity)
                 else:
                     raise Exception(
                         "Error, insufficient transponders at nodes for circuit."
@@ -282,13 +358,14 @@ class AlpWolf:
         v: str,
         transponder_u: int = None,
         transponder_v: int = None,
+        capacity: int = None
     ) -> int:
         """Adds a circuit between nodes u and v.
 
         Throws an assertion error if the transponder indices given are anything but -1 (i.e., they
         are already assigned).
 
-        Updated transponders at both nodes to map to eachother.
+        Updated transponders at both nodes to map to each other.
 
         Adds 1 to circuit count for each direction of the circuit.
 
@@ -305,6 +382,9 @@ class AlpWolf:
             0 on success.
             -1 of failure.
         """
+        if capacity is None:
+            capacity = self.circuit_bandwidth
+            
         # logger.info("Adding circuit {} {}.".format(u, v))
         if transponder_u == None or transponder_v == None:
             transponder_u = self.get_available_transponder(
@@ -335,17 +415,21 @@ class AlpWolf:
 
         # update logical graph
         if (u, v) in self.logical_graph.edges:
-            self.logical_graph[u][v]["capacity"] += self.circuit_bandwidth
+            self.logical_graph[u][v]["capacity"] += capacity
         else:
             self.logical_graph.add_edge(u, v)
-            self.logical_graph[u][v]["capacity"] = self.circuit_bandwidth
+            self.logical_graph[u][v]["capacity"] = capacity
 
         logger.info("Successfully added circuit {} {}.".format(u, v))
+        logger.info(f"Total Circuits: {self.circuits[(u, v)]}\t Total Capacity: {self.logical_graph[u][v]['capacity']}")
         return 0
 
     def drop_circuit(
         self, u: str, v: str, transponder_u=None, transponder_v=None
     ):
+        ####
+        #### TODO: Does not handle capacities read from input graph eloquently.
+        ####        
         """Remove the u, v circuit if it exists.
 
         Throws assertion error if the transponders for the nodes do not map correctly,
@@ -381,12 +465,12 @@ class AlpWolf:
         # Verify output. V's transponder should point to U...
         assert (
             self.base_graph.nodes[v]["transponder"][transponder_v] == u
-        ), "While dropping circut, node {}'s transponder did not map to {}. Instead it mapped to {}".format(
+        ), "While dropping circuit, node {}'s transponder did not map to {}. Instead it mapped to {}".format(
             v, u, self.base_graph.nodes[v]["transponder"][transponder_v]
         )
         assert (
             self.base_graph.nodes[u]["transponder"][transponder_u] == v
-        ), "While dropping circut, node {}'s transponder did not map to {}. Instead it mapped to {}".format(
+        ), "While dropping circuit, node {}'s transponder did not map to {}. Instead it mapped to {}".format(
             u, v, self.base_graph.nodes[u]["transponder"][transponder_u]
         )
         assert (
@@ -398,7 +482,7 @@ class AlpWolf:
         self.base_graph.nodes[u]["transponder"][transponder_u] = -1
 
         self.circuits[(u, v)] -= 1
-        # ensure opposite pairing has same number of circuts.
+        # ensure opposite pairing has same number of circuits.
         self.circuits[(v, u)] = self.circuits[(u, v)]
 
         # update logical graph
@@ -459,7 +543,7 @@ class AlpWolf:
             return []
 
         if candid_set == "all":
-            logger.info("getting list of candidate circutes.")
+            logger.info("getting list of candidate circuits.")
             candidates = []
             for u, v in combinations(self.get_nodes(), 2):
                 if (u, v) not in self.circuits:
@@ -494,7 +578,7 @@ class AlpWolf:
                 Args:
                     adjacent_links (list): [(s:str, t:Str, betweenness:float)]. Assumes
                                         either 's' or 't' is a node in target link.
-                                        This link is therefore adjacent to the targetlink.
+                                        This link is therefore adjacent to the target link.
                                         List is given sorted by betweenness. Betweenness
                                         is ignored by this function.
                     target_link (tuple): (u:str, v:str). Target link is assumed adjacent to

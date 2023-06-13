@@ -42,7 +42,7 @@ class Simulation:
         magnitude=100 * 10**10,
         traffic_file="",
         topology_programming_method="",
-        fallow_transponders=5,
+        fallow_transponders=0,
         use_heuristic="",
         candidate_link_choice_method="all",
         congestion_threshold_upper_bound=0.8,
@@ -88,8 +88,9 @@ class Simulation:
                 Used when fallow_tx_allocation_strategy = "file", contains a path to a file that explicitly states the number of fallow transponders per node.
             salt (str, optional): Used to generate unique file name for temp files when experiments with similar parameters are running simultaneously. Defaults to "".
         """
+        makedirs(".temp", exist_ok=True)
         self.nonce = (
-            "./temp/"
+            "./.temp/"
             + sha1(
                 "".join(
                     [
@@ -423,7 +424,7 @@ class Simulation:
         write_gml(gml_view, name)
         del gml_view
 
-    def perform_sim(self, circuits=1, start_iter=0, end_iter=0, repeat=False):
+    def perform_sim(self, circuits=1, start_iter=0, end_iter=0, repeat=False, unit="Gbps"):
         if end_iter == 0:
             end_iter = self.iterations
 
@@ -683,7 +684,7 @@ class Simulation:
                         updated_topology_file + ".gml"
                     )
                     Gml_to_dot(
-                        self.wolf.logical_graph, iteration_topo + ".dot"
+                        self.wolf.logical_graph, iteration_topo + ".dot", unit=unit
                     )
 
                     # Draw the link graph for the instanced topology.
@@ -949,7 +950,7 @@ class Simulation:
                     logger.error(
                         "Error verifying traffic file Create one now? [y/n]"
                     )
-
+                    
                     create = input()
                     if create.lower().startswith("y"):
                         pass

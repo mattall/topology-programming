@@ -39,10 +39,10 @@ def write_json_graph(G, output_file):
 
 
 class Gml_to_dot:
-    def __init__(self, gml, outFile):
+    def __init__(self, gml, outFile, unit="Gbps"):
         # Get providers
         print("[Gml_to_dot] inFile: {}, outFile: {}".format(gml, outFile))
-        self.write_gml_to_dot(gml, outFile)
+        self.write_gml_to_dot(gml, outFile, unit)
 
     # def __call__(self, inFile, outfile):
 
@@ -76,7 +76,7 @@ class Gml_to_dot:
             mac_list.append("{}{}{}:{}{}:{}{}".format(mac, *hex_num))
         return mac_list
 
-    def write_dot_graph(self, nodes, links, link_capacity, name):
+    def write_dot_graph(self, nodes, links, link_capacity, name, unit="Gbps"):
         nodes = list(nodes)
         links = list(links)
         switch_ips = [str(ip_address(a)) for a in range(len(nodes))]
@@ -110,14 +110,10 @@ class Gml_to_dot:
                     link_capacity.values()
                 )  # ensure congestion happens "in network," not at hosts.
                 fob.write(
-                    'h{0} -> s{0}\t[src_port=0, dst_port=0, cost=1, capacity="{1}Gbps"];\n'.format(
-                        x, capacity
-                    )
+                    f'h{x} -> s{x}\t[src_port=0, dst_port=0, cost=1, capacity="{capacity}{unit}"];\n'
                 )
                 fob.write(
-                    's{0} -> h{0}\t[src_port=0, dst_port=0, cost=1, capacity="{1}Gbps"];\n'.format(
-                        x, capacity
-                    )
+                    f's{x} -> h{x}\t[src_port=0, dst_port=0, cost=1, capacity="{capacity}{unit}"];\n'
                 )
 
             fob.write("\n")
@@ -130,19 +126,15 @@ class Gml_to_dot:
                     exit()
 
                 fob.write(
-                    's{0} -> s{1}\t[src_port={1}, dst_port={0}, cost=1, capacity="{2}Gbps"];\n'.format(
-                        a, b, capacity
-                    )
+                    f's{a} -> s{b}\t[src_port={b}, dst_port={a}, cost=1, capacity="{capacity}{unit}"];\n'
                 )
                 fob.write(
-                    's{0} -> s{1}\t[src_port={1}, dst_port={0}, cost=1, capacity="{2}Gbps"];\n'.format(
-                        b, a, capacity
-                    )
+                    f's{b} -> s{a}\t[src_port={a}, dst_port={b}, cost=1, capacity="{capacity}{unit}"];\n'
                 )
 
             fob.write("}")
 
-    def write_gml_to_dot(self, gml, out_file):
+    def write_gml_to_dot(self, gml, out_file, unit="Gbps"):
         if type(gml) is str and path.isfile(gml):
             G = read_gml(gml)
         else:
@@ -163,7 +155,7 @@ class Gml_to_dot:
             nodes, links, link_capacity
         )
 
-        self.write_dot_graph(vertices, edges, edge_capacity, out_file)
+        self.write_dot_graph(vertices, edges, edge_capacity, out_file, unit=unit)
 
 
 def _link_on_path(path, link):
