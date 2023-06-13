@@ -1,14 +1,9 @@
-from collections import defaultdict
-from logging import error
 from posix import listdir
 import re
 from os import path
 
-from networkx.algorithms.centrality.betweenness import edge_betweenness
 from onset.attacker import find_target_link
 from onset.constants import SCRIPT_HOME
-from onset.utilities.graph_utils import parse_edges
-from onset.utilities.sysUtils import cast_pair_to_int, reindex_down, reindex_up
 from onset.utilities.logger import logger
 from onset.utilities.post_process import (
     calc_percent_diff,
