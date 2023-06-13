@@ -819,6 +819,12 @@ class Simulation:
 
         def verify_topo():
             logger.debug("verifying topology file.")
+            gml_handle = path.join(
+                SCRIPT_HOME, "data", "graphs", "gml", name + ".gml"
+            )
+            json_handle = path.join(
+                SCRIPT_HOME, "data", "graphs", "json", name + ".json"
+            )
             if (
                 self.shakeroute
                 and self.topology_programming_method != "baseline"
@@ -832,14 +838,17 @@ class Simulation:
                     self.topology_programming_method + ".gml",
                 )
 
-            else:
-                base_topo_file = path.join(
-                    SCRIPT_HOME, "data", "graphs", "gml", name + ".gml"
-                )
+            elif isfile(gml_handle):
+                base_topo_file = gml_handle
 
-            assert isfile(
-                base_topo_file
-            ), "Error topology file not found: {}".format(base_topo_file)
+            elif isfile(json_handle):
+                base_topo_file = json_handle
+            else:
+                logger.error(
+                    "Error topology file not found: {}".format(base_topo_file),
+                    exc_info=1,
+                )
+                exit(-1)
             logger.debug("topology file check passed.")
             self.topo_file = base_topo_file
 
