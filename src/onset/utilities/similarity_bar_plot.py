@@ -3,6 +3,7 @@ from sys import argv
 from onset.similarity import calc_accuracy_as_dataframe
 from onset.utilities.graph_utils import read_json_graph
 import seaborn as sns
+
 def main(argv):
     try:
         G_path = argv[1]

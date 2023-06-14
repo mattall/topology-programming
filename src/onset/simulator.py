@@ -424,7 +424,8 @@ class Simulation:
         write_gml(gml_view, name)
         del gml_view
 
-    def perform_sim(self, circuits=1, start_iter=0, end_iter=0, repeat=False, unit="Gbps"):
+    def perform_sim(self, circuits=1, start_iter=0, end_iter=0, repeat=False, unit="Gbps",
+                    demand_factor=1):
         if end_iter == 0:
             end_iter = self.iterations
 
@@ -510,7 +511,9 @@ class Simulation:
                     pass
                     # don't read a new line if we are on the repetition step
                 else:
-                    tm_i_data = fob.readline()
+                    tm_i_data_from_file = fob.readline()
+                    tm_i_data = [str(float(i)*demand_factor) for i in tm_i_data_from_file.split()]
+                    tm_i_data_to_temp_file = " ".join(tm_i_data)
 
                 if i < start_iter:
                     continue
@@ -521,8 +524,8 @@ class Simulation:
                         continue
                 j += 1
                 temp_tm_i = self.nonce
-                temp_fob = open(self.nonce, "wb")
-                temp_fob.write(tm_i_data)
+                temp_fob = open(self.nonce, "w")
+                temp_fob.write(tm_i_data_to_temp_file)
                 temp_fob.close()
                 reconfig_time = 0
                 new_circuit = []
