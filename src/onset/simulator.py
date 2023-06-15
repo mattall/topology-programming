@@ -428,7 +428,7 @@ class Simulation:
                     demand_factor=1):
         if end_iter == 0:
             end_iter = self.iterations
-
+        
         return_data = {
             "Iteration": [],
             "Experiment": [],
@@ -469,7 +469,6 @@ class Simulation:
         j = 1
         # Open traffic file and pass a new line from the file for every iteration.
         with open(traffic, "rb") as fob:
-            sig_add_circuits = True
             PREV_ITER_ABS_PATH = ""
             for i in range(1, iterations + 2):
                 if self.shakeroute:
@@ -666,10 +665,11 @@ class Simulation:
                         sig_add_circuits = False
 
                     else:
-                        # find new circuits
-                        # call self.wolf.add_circuit(a,b)
-                        # update flux_circuits with circuits added
-                        # set sig_add_circuits false.
+                        # Template for OTP methods:
+                        #   find new circuits
+                        #   call self.wolf.add_circuit(a,b)
+                        #   update flux_circuits with circuits added
+                        #   set sig_add_circuits false.
                         pass
 
                     # self.base_graph.G = Graph.copy(self.wolf.logical_graph)
