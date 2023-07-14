@@ -10,7 +10,7 @@ from collections import defaultdict
 from copy import copy
 from itertools import combinations
 from math import ceil
-
+from networkx import is_strongly_connected
 from networkx import Graph, read_gml, set_node_attributes, relabel_nodes
 from networkx.algorithms.centrality.betweenness import (
     edge_betweenness_centrality,
@@ -74,6 +74,7 @@ class AlpWolf:
         }
         self._init_transponders()
         self._init_position()
+        assert is_strongly_connected(self.logical_graph.to_directed())
 
     def import_graph(self, path):
         if path.endswith(".gml"):
@@ -141,7 +142,10 @@ class AlpWolf:
             node_to_str_map = {node: str(node + 1) for (node) in G.nodes}
             # node_to_str_map = {node: ("sw" + str(node)) for (node) in G.nodes}
             relabel_nodes(G, node_to_str_map, copy=False)
-        
+        elif not node_list[0].isdigit():
+            node_to_str_map = {node_list[i]: i+1 for i in range(len(node_list))}
+            relabel_nodes(G, node_to_str_map, copy=False)
+
         position = {}
         for node in G.nodes():
             try:
@@ -256,11 +260,13 @@ class AlpWolf:
             for node_n in self.base_graph.nodes:
                 self.base_graph.nodes[node_n]["transponder"] = {}
                 assert self.transponders_per_degree == 1
-                assert self.fallow_transponders == 0
+                # assert self.fallow_transponders == 0
                 
                 transponder_count = (
                     self.transponders_per_degree
-                    * self.base_graph.degree(node_n)                
+                    * self.base_graph.degree(node_n)
+                    + self.fallow_transponders
+           
                 )
                 for i in range(transponder_count):
                     self.base_graph.nodes[node_n]["transponder"][i] = -1

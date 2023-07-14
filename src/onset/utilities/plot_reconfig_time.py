@@ -314,8 +314,8 @@ def get_reconfig_time(gml_file, circuits):
 
             # expects something like: '3-13'
             # new_link = circuit.split('-')          # becomes ['3', '13']
-            new_link[0] = "s" + new_link[0]  # becomes ['s3', '13']
-            new_link[1] = "s" + new_link[1]  # becomes ['s3', 's13']
+            new_link[0] = f"s{new_link[0]}"  # becomes ['s3', '13']
+            new_link[1] = f"s{new_link[1]}"  # becomes ['s3', 's13']
 
             G = nx.read_gml(gml_file)
 

@@ -84,7 +84,7 @@ def work_log(identifier, total, candidate_link_list, G, network):
                             reversed_path
                         )
 
-    with open("./temp/{}.json".format(identifier), "w") as fob:
+    with open("./.temp/{}.json".format(identifier), "w") as fob:
         # json.dump({"list": tunnel_list, "dict": tunnel_dict},fob)
         json.dump({"list": tunnel_list}, fob, indent=4)
 
@@ -96,6 +96,7 @@ class Link_optimization:
         self.PARALLEL = True
         self.k = 1
         self.MAX_DISTANCE = 5000  # km
+        self.MAX_DISTANCE = float("inf")  # km
         self.LINK_CAPACITY = 100 * 10**9  # bps
         self.BUDGET = BUDGET
         self.network = network
@@ -158,7 +159,7 @@ class Link_optimization:
         self.save_paths()
 
     def load_path_list(self, identifier):
-        temp_file = "./temp/{}.json".format(identifier)
+        temp_file = "./.temp/{}.json".format(identifier)
         with open(temp_file, "r") as fob:
             obj = json.load(fob)
 
@@ -626,6 +627,8 @@ class Link_optimization:
                 # Write File for future
                 with open(link_tunnels_file, "wb") as pkl:
                     pickle.dump(network_tunnels, pkl)
+
+            assert len(network_tunnels) == len(super_graph.edges())                        
 
             for link_i, (link_source, link_target) in tqdm(
                 enumerate(list(super_graph.edges())),

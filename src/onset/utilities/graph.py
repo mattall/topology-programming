@@ -4,28 +4,11 @@ from sys import exit
 from typing import DefaultDict
 import networkx as nx
 
+
 import json
 
 from networkx import read_gml
 from networkx.classes.function import get_edge_attributes
-
-
-def read_json_paths(input_file):
-    with open(input_file, "r") as fob:
-        jobj = json.load(fob)
-    if "paths" in jobj:          
-        return jobj["paths"]
-    else:
-        return jobj
-
-def read_json_graph(input_file, stringify=False):
-    with open(input_file, "r") as fob:
-        jobj = json.load(fob)
-
-    G = nx.adjacency_graph(jobj, multigraph=False)
-    if stringify:
-        nx.relabel_nodes(G, lambda i: str(i), copy=False)
-    return G
 
 
 def write_json_graph(G, output_file):
@@ -39,10 +22,10 @@ def write_json_graph(G, output_file):
 
 
 class Gml_to_dot:
-    def __init__(self, gml, outFile, unit="Gbps"):
+    def __init__(self, gml, outFile):
         # Get providers
         print("[Gml_to_dot] inFile: {}, outFile: {}".format(gml, outFile))
-        self.write_gml_to_dot(gml, outFile, unit)
+        self.write_gml_to_dot(gml, outFile)
 
     # def __call__(self, inFile, outfile):
 
@@ -76,7 +59,7 @@ class Gml_to_dot:
             mac_list.append("{}{}{}:{}{}:{}{}".format(mac, *hex_num))
         return mac_list
 
-    def write_dot_graph(self, nodes, links, link_capacity, name, unit="Gbps"):
+    def write_dot_graph(self, nodes, links, link_capacity, name):
         nodes = list(nodes)
         links = list(links)
         switch_ips = [str(ip_address(a)) for a in range(len(nodes))]
@@ -84,7 +67,7 @@ class Gml_to_dot:
         mac_addrs = self.mac_range(len(nodes) * 2)
         # with open("./" + name + '.dot', 'w') as fob:
         with open(name, "w") as fob:
-            fob.write("digraph topology {\n")
+            fob.write("digraph topology {\n\n")
             for x in sorted(nodes):
                 mac = mac_addrs.pop()
                 ip = switch_ips.pop()
@@ -94,7 +77,7 @@ class Gml_to_dot:
                     )
                 )
 
-            # fob.write("\n")
+            fob.write("\n")
             for x in sorted(nodes):
                 mac = mac_addrs.pop()
                 ip = host_ips.pop()
@@ -104,19 +87,23 @@ class Gml_to_dot:
                     )
                 )
 
-            # fob.write("\n")
+            fob.write("\n")
             for x in sorted(nodes):
                 capacity = max(
                     link_capacity.values()
                 )  # ensure congestion happens "in network," not at hosts.
                 fob.write(
-                    f'h{x} -> s{x}\t[src_port=0, dst_port=0, cost=1, capacity="{capacity}{unit}"];\n'
+                    'h{0} -> s{0}\t[src_port=0, dst_port=0, cost=1, capacity="{1}Gbps"];\n'.format(
+                        x, capacity
+                    )
                 )
                 fob.write(
-                    f's{x} -> h{x}\t[src_port=0, dst_port=0, cost=1, capacity="{capacity}{unit}"];\n'
+                    's{0} -> h{0}\t[src_port=0, dst_port=0, cost=1, capacity="{1}Gbps"];\n'.format(
+                        x, capacity
+                    )
                 )
 
-            # fob.write("\n")
+            fob.write("\n")
             for a, b in sorted(links):
                 try:
                     capacity = link_capacity[(a, b)]
@@ -124,21 +111,21 @@ class Gml_to_dot:
                     for l in link_capacity:
                         print(l, link_capacity[l])
                     exit()
-                
+
                 fob.write(
-                    f's{a} -> s{b}\t[src_port={b}, dst_port={a}, cost=1, capacity="{capacity}{unit}"];\n'
+                    's{0} -> s{1}\t[src_port={1}, dst_port={0}, cost=1, capacity="{2}Gbps"];\n'.format(
+                        a, b, capacity
+                    )
                 )
-                if (a, b) != sorted(links)[-1]:
-                    fob.write(
-                        f's{b} -> s{a}\t[src_port={a}, dst_port={b}, cost=1, capacity="{capacity}{unit}"];\n'
+                fob.write(
+                    's{0} -> s{1}\t[src_port={1}, dst_port={0}, cost=1, capacity="{2}Gbps"];\n'.format(
+                        b, a, capacity
                     )
-                else:
-                    fob.write(
-                        f's{b} -> s{a}\t[src_port={a}, dst_port={b}, cost=1, capacity="{capacity}{unit}"];'
-                    )
+                )
+
             fob.write("}")
 
-    def write_gml_to_dot(self, gml, out_file, unit="Gbps"):
+    def write_gml_to_dot(self, gml, out_file):
         if type(gml) is str and path.isfile(gml):
             G = read_gml(gml)
         else:
@@ -159,7 +146,7 @@ class Gml_to_dot:
             nodes, links, link_capacity
         )
 
-        self.write_dot_graph(vertices, edges, edge_capacity, out_file, unit=unit)
+        self.write_dot_graph(vertices, edges, edge_capacity, out_file)
 
 
 def _link_on_path(path, link):
@@ -177,46 +164,6 @@ def _link_on_path(path, link):
 def link_on_path(path, link):
     l2 = [link[1], link[0]]
     return _link_on_path(path, link) or _link_on_path(path, l2)
-
-
-def get_edge_flows(G, paths=None):
-    """
-    returns dictionary mapping each edge to the set of source and destination
-    pairs whose shortest-path traverse the edge.
-
-    e.g.,
-        G:  1---2---3
-                |
-            4---5---6
-
-     >>> get_edge_flows(G)
-    {
-        (1,2): {(1,2),(1,3),(1,4),(1,5),(1,6)},
-        (2,3): {(1,3),(2,3),(3,4),(3,5),(3,6)},
-        (2,5): {(1,4),(1,5),(1,6),(2,4),(2,5),(2,6),(3,4),(3,5),(3,6)},
-        (4,5): {(1,4),(2,4),(3,4),(4,5),(4,6)},
-        (5,6): {(1,6),(2,6),(3,6),(4,6),(5,6)},
-    }
-    """
-    if isinstance(paths, str):
-        paths = read_paths(paths)
-    else:
-        paths = get_paths(G)
-    edge_flows = DefaultDict(set)
-    
-    for net_path in paths:
-        src = paths[net_path]["src"]
-        dst = paths[net_path]["dst"]
-        hops = paths[net_path]["hops"]
-        for u, v in zip(hops[:], hops[1:]):
-            edge = tuple(sorted((u, v)))
-            edge_flows[edge].add(tuple(sorted((src, dst))))
-    return edge_flows
-
-
-def read_paths(path_file: str) -> dict:
-    if path_file.endswith(".json"):
-        return read_json_paths(path_file)
 
 
 def import_gml_graph(path):  # , label=None, destringizer=None):
@@ -247,40 +194,55 @@ def import_gml_graph(path):  # , label=None, destringizer=None):
     return G
 
 
-def get_paths(source: nx.Graph | str, target_json_file=""):
-    if isinstance(source, str) and source.endswith(".gml"):
-        G = import_gml_graph(source)
-    elif isinstance(source, nx.Graph):
-        G = source
-    else:
-        raise Exception("BAD SOURCE. Expected.gml file or nx.Graph instance")
+def get_paths(source_gml_file, target_json_file):
+    G = import_gml_graph(source_gml_file)
+    new_graph_file = None
+    # G = nx.read_gml(source_gml_file)
+    source_dir = path.dirname(source_gml_file)
+    source_base_file = path.basename(source_gml_file)
 
-    assert nx.is_connected(G)
-    path_id = 0
+    target_dir = path.dirname(target_json_file)
+    target_base_file = path.basename(target_json_file)
+
+    if not nx.is_connected(G):
+        LCC = max(nx.strongly_connected_components(G.to_directed()), key=len)
+        G = G.subgraph(LCC)
+        new_graph_file = path.join(source_dir, "connected_" + source_base_file)
+        node_label_map = {
+            i: str(j + 1) for (i, j) in zip(G.nodes(), range(len(G.nodes())))
+        }
+        G = nx.relabel_nodes(G, node_label_map)
+        write_gml(G, new_graph_file)
+        target_json_file = path.join(
+            target_dir, "connected_" + target_base_file
+        )
+
+    pid = 0
     source_nodes = G.nodes()
     target_nodes = G.nodes()
     path_dict = DefaultDict(dict)
-    for s in source_nodes:
-        for t in target_nodes:
-            if s != t:
-                s_t_paths = nx.all_shortest_paths(G, s, t)
+    for source in source_nodes:
+        for target in target_nodes:
+            if source != target:
+                s_t_paths = nx.all_shortest_paths(G, source, target)
                 for s_t_path in s_t_paths:
-                    path_dict["path{}".format(path_id)]["src"] = f"{s}"
-                    path_dict["path{}".format(path_id)]["dst"] = f"{t}"
-                    path_dict["path{}".format(path_id)]["nhop"] = len(s_t_path)
-                    path_dict["path{}".format(path_id)]["hops"] = [
-                        f"{node}" for node in s_t_path
+                    path_dict["path{}".format(pid)]["src"] = "s{}".format(
+                        source
+                    )
+                    path_dict["path{}".format(pid)]["dst"] = "s{}".format(
+                        target
+                    )
+                    path_dict["path{}".format(pid)]["nhop"] = len(s_t_path)
+                    path_dict["path{}".format(pid)]["hops"] = [
+                        "s{}".format(node) for node in s_t_path
                     ]
-                    path_id += 1
+                    pid += 1
+    with open(target_json_file, "w") as fob:
+        json.dump({"paths": path_dict, "npath": len(path_dict)}, fob, indent=4)
+        print("Saved JSON Paths to: {}".format(target_json_file))
 
-    if isinstance(target_json_file, str) and target_json_file.endswith(".json"):
-        with open(target_json_file, "w") as fob:
-            json.dump(
-                {"paths": path_dict, "npath": len(path_dict)}, fob, indent=4
-            )
-            print(f"Saved JSON Paths to: {target_json_file}")
+    return target_json_file, len(G.nodes)
 
-    return path_dict
 
 def convert_paths_onset_to_json(source_file, target_file):
     paths = {}
@@ -311,7 +273,14 @@ def convert_paths_onset_to_json(source_file, target_file):
 
     with open(target_file, "w") as fob:
         json.dump({"paths": paths, "npath": len(paths)}, fob, indent=4)
-    return {"paths": paths, "npath": len(paths)}
+
+
+def read_json_graph(input_file):
+    with open(input_file, "r") as fob:
+        jobj = json.load(fob)
+
+    G = nx.adjacency_graph(jobj, multigraph=False)
+    return G
 
 
 def parse_edges(path):
@@ -332,6 +301,7 @@ def parse_edges(path):
         edge_list.append((a, b))
 
     return edge_list
+
 
 def write_gml(G, name):
     with open(name, "w") as fob:

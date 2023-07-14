@@ -1,3 +1,6 @@
+from numpy import loadtxt, sqrt
+from itertools import combinations
+from collections import Counter
 from onset.alpwolf import AlpWolf
 from onset.constants import SCRIPT_HOME
 from onset.defender import Defender
@@ -59,33 +62,51 @@ class Simulation:
         Args:
             network_name (str):
             num_hosts (int): number of hosts in the network
+            
             test_name (str): Unique string, identifier for the simulation results
+            
             iterations (int, optional): Number of simulated epochs. Defaults to 0.
+            
             te_method (str, optional): Traffic engineering method - Must be supported
                 by Yates or self-implemented. Defaults to '-ecmp'.
+            
             start_clean (bool, optional): Overwrites simulation traffic matrices with new data. Defaults to False.
+            
             magnitude (int, optional): Mean value for traffic demand between nodes
                 - used only when start_clean is True. Defaults to 100*10**10.
+            
             traffic_file (str, optional): Path to traffic matrix file. Ignored when start_clean is True. Defaults to "".
+            
             topology_programming_method (str, optional): Topology programming method to use
                 Options: "cli", "cache", "onset", or "greylambda". Defaults to "".
+            
             fallow_transponders (int, optional): total fallow transponders per node. Defaults to 5.
+            
             use_heuristic (str, optional): Used when `topology_programming_method` is cache.
                 Limits the number of cached solutions to generate. Defaults to "".
+            
             candidate_link_choice_method (str, optional): "all" or "heuristic". Determines how to choose candidate links
                 when `topology_programming_method` is set to "cache". Defaults to "all".
+            
             congestion_threshold_upper_bound (float, optional): Congestion at or above this level triggers a topology
                 programming response from the network. Defaults to 0.8.
+            
             congestion_threshold_lower_bound (float, optional): Congestion at or below this level reverse any topology
                 programming update to the network. Defaults to 0.3.
+            
             attack_proportion (str, optional): Percent of total traffic that is from attackers.
                 Only used for file naming. Defaults to "".
+            
             shakeroute (bool, optional): shakeroute experiments simulate fiber cut failure scenarios. Defaults to False.
+            
             net_dir (bool, optional): director for network topology files. Defaults to False.
+            
             fallow_tx_allocation_strategy (str, optional): Describes how to allocate transponders. Defaults to 'static'.
                 can also be "dynamic" or "file". If it is "dynamic" then the top 90th percentile nodes get 'fallow_transponders' and others get 'fallow_transponders/2'.
+            
             fallow_tx_allocation_file (str, optional): _description_. Defaults to "".
                 Used when fallow_tx_allocation_strategy = "file", contains a path to a file that explicitly states the number of fallow transponders per node.
+            
             salt (str, optional): Used to generate unique file name for temp files when experiments with similar parameters are running simultaneously. Defaults to "".
         """
         makedirs(".temp", exist_ok=True)
@@ -243,7 +264,7 @@ class Simulation:
             "-out",
             result_path,
             "-budget",
-            "3",
+            "3", ">>", ".temp/yates.out"
         ]
 
         self._system(" ".join(command_args))
@@ -428,7 +449,7 @@ class Simulation:
                     demand_factor=1):
         if end_iter == 0:
             end_iter = self.iterations
-        
+
         return_data = {
             "Iteration": [],
             "Experiment": [],
@@ -589,7 +610,7 @@ class Simulation:
                     ):
                         optimizer = Link_optimization(
                             G=self.wolf.logical_graph,
-                            BUDGET=3,
+                            BUDGET=4,
                             demand_matrix=self.nonce,
                             network=self.network_name,
                         )
@@ -599,7 +620,7 @@ class Simulation:
                             if self.shakeroute:
                                 max_load = 10000.0
                         else:
-                            max_load = 1.0
+                            max_load = 0.8
 
                         # optimizer.run_model_minimize_cost_v1(max_load)
                         # optimizer.run_model_minimize_cost()
@@ -623,9 +644,9 @@ class Simulation:
                             for nc in new_circuit:
                                 u, v = nc
                                 if circuit_tag == "":
-                                    circuit_tag += "circuit-" + u + "-" + v
+                                    circuit_tag += f"circuit-{u}-{v}"
                                 else:
-                                    circuit_tag += "." + u + "-" + v
+                                    circuit_tag += f".{u}-{v}"
 
                                 for _ in range(circuits):
                                     self.wolf.add_circuit(u, v)
@@ -637,6 +658,54 @@ class Simulation:
                         #     print("Could Not Add New Circuit")
                         #     self.exit_early = True
 
+                        sig_add_circuits = False
+
+                    elif (
+                        self.topology_programming_method == "OTP"
+                        and sig_add_circuits
+                    ):
+                        edge_congestion_file = path.join(
+                            PREV_ITER_ABS_PATH,
+                            "EdgeCongestionVsIterations.dat",
+                        )
+                        edge_congestion_d = read_link_congestion_to_dict(
+                            edge_congestion_file
+                        )
+                        congested_edges = [
+                            k
+                            for k in edge_congestion_d
+                            if edge_congestion_d[k] > 0.80
+                        ]
+
+                        def find_shortcut_link(congested_edges):                            
+                            node_counter = Counter()
+                            message = "Looking for a shortcut link among: "
+                            congested_edges = [e.strip("()").replace("s", "").split(",") for e in congested_edges]
+                            for e in congested_edges:
+                                u, v = e
+                                node_counter.update((u, v))
+                                message += f"({u}, {v}) "
+                            logger.info(message)
+                            midpoint = max(node_counter, key=node_counter.get)
+                            terminals = []
+                            for c in congested_edges: 
+                                this = c[:]
+                                if midpoint in this:
+                                    this.remove(midpoint)
+                                    terminals.append(this[0])
+                            shortcuts = [c for c in combinations(terminals, 2) if c[0] != c[1] and c not in self.wolf.logical_graph.edges()]
+                            logger.info(f"Found the following shortcut: {shortcuts}")
+                            return shortcuts
+                        
+                        shortcuts = find_shortcut_link(congested_edges)
+                        for edge in shortcuts:
+                            u, v = edge
+                            u = int(u)
+                            v = int(v)
+                            for _ in range(circuits):
+                                self.wolf.add_circuit(u, v, 100)
+                                flux_circuits.append((u,v))
+                        # flux_circuits.extend(congested_edges)
                         sig_add_circuits = False
 
                     elif (
@@ -665,11 +734,10 @@ class Simulation:
                         sig_add_circuits = False
 
                     else:
-                        # Template for OTP methods:
-                        #   find new circuits
-                        #   call self.wolf.add_circuit(a,b)
-                        #   update flux_circuits with circuits added
-                        #   set sig_add_circuits false.
+                        # find new circuits
+                        # call self.wolf.add_circuit(a,b)
+                        # update flux_circuits with circuits added
+                        # set sig_add_circuits false.
                         pass
 
                     # self.base_graph.G = Graph.copy(self.wolf.logical_graph)
@@ -784,12 +852,12 @@ class Simulation:
                     print("Unknown Error")
                     print(repr(e))
                     traceback.print_exc()
-                    self._system("rm %s" % temp_tm_i)
+                    # self._system("rm %s" % temp_tm_i)
                     return return_data
 
-                finally:
-                    # Remove the temp file.
-                    self._system("rm %s" % temp_tm_i)
+                # finally:
+                    # # Remove the temp file.
+                    # self._system("rm %s" % temp_tm_i)
 
                 PREV_ITER_ABS_PATH = ITERATION_ABS_PATH
                 # command_args = ["yates", iteration_topo, temp_tm_i, temp_tm_i, hosts,
@@ -939,13 +1007,17 @@ class Simulation:
                 ), "Error traffic file not found: {}".format(traffic_file)
                 logger.debug("traffic file found.")
                 lines = count_lines(traffic_file)
-                assert (
-                    lines >= self.iterations
-                ), "traffic file found, but has too few lines. expected: {} got: {}".format(
+                if lines < self.iterations:
+                    logger.error("traffic file found, but has too few lines. expected: {} got: {}".format(
                     self.iterations, lines
-                )
+                ))
+                    assert False
                 logger.debug("traffic file line-count passed.")
-
+                M = loadtxt(traffic_file)
+                if sqrt(len(M)) != self.num_hosts:
+                    logger.error("WRONG NUMBER OF ENTRIES IN MATRIX YOU FUCKING IDIOT")
+                    assert False
+                
             except AssertionError:
                 if self.start_clean:
                     pass

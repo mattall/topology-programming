@@ -403,13 +403,17 @@ class Attacker:
         edge_list = list(self.edge_flows.keys())
         if target_edges == None:
             # n_targets = len(self.n_most_used_edges)
-            target_edges_i = np.random.choice(
-                range(len(self.edge_flows)), n_targets, replace=False
-            )
+
+            # target_edges_i = np.random.choice(
+            #     range(len(self.edge_flows)), n_targets, replace=False
+            # )
 
             # attack_flows = self.edge_flows[target_edges]
             # load original matrix.
-            target_edges = [edge_list[i] for i in target_edges_i]
+            # target_edges = [edge_list[i] for i in target_edges_i]
+
+            self.find_target_link(1)
+            target_edges = [self.most_used_edge]
             print("target_edges: ", target_edges)
 
         if target_edges is not None and len(target_edges) < n_targets:
