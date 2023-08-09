@@ -134,26 +134,26 @@ class AlpWolf:
         return self.G
     
     def import_json_graph(self, path):  # , label=None, destringizer=None):
-        G = self.G = read_json_graph(path)
+        G = self.G = read_json_graph(path, stringify=True, serialize=True)
         # Note: Because of something weird in read_gml, must remake node IDs into strings manually.
         # Note about note: Not sure if this still applies, but leaving it alone.
-        node_list = list(G.nodes())
-        if not isinstance(node_list[0], str) and min(G.nodes) == 0:
-            node_to_str_map = {node: str(node + 1) for (node) in G.nodes}
-            # node_to_str_map = {node: ("sw" + str(node)) for (node) in G.nodes}
-            relabel_nodes(G, node_to_str_map, copy=False)
-        elif not node_list[0].isdigit():
-            node_to_str_map = {node_list[i]: i+1 for i in range(len(node_list))}
-            relabel_nodes(G, node_to_str_map, copy=False)
+        # node_list = list(G.nodes())
+        # if not isinstance(node_list[0], str) and min(G.nodes) == 0:
+        #     node_to_str_map = {node: str(node + 1) for (node) in G.nodes}
+        #     # node_to_str_map = {node: ("sw" + str(node)) for (node) in G.nodes}
+        #     relabel_nodes(G, node_to_str_map, copy=False)
+        # elif not node_list[0].isdigit():
+        #     node_to_str_map = {node_list[i]: i+1 for i in range(len(node_list))}
+        #     relabel_nodes(G, node_to_str_map, copy=False)
 
         position = {}
         for node in G.nodes():
-            try:
+            if "Longitude" in G.nodes[node] and "Latitude" in G.nodes[node]:
                 position[node] = (
-                    G.nodes()[node]["Longitude"],
-                    G.nodes()[node]["Latitude"],
+                    G.nodes[node]["Longitude"],
+                    G.nodes[node]["Latitude"],
                 )
-            except KeyError:
+            else:
                 from numpy.random import random
 
                 logger.error(

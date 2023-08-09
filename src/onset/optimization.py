@@ -10,7 +10,7 @@ import json
 import pickle
 
 # third-party
-from gurobipy import Model, GRB, quicksum, min_, max_, Env
+from gurobipy import Model, GRB, quicksum, min_, max_, Env, tuplelist
 import networkx as nx
 import numpy as np
 from tqdm import tqdm
@@ -346,6 +346,377 @@ class Link_optimization:
             return json.dump(
                 {"list": self.original_tunnel_list}, fob, indent=4
             )
+
+    def run_model_max_diff(self):
+        super_graph = self.super_graph
+        candidate_links = self.candidate_links
+        super_paths_list = self.tunnel_list
+        LINK_CAPACITY = self.LINK_CAPACITY
+        demand_dict = self.demand_dict
+        # self.BUDGET = min(len(self.candidate_links), 10)
+        # self.BUDGET = len(self.candidate_links)
+        with Env() as env, Model("ONSET", env=env) as m:
+            self.model = m
+            m.setParam("NodefileStart", 2)
+            m.setParam(
+                "SoftMemLimit", 5
+            )  # Process dies if uses more than 5 GB
+
+            # ## Variables
+            #
+            # #### Inputs
+            #
+            # - $G(V,E)$ : network $G$, vertices $V$, edges, $E$
+            # - $e' \in E$      : Original edges
+            # - $\hat{e} \in E$ : Candidate edges
+            # - *Note*: $\hat{e} \cap e' = \emptyset$ and $\hat{e} \cup e' = E$
+            # - $d_{s,t} \in D$ : Demand $d$ between two nodes $s$ and $t$ in demand matrix $D$
+            # - $p \in \mathcal{P}$ : A path, sequence of 2 or more nodes $\{v_0, \dots, v_n\}$ s.t., $ \forall i \in N^{[1, n]}, (v_{i-1}, v_i) \in E$
+            # - $P_{s,t} \in \mathcal{P}$ : Set of paths $P$ from $s$ to $t$ among all paths $\mathcal{P}$
+            # - $\hat{P_{s,t}} \in \mathcal{P}$ : Set of paths $P$ that contain at least one candidate link, $\hat{e}$
+            # - ${P'_{s,t}} \in \mathcal{P}$ : Set of paths that contain only original links, ${e'}$
+            # - *Note*: $\hat{P_{s,t}} \cap {P'_{s,t}} = \emptyset$ and $\hat{P_{s,t}} \cup {P'_{s,t}} = \mathcal{P}$
+            # - ${P^e_{s,t}} \in \mathcal{P}$ : Set of paths that contain a particular link, $e$
+            # - $B$: Budget. Number of candidate links that can be provisioned in the network
+            # - $C$: Link capacity
+            #
+            # ### Decision Variables
+            #
+            # - $b_{e}$: Binary variable. $1$ if edge $e$ is active. $0$ if $e$ is inactive.
+            # - $b_{p}$: Binary variable. $1$ if path $p$ is active. $0$ if $p$ is inactive.
+            # - $U_{e}$: Utilization of edge $e$
+            # - $flow_{p}$: $flow$ allocated onto path $p$
+            #
+            # ### Auxillary Variable/Constraint
+            # - $M$: Objective function auxillary variable, $M = max_{e \in E} U_e$
+
+            print("Initializing Optimizer variables")
+            print("\tInitializing candidate_link_vars")
+            # candid_link_vars = m.addVars(
+            #     range(len(candidate_links)), vtype=GRB.BINARY, name="b_link"
+            # )
+
+            candid_link_vars = m.addVars(
+                len(super_graph.edges()),
+                vtype=GRB.BINARY,
+                name="candidate_links",
+            )
+
+            initial_links_data = [
+                1 if e in self.G.edges() else 0 for e in super_graph.edges()
+            ]
+
+            initial_links = tuplelist(range(len(super_graph.edges())))
+            for i, val in enumerate(initial_links_data):
+                initial_links[i] = val
+
+            link_union = m.addVars(
+                len(super_graph.edges()), vtype=GRB.INTEGER, name="link_union"
+            )
+
+            # Add constraints to link_union
+            for i in range(len(super_graph.edges())):
+                # link_union[i] should be greater than or equal to candidate_links[i]
+                m.addConstr(link_union[i] >= candid_link_vars[i])
+
+                # link_union[i] should be greater than or equal to initial_links[i]
+                m.addConstr(link_union[i] >= initial_links[i])
+
+            print("\tInitializing path_vars")
+            path_vars = m.addVars(
+                range(len(super_paths_list)), vtype=GRB.BINARY, name="b_path"
+            )
+
+            print("\tInitializing link_util")
+            link_util = m.addVars(
+                range(len(super_graph.edges())),
+                vtype=GRB.CONTINUOUS,
+                lb=0,
+                ub=LINK_CAPACITY,
+                name="link_util",
+            )
+
+            # # unbound
+            # link_util = m.addVars(range(len(super_graph.edges())),
+            #                     vtype=GRB.CONTINUOUS, lb=0, name="link_util")
+            print("\tInitializing norm_link_util")
+            norm_link_util = m.addVars(
+                range(len(super_graph.edges())),
+                vtype=GRB.CONTINUOUS,
+                lb=0,
+                ub=1,
+                name="norm_link_util",
+            )
+
+            m.addConstrs(
+                (
+                    norm_link_util[i] == link_util[i] / LINK_CAPACITY
+                    for i in range(len(super_graph.edges()))
+                ),
+                name="norm_link_util_constr",
+            )
+
+            print("\tInitializing flow_p")
+            flow_p = m.addVars(
+                range(len(super_paths_list)),
+                vtype=GRB.CONTINUOUS,
+                lb=0,
+                name="flow_p",
+            )
+
+            m.addConstrs(
+                (
+                    norm_link_util[i] == link_util[i] / LINK_CAPACITY
+                    for i in range(len(super_graph.edges()))
+                ),
+                name="norm_link_util_constr",
+            )
+
+            print("Setting Objective.")
+            M = m.addVar(vtype=GRB.INTEGER, name="M")
+            m.addConstr(
+                M == link_union.sum(),
+                name="objective_constr_min_graph_union_M",
+            )
+
+            m.setObjective(M, sense=GRB.MINIMIZE)
+
+            print("Initializing Constraints")
+            # ### Budget Constraint
+            #
+            # $\sum_{\hat{e} \in E} b_\hat{e} \leq B$
+            # print("Adding Model Constraint, Budget: {}".format(self.BUDGET))
+            # print("\tInitializing Budget")
+            # m.addConstr(quicksum(candid_link_vars) <= self.BUDGET, "budget")
+
+            # ### Active Paths Constraints
+            #
+            # $\forall p \in \mathcal{P} : flow_{p} \leq C * b_p$
+            #
+            # $\forall p \in \mathcal{P}: b_{p} = \min_{e \in p} b_e$
+            #
+            ##############################
+            # Add Active Path Constraint #
+            ##############################
+            print("\tInitializing flow_binary and path_link constraints")
+
+            path_candidate_links = [[] for _ in range(len(path_vars))]
+
+            # path_candidate_link_file = os.path.join(
+            #     SCRIPT_HOME,
+            #     "data",
+            #     "paths",
+            #     "optimization",
+            #     self.network + "_path_candidate_links.pkl",
+            # )
+            # try to preload constraint
+            # if os.path.exists(path_candidate_link_file):
+            #     with open(path_candidate_link_file, 'rb') as pkl:
+            #         path_candidate_links = pickle.load(pkl)
+            # else:
+
+            path_candidate_links = [[] for _ in range(len(path_vars))]
+            for p_i in tqdm(
+                range(len(path_vars)),
+                desc="Initialling candidate link & path binary vars 1",
+                total=len(path_vars),
+            ):
+                path_i_links = list(
+                    zip(super_paths_list[p_i], super_paths_list[p_i][1:])
+                )
+                for link_l in path_i_links:
+                    l1 = list(link_l)
+                    l2 = [l1[1], l1[0]]
+                    if l1 in candidate_links or l2 in candidate_links:
+                        candidate_index = (
+                            candidate_links.index(l1)
+                            if l1 in candidate_links
+                            else candidate_links.index(l2)
+                        )
+                        path_candidate_links[p_i].append(candidate_index)
+
+                # with open(path_candidate_link_file, 'wb') as pkl:
+                #      pickle.dump(path_candidate_links, pkl)
+
+            for p_i in tqdm(
+                range(len(path_vars)),
+                desc="Initialling candidate link & path binary vars 2",
+                total=len(path_vars),
+            ):
+                m.addConstr(
+                    flow_p[p_i] <= path_vars[p_i] * LINK_CAPACITY,
+                    "flow_binary_{}".format(p_i),
+                )
+                if path_candidate_links[p_i] != []:
+                    path_candidate_link_vars = [
+                        candid_link_vars[var_i]
+                        for var_i in path_candidate_links[p_i]
+                    ]
+                    m.addConstr(
+                        path_vars[p_i] == min_(path_candidate_link_vars),
+                        name="path_link_constr_{}".format(p_i),
+                    )
+
+                else:
+                    m.addConstr(
+                        path_vars[p_i] == True,
+                        name="path_link_constr_{}".format(p_i),
+                    )
+
+            # ### Total demand for a path constraint
+            #
+            # $\forall d_{s,t} \in D : d_{s,t} \leq \sum_{p \in P_{s,t}} flow_{p}$
+            #
+            # #####################################################
+            # # Find demand per tunnel considering active tunnels #
+            # #####################################################
+            print(
+                "\tInitializing Find demand per tunnel considering active tunnels"
+            )
+            for source, target in demand_dict:
+                P = self.tunnel_dict[(source, target)]
+
+                m.addConstr(
+                    demand_dict[(source, target)]
+                    <= quicksum(flow_p[p] for p in P),
+                    "flow_{}_{}".format(source, target),
+                )
+
+            # ### Total link utilization from all active paths constraint
+            #
+            # $\forall e \in E: U_e = \sum_{p | e \in p } flow_{p} $
+            #
+            # $\forall e \in E: \sum_{p | e \in p } flow_{p} \leq C $
+            #
+            ###############################################################
+            # Find Demand per link considering demand from active tunnels #
+            ###############################################################
+            print(
+                "\tInitializing Find Demand per link considering demand from active tunnels"
+            )
+            link_tunnels_file = os.path.join(
+                SCRIPT_HOME,
+                "data",
+                "paths",
+                "optimization",
+                self.network + "_tunnels.pkl",
+            )
+
+            # FILE EXISTS
+            if os.path.exists(link_tunnels_file):
+                # NOT EMPTY
+                print(
+                    "Loading Link Tunnels file: {}".format(link_tunnels_file)
+                )
+                if os.path.getsize(link_tunnels_file) > 0:
+                    with open(link_tunnels_file, "rb") as pkl:
+                        network_tunnels = pickle.load(pkl)
+
+            else:
+                print("Generating Link Tunnels: {}".format(link_tunnels_file))
+                network_tunnels = []
+                # for all links.
+                if 0:
+                    for link_i, (link_source, link_target) in enumerate(
+                        list(super_graph.edges())
+                    ):
+                        link_tunnels = []
+                        # for all tunnels
+                        for tunnel_i, tunnel in enumerate(super_paths_list):
+                            if link_on_path(
+                                tunnel, [link_source, link_target]
+                            ):
+                                link_tunnels.append(tunnel_i)
+
+                        network_tunnels.append(link_tunnels)
+
+                if 1:
+                    network_tunnels = [
+                        [] for _ in range(len(super_graph.edges()))
+                    ]
+                    link_index = list(super_graph.edges())[:]
+                    for tunnel_i, tunnel in tqdm(
+                        enumerate(super_paths_list),
+                        desc="Generating link tunnels list.",
+                        total=len(super_paths_list),
+                    ):
+                        for u, v in zip(tunnel, tunnel[1:]):
+                            try:
+                                l_id = link_index.index((u, v))
+                            except ValueError:
+                                l_id = link_index.index((v, u))
+
+                            network_tunnels[l_id].append(tunnel_i)
+
+                # Write File for future
+                with open(link_tunnels_file, "wb") as pkl:
+                    pickle.dump(network_tunnels, pkl)
+
+            assert len(network_tunnels) == len(super_graph.edges())
+
+            for link_i, (link_source, link_target) in tqdm(
+                enumerate(list(super_graph.edges())),
+                desc="Initializing link utilization constraints.",
+                total=len(super_graph.edges()),
+            ):
+                link_tunnels = network_tunnels[link_i]
+                # if 0:
+                #     # FILE EXISTS
+                #     if os.path.exists(link_i_tunnels_file):
+                #         # NOT EMPTY
+                #         if os.path.getsize(link_i_tunnels_file) > 0:
+                #             with open(link_i_tunnels_file, 'rb') as pkl:
+                #                 link_tunnels = pickle.load(pkl)
+
+                #         # IS EMPTY
+                #         else:
+                #             link_tunnels = []
+
+                #     # FILE DOES NOT EXIST
+                #     else:
+                #         # Enumerate Tunnels
+                #         for tunnel_i, tunnel in enumerate(super_paths_list):
+                #             if link_on_path(tunnel, [link_source, link_target]):
+                #                 link_tunnels.append(tunnel_i)
+
+                #         # Write File for future
+                #         with open(link_i_tunnels_file, 'wb') as pkl:
+                #             pickle.dump(link_tunnels, pkl)
+
+                # if 1:
+                #     link_tunnels = []
+                #     for tunnel_i, tunnel in enumerate(super_paths_list):
+                #         if link_on_path(tunnel, [link_source, link_target]):
+                #             link_tunnels.append(tunnel_i)
+
+                m.addConstr(
+                    link_util[link_i]
+                    == quicksum(flow_p[i] for i in link_tunnels),
+                    "link_demand_{}".format(link_i),
+                )
+
+                m.addConstr(
+                    self.LINK_CAPACITY
+                    >= quicksum(flow_p[i] for i in link_tunnels),
+                    "link_utilization_{}".format(link_i),
+                )
+
+            m.update()
+            self.model.optimize()
+            if self.model.status == GRB.Status.OPTIMAL:
+                # links_to_add = []
+                # for clv in candid_link_vars:
+                #     if candid_link_vars[clv].x == 1:
+                #         links_to_add.append(candidate_links[clv])
+                # self.links_to_add = links_to_add
+                resultant_edges = [
+                    list(super_graph.edges())[i]
+                    for i in range(len(candid_link_vars))
+                    if candid_link_vars[i].x == 1
+                ]
+                add_edges = [e for e in resultant_edges if e not in self.G.edges()]
+                drop_edges = [e for e in self.G.edges() if e not in resultant_edges]
+                return (resultant_edges, add_edges, drop_edges)
 
     def run_model_mixed_objective(self):
         super_graph = self.super_graph

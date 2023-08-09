@@ -5,7 +5,8 @@ from onset.alpwolf import AlpWolf
 from onset.constants import SCRIPT_HOME
 from onset.defender import Defender
 from onset.utilities.config import CROSSFIRE
-from onset.optimization import Link_optimization
+from onset.optimization_two import Link_optimization
+# from mcf_net_difference import Link_optimization
 from onset.constants import USER_HOME
 from onset.utilities.diff_compare import diff_compare
 from onset.utilities.gml_to_dot import Gml_to_dot
@@ -732,6 +733,59 @@ class Simulation:
                                 self.wolf.add_circuit(u, v)
                         flux_circuits.extend(congested_edges)
                         sig_add_circuits = False
+                    
+                    elif self.topology_programming_method == "skinwalker":
+                        optimizer = Link_optimization(
+                            G=self.wolf.logical_graph,
+                            # BUDGET=0,
+                            demand_matrix_file=self.nonce,
+                            network=self.network_name,
+                            core_G=self.wolf.base_graph.copy(as_view=True)
+                        )
+                        # optimizer.run_model()
+                        if self.te_method == "-ecmp":
+                            max_load = 0.5
+                            if self.shakeroute:
+                                max_load = 10000.0
+                        else:
+                            max_load = 0.8
+
+                        # optimizer.run_model_minimize_cost_v1(max_load)
+                        # optimizer.run_model_minimize_cost()
+                        new_circuit = []
+                        result_topo = []
+                        add_links = []
+                        drop_links = []
+                        # optimizer.LINK_CAPACITY *= max_load
+                        add_links, drop_links = optimizer.mcf()          
+                        # result_topo, add_links, drop_links = optimizer.optimize()                        
+                        # result_topo, add_links, drop_links = optimizer.run_model_max_diff_ignore_demand()                        
+
+                        circuit_tag = ""
+                        new_circuit = add_links[:]
+                        if drop_links:
+                            for drop_circuit in drop_links:
+                                u, v = drop_circuit
+                                self.wolf.drop_circuit(u,v)
+
+                        if add_links:
+                            for nc in new_circuit:
+                                u, v = nc
+                                if circuit_tag == "":
+                                    circuit_tag += f"circuit-{u}-{v}"
+                                else:
+                                    circuit_tag += f".{u}-{v}"
+
+                                self.wolf.add_circuit(u, v)
+
+                            circuits_added = True
+                            # flux_circuits.extend(new_circuit)
+
+                        # elif new_circuit == []:
+                        #     print("Could Not Add New Circuit")
+                        #     self.exit_early = True
+
+                        sig_add_circuits = False
 
                     else:
                         # find new circuits
@@ -767,11 +821,15 @@ class Simulation:
                         traffic_file=temp_tm_i,
                     )
                     if len(new_circuit) > 0:
-                        reconfig_time = get_reconfig_time(
-                            updated_topology_file + ".gml", new_circuit
-                        )
+                        if self.topology_programming_method == "skinwalker":
+                            reconfig_time = 1
+                        else: 
+                            reconfig_time = get_reconfig_time(
+                                updated_topology_file + ".gml", new_circuit
+                            )
                     else:
                         reconfig_time = 0
+
                     return_data["ReconfigTime"].append(reconfig_time)
                     return_data["Strategy"].append(
                         "{} {}".format(
@@ -917,7 +975,7 @@ class Simulation:
                 base_topo_file = json_handle
             else:
                 logger.error(
-                    "Error topology file not found: {}".format(base_topo_file),
+                    f"Error topology file not found: {gml_handle} or {json_handle}",
                     exc_info=1,
                 )
                 exit(-1)

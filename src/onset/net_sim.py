@@ -4,7 +4,8 @@
 # Produces two network simulations with traffic engineering sim (YATES).
 #   1) Run YATES over the plain network graph.
 #   2) Run YATES over the adaptive graph.
-
+import sys
+sys.path.insert(0, '/home/m/src/topology-programming/src/')
 from onset.utilities.flows import sanitize_magnitude
 from onset.simulator import Simulation
 import argparse
@@ -51,7 +52,7 @@ if __name__ == "__main__":
         "-C",
         "--circuits",
         type=int,
-        default=5,
+        default=1,
         help="Number of circuits to add",
     )
     parser.add_argument(

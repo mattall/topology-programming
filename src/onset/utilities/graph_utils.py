@@ -18,13 +18,19 @@ def read_json_paths(input_file):
     else:
         return jobj
 
-def read_json_graph(input_file, stringify=False):
+def read_json_graph(input_file, stringify=False, serialize=False):
     with open(input_file, "r") as fob:
         jobj = json.load(fob)
 
     G = nx.adjacency_graph(jobj, multigraph=False)
+    if serialize:
+        node_list = list(G.nodes())
+        node_to_str_map = {node_list[i]: i+1 for i in range(len(node_list))}
+        G = nx.relabel_nodes(G, node_to_str_map, copy=True)
+        
     if stringify:
         nx.relabel_nodes(G, lambda i: str(i), copy=False)
+    
     return G
 
 
