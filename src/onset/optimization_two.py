@@ -28,6 +28,8 @@ class Link_optimization:
         use_cache=False,
         parallel_execution=False,
         txp_count=None,
+        BUDGET=1,
+        compute_paths=False
     ):
         self.G = G
         self.all_node_pairs = list(permutations(self.G.nodes, 2))
@@ -72,16 +74,13 @@ class Link_optimization:
         self.PARALLEL = parallel_execution
         self.k = 1
         self.MAX_DISTANCE = 5000  # km
-        self.MAX_DISTANCE = float("inf")  # km
-        # self.LINK_CAPACITY = 100  # bps
+        # self.MAX_DISTANCE = float("inf")  # km            
         self.LINK_CAPACITY = 100 * 10**9  # bps
-        # self.BUDGET = BUDGET
-        # self.G = nx.read_gml("./data/graphs/gml/sprint.gml")
-        self.super_graph = nx.Graph()
-
-        # self.demand_matrix = np.loadtxt("./data/traffic/sprint_240Gbps.txt")
-
+        self.BUDGET = BUDGET      
+        self.super_graph = nx.Graph()        
         self.model = None
+        self.flow_vars = None
+        self.flow_paths = tupledict()
         self.candidate_links = []
         self.tunnel_list = []
         self.links_to_add = []
@@ -92,7 +91,8 @@ class Link_optimization:
             self.initialize_demand()
         self.initialize_candidate_links()
         self.add_candidate_links_to_super_graph()
-        # self.get_shortest_paths()
+        if compute_paths:
+            self.get_shortest_paths()
         
     def get_shortest_paths_from_k_link_super_graphs(self, k):
         # Run after finding candidate links
@@ -378,11 +378,13 @@ class Link_optimization:
             return json.dump(
                 {"list": self.original_tunnel_list}, fob, indent=4
             )
+    
     def get_flow_allocations(self):
         m = self.model
+        flow_vars = self.flow_vars
         demand = self.demand_dict
         prime_edges = self.prime_edges
-
+        flow_paths = self.flow_paths
         if m.status == GRB.Status.OPTIMAL:
             print("Optimal solution found.")        
             for (source, target) in demand.keys():
@@ -495,6 +497,7 @@ class Link_optimization:
         
         # Optimize the model
         m.optimize()
+        self.flow_vars = flow_vars
         if m.status == GRB.Status.OPTIMAL:
             print("Optimal solution found.")
             resultant_edges = [
@@ -519,7 +522,7 @@ class Link_optimization:
         else:
             print("No optimal solution found.")
         
-        return flow_paths
+        return -1
 
     def run_model_max_diff(self):
         core_G = self.core_G
@@ -789,7 +792,7 @@ class Link_optimization:
                 # Print out the IIS constraints and variables
                 print('\nThe following constraints and variables are in the IIS:')
                 for c in m.getConstrs():
-                    if c.IISConstr: print(f'\t{c.constrname}: {model.getRow(c)} {c.Sense} {c.RHS}')
+                    if c.IISConstr: print(f'\t{c.constrname}: {m.getRow(c)} {c.Sense} {c.RHS}')
 
                 for v in m.getVars():
                     if v.IISLB: print(f'\t{v.varname} ≥ {v.LB}')
