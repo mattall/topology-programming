@@ -569,7 +569,7 @@ class Simulation:
                     if self.topology_programming_method == "cli":
                         client = self.wolf.cli()
 
-                    elif (
+                    elif ( # Heuristic method from very early testing.
                         self.topology_programming_method == "cache"
                         and sig_add_circuits
                         and not circuits_added
@@ -605,7 +605,8 @@ class Simulation:
                         #     self.exit_early = True
 
                     # elif self.strategy == 'onset' and sig_add_circuits and not circuits_added:
-                    elif (
+                    
+                    elif ( # Method from TDSC-23 - Link-flood DDoS Defense
                         self.topology_programming_method == "onset"
                         and sig_add_circuits
                     ):
@@ -661,7 +662,7 @@ class Simulation:
 
                         sig_add_circuits = False
 
-                    elif (
+                    elif ( # Method from PDP+OTP HotNets-23
                         self.topology_programming_method == "OTP"
                         and sig_add_circuits
                     ):
@@ -709,7 +710,7 @@ class Simulation:
                         # flux_circuits.extend(congested_edges)
                         sig_add_circuits = False
 
-                    elif (
+                    elif ( # Method from TNSM-23
                         self.topology_programming_method == "greylambda"
                         and sig_add_circuits
                     ):
@@ -734,6 +735,61 @@ class Simulation:
                         flux_circuits.extend(congested_edges)
                         sig_add_circuits = False
                     
+                    elif ( # Bandwidth Variable Transceivers - Emulate RADWAN
+                        self.topology_programming_method == "BVT" 
+                        and sig_add_circuits
+                    ):
+                        edge_congestion_file = path.join(
+                            PREV_ITER_ABS_PATH,
+                            "EdgeCongestionVsIterations.dat",
+                        )
+                        edge_congestion_d = read_link_congestion_to_dict(
+                            edge_congestion_file
+                        )
+                        congested_edges = [
+                            k
+                            for k in edge_congestion_d
+                            if edge_congestion_d[k] == 1
+                        ]
+                        # Increase bandwidth on congested links 20%                        
+
+                        # for edge in congested_edges:
+                        #     u, v = edge.strip("()").replace("s", "").split(",")
+                        #     u = int(u)
+                        #     v = int(v)
+                        #     for _ in range(circuits):
+                        #         self.wolf.add_circuit(u, v)
+                        # flux_circuits.extend(congested_edges)
+                        sig_add_circuits = False                
+
+                    elif ( # Temporary Bandwidth Expansion - i.e., Spiffy 
+                        self.topology_programming_method == "TBE"
+                        and sig_add_circuits
+                    ):
+                        edge_congestion_file = path.join(
+                            PREV_ITER_ABS_PATH,
+                            "EdgeCongestionVsIterations.dat",
+                        )
+                        edge_congestion_d = read_link_congestion_to_dict(
+                            edge_congestion_file
+                        )
+                        congested_edges = [
+                            k
+                            for k in edge_congestion_d
+                            if edge_congestion_d[k] == 1
+                        ]
+                        # Increase bandwidth on congested links 20%                        
+
+                        # for edge in congested_edges:
+                        #     u, v = edge.strip("()").replace("s", "").split(",")
+                        #     u = int(u)
+                        #     v = int(v)
+                        #     for _ in range(circuits):
+                        #         self.wolf.add_circuit(u, v)
+                        # flux_circuits.extend(congested_edges)
+                        sig_add_circuits = False                
+
+                    # Net Recon Defense Method
                     elif self.topology_programming_method == "skinwalker":
                         optimizer = Link_optimization(
                             G=self.wolf.logical_graph,
@@ -787,6 +843,7 @@ class Simulation:
 
                         sig_add_circuits = False
 
+                    # Template for new TP methods
                     else:
                         # find new circuits
                         # call self.wolf.add_circuit(a,b)
