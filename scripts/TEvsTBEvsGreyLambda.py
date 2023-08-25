@@ -1,78 +1,71 @@
-from onset.simulator import Simulation
+import sys
+
+# sys.path.insert(0, "/home/m/src/topology-programming/src/")
+# from onset.simulator import Simulation
 from itertools import product
 from os import path
-from sys import exit
+import multiprocessing
+from experiment_mapped import experiment, experiment_mapped
+from experiment_params import *
+
+pool = multiprocessing.Pool()
+
+#
+
+if __name__ == "__main__":
+    def custom_error_callback(error):
+        print(f"Got an Error: {error}\n", flush=True)
 
 
-if __name__ == "__main__": 
-    starting_demand_factor = 1
+    def custom_callback(result_file):
+        print(f"Wrote result to: {result_file}\n", flush=True)
 
-    te_methods = ["mcf", "semimcfraekeft", "ncflow"]
-    tp_methods = ["TE", "TBE", "greylambda"]
-    networks = ["Comcast", "Verizon", "Zayo", "azure", "b4"]
-    t_classes = ["background", "background-plus-flashcrowd"]
 
-    TE_name = {"-mcf": "MCF", "-semimcfraekeft": "SMORE", "-ncflow": "NCFlow"}
-    n_ftx = {"TE": 0, "TBE": 0, "greylambda": 2}
-    hosts = {"Comcast": 149, "Verizon": 116, "azure": 113, "Zayo": 96, "b4": 54}
 
-    experiment_combinations = product(te_methods, tp_methods, networks, t_classes)
+    experiment_combinations = list(product(
+        te_methods, tp_methods, networks, t_classes, demand_scale
+    ))
 
-    # for traffic, experiment_name, ftx, strat in params:
-    for te_method, tp_method, network, t_class in experiment_combinations:
-        experiment_name = "-".join((te_method, tp_method, network, t_class))
-        traffic_file = f"data/traffic/{t_class}_{network}-tm",
-        demand_factor = starting_demand_factor
-        my_sim = Simulation(
-            network,
-            hosts,
-            experiment_name,
-            iterations=1,
-            fallow_transponders=n_ftx[tp_method],
-            te_method= "-" + te_method,
-            traffic_file=traffic_file,
-            fallow_tx_allocation_strategy="static", 
-            topology_programming_method=tp_method,
-            congestion_threshold_upper_bound=0.99999,
-            congestion_threshold_lower_bound=0.99999,
-        )  
+    # for (
+    #     te_method,
+    #     tp_method,
+    #     network,
+    #     t_class,
+    #     scale,
+    # ) in experiment_combinations:
+    #     pool.apply_async(
+    #         experiment,
+    #         args=(
+    #             te_method,
+    #             tp_method,
+    #             network,
+    #             t_class,
+    #             scale,
+    #         ),
+    #         error_callback=custom_error_callback,
+    #         callback=custom_callback,
+    #     )
+    result_files = sorted(
+                        list(
+                            pool.map_async(
+                                experiment_mapped, 
+                                experiment_combinations, 
+                                callback=custom_callback, 
+                                error_callback=custom_error_callback).get()
+                        )
+                    )
+    pool.close()
+    pool.join()
 
-        try:
-            report_path = (
-                f"data/reports/{experiment_name}.csv"
-            )
-            if path.exists(report_path):
-                print_header = False
-                report_fob = open(report_path, "a")
-            else:
-                print_header = True
-                report_fob = open(report_path, "w")
-
-            prev_path = ""
-            while True:
-                result = my_sim.perform_sim(
-                    unit="Mbps", demand_factor=demand_factor, repeat=True
-                )
-
-                if print_header:
-                    [report_fob.write(f"{key};") for key in result.keys()]
-                    report_fob.write(f"Demand Factor\n")
-                    print_header = False
-
-                [report_fob.write(f"{result[key][-1]};") for key in result.keys()]
-                report_fob.write(f"{demand_factor}\n")
-
-                if result["Loss"][-1] > 0.4:
-                    break
+    with open( "data/reports/demand_scale_results.csv", 'w') as write_fob:        
+        for i, rf in enumerate(result_files):
+            with open(rf, 'r') as read_fob:
+                lines = read_fob.readlines()
+                if i == 0:
+                    for l in lines:
+                        write_fob.write(l)
                 else:
-                    demand_factor *= 1.1
+                    for l in lines[1:]:
+                        write_fob.write(l)
 
-        except KeyboardInterrupt:
-            report_fob.close()
-            exit()
 
-        except Exception as e:
-            print(e)
-
-        finally:
-            report_fob.close()

@@ -48,6 +48,7 @@ class AlpWolf:
                 Used when fallow_tx_allocation_strategy = "file", contains a path to a file that explicitly states the number of fallow transponders per node.
 
         """
+        self.modulation = {"OOK", "BPSK", "QPSK", "8-QAM", "16-QAM" }
         self.circuit_bandwidth = 100  # Gb/s
         self.transponders_per_degree = 1
         self.base_graph_file = base_graph_file
@@ -60,6 +61,7 @@ class AlpWolf:
         self.fallow_tx_allocation_strategy = fallow_tx_allocation_strategy
         self.fallow_tx_allocation_file = fallow_tx_allocation_file
         self.n_super_nodes = ceil(self.n_nodes * 0.1)
+        self.initial_bandwidth_dict = defaultdict(lambda : defaultdict(float))
         self.import_capacity = False
         self.commands = {
             "list nodes": "shows all nodes",
@@ -697,6 +699,29 @@ class AlpWolf:
             node_n (str): a node descriptor.
         """
         logger.info(self.base_graph.nodes[node_n]["transponder"])
+
+    def restrict_bandwidth(self, fraction:float):
+        assert fraction < 1, "restriction should be a fraction of the whole"
+        if self.bandwidth_restricted: 
+            print("Bandwidth is restricted, cannot restrict again")
+            return
+        else:
+            self.bandwidth_restricted = True
+            self.initial_bandwidth_dict
+            for u, v in self.logical_graph.edges:
+                self.initial_bandwidth_dict[u][v] = self.logical_graph[u][v]["capacity"]
+                self.logical_graph[u][v]["capacity"] *= fraction
+            return
+
+    def relax_restricted_bandwidth(self):        
+        if not self.bandwidth_restricted: 
+            print("Bandwidth is not restricted, nothing to do.")
+            return
+        else:
+            self.bandwidth_restricted = False
+            for u, v in self.logical_graph.edges:
+                self.logical_graph[u][v]["capacity"] = self.logical_graph[u][v]["capacity"]
+            return
 
     def cli(self):
         """Starts the AlpWolf command line interface for issuing topology change commands."""

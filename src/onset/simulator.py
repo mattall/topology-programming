@@ -221,6 +221,8 @@ class Simulation:
             fallow_tx_allocation_strategy=self.fallow_tx_allocation_strategy,
             fallow_tx_allocation_file=self.fallow_tx_allocation_file,
         )
+        if self.topology_programming_method == "TBE": 
+            self.wolf.restrict_bandwidth(0.8)
 
     def _system(self, command: str):
         logger.info("Calling system command: {}".format(command))
@@ -255,7 +257,7 @@ class Simulation:
         if self.shakeroute:
             result_path = path.join(self.network_name, result_path)
         command_args = [
-            USER_HOME + "/.opam/4.06.0/bin/yates",
+            USER_HOME + "/.opam/ocaml.4.12.1/bin/yates",
             topo_file,
             traffic_file,
             traffic_file,
@@ -268,7 +270,7 @@ class Simulation:
             "-budget",
             "3",
             ">>",
-            ".temp/yates.out",
+            f"{self.nonce}_yates.out",
         ]
 
         self._system(" ".join(command_args))
@@ -477,6 +479,8 @@ class Simulation:
             "Loss": [],
             "Throughput": [],
             "Link Bandwidth Coefficient": [],
+            "Demand Factor": [],
+
         }
         circuits_added = False
 
@@ -786,30 +790,13 @@ class Simulation:
 
                     elif (  # Temporary Bandwidth Expansion - i.e., Spiffy
                         self.topology_programming_method == "TBE"
-                        and sig_add_circuits
+                        # and sig_add_circuits
                     ):
-                        edge_congestion_file = path.join(
-                            PREV_ITER_ABS_PATH,
-                            "EdgeCongestionVsIterations.dat",
-                        )
-                        edge_congestion_d = read_link_congestion_to_dict(
-                            edge_congestion_file
-                        )
-                        congested_edges = [
-                            k
-                            for k in edge_congestion_d
-                            if edge_congestion_d[k] == 1
-                        ]
-                        # Increase bandwidth on congested links 20%
+                        if "flashcrowd" in self.traffic_file \
+                            and demand_factor > 0.9:
 
-                        # for edge in congested_edges:
-                        #     u, v = edge.strip("()").replace("s", "").split(",")
-                        #     u = int(u)
-                        #     v = int(v)
-                        #     for _ in range(circuits):
-                        #         self.wolf.add_circuit(u, v)
-                        # flux_circuits.extend(congested_edges)
-                        sig_add_circuits = False
+                            self.wolf.relax_restricted_bandwidth()
+                        # sig_add_circuits = False
 
                     # Net Recon Defense Method
                     elif self.topology_programming_method == "skinwalker":
@@ -956,6 +943,7 @@ class Simulation:
                     )
                     return_data["Links Dropped"].append(drop_circuits)
                     return_data["Link Bandwidth Coefficient"].append(max_load)
+                    return_data["Demand Factor"].append(demand_factor)
 
                     if iter_congestion == "SIG_EXIT":
                         return
