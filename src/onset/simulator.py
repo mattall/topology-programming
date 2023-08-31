@@ -257,7 +257,7 @@ class Simulation:
         if self.shakeroute:
             result_path = path.join(self.network_name, result_path)
         command_args = [
-            USER_HOME + "/.opam/ocaml.4.12.1/bin/yates",
+            "yates",
             topo_file,
             traffic_file,
             traffic_file,
@@ -460,6 +460,7 @@ class Simulation:
         unit="Gbps",
         demand_factor=1,
     ):
+        sim_param_tag = f"circuits-{circuits}_startIter-{start_iter}_endIter-{end_iter}_repeat-{repeat}_unit-{unit}_demandFactor-{demand_factor}"
         if end_iter == 0:
             end_iter = self.iterations
 
@@ -508,22 +509,16 @@ class Simulation:
             PREV_ITER_ABS_PATH = ""
             for i in range(1, iterations + 2):
                 if self.shakeroute:
-                    ITERATION_ID = "{}".format(
-                        self.topology_programming_method
-                    )
+                    ITERATION_ID = self.topology_programming_method
 
                 elif repeat:
                     if j == 1:
-                        ITERATION_ID = name + "_{}-{}-{}".format(
-                            i, j, iterations
-                        )
+                        ITERATION_ID = f"{name}_{i}-{j}-{iterations}_{sim_param_tag}"
                     elif j == 2:
-                        ITERATION_ID = name + "_{}-{}-{}".format(
-                            i - 1, j, iterations
-                        )
+                        ITERATION_ID = f"{name}_{i - 1}-{j}-{iterations}_{sim_param_tag}"
 
                 else:
-                    ITERATION_ID = name + "_{}-{}".format(i, iterations)
+                    ITERATION_ID = f"{name}_{i}-{iterations}_{sim_param_tag}"
 
                 ITERATION_REL_PATH = path.join(EXPERIMENT_ID, ITERATION_ID)
                 ITERATION_ABS_PATH = path.join(

@@ -63,6 +63,7 @@ class AlpWolf:
         self.n_super_nodes = ceil(self.n_nodes * 0.1)
         self.initial_bandwidth_dict = defaultdict(lambda : defaultdict(float))
         self.import_capacity = False
+        self.bandwidth_restricted = False
         self.commands = {
             "list nodes": "shows all nodes",
             "list links": "shows all point-to-point fiber links",

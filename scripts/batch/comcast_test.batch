@@ -1,0 +1,14 @@
+#!/bin/bash
+
+#SBATCH --account=$SBATCH_ACCOUNT        ### change this to your actual account for charging
+#SBATCH --partition=computelong               ### queue to submit to
+#SBATCH --job-name=$JOBNAME              ### job name
+#SBATCH --output=$JOBNAME.out             ### file in which to store job stdout
+#SBATCH --error=$JOBNAME.err              ### file in which to store job stderr
+#SBATCH --time=1-00:00:00                ### wall-clock time limit, in minutes
+#SBATCH --mem=20Gb                        ### memory limit per node, in MB
+#SBATCH --nodes=1                        ### number of nodes to use
+#SBATCH --ntasks-per-node=1              ### number of tasks to launch per node
+#SBATCH --cpus-per-task=1                ### number of cores for each task
+ 
+yates data/graphs/dot/Comcast.dot data/traffic/background_Comcast-tm data/traffic/background_Comcast-tm data/hosts/Comcast.hosts -num-tms 1 -budget 2 -mcf

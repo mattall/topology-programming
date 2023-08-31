@@ -7,44 +7,24 @@ from os import path
 import multiprocessing
 from experiment_mapped import experiment, experiment_mapped
 from experiment_params import *
-
+from datetime import datetime
+from sys import argv
 pool = multiprocessing.Pool()
 
-#
-
 if __name__ == "__main__":
+
+    tp_methods = [argv[1]]
+    print(tp_methods)
     def custom_error_callback(error):
         print(f"Got an Error: {error}\n", flush=True)
-
 
     def custom_callback(result_file):
         print(f"Wrote result to: {result_file}\n", flush=True)
 
-
-
     experiment_combinations = list(product(
         te_methods, tp_methods, networks, t_classes, demand_scale
     ))
-
-    # for (
-    #     te_method,
-    #     tp_method,
-    #     network,
-    #     t_class,
-    #     scale,
-    # ) in experiment_combinations:
-    #     pool.apply_async(
-    #         experiment,
-    #         args=(
-    #             te_method,
-    #             tp_method,
-    #             network,
-    #             t_class,
-    #             scale,
-    #         ),
-    #         error_callback=custom_error_callback,
-    #         callback=custom_callback,
-    #     )
+    print(len(experiment_combinations))
     result_files = sorted(
                         list(
                             pool.map_async(
@@ -57,7 +37,9 @@ if __name__ == "__main__":
     pool.close()
     pool.join()
 
-    with open( "data/reports/demand_scale_results.csv", 'w') as write_fob:        
+    ts = datetime.isoformat(datetime.now()).replace('.', '_').replace(':', '_')
+
+    with open( "data/reports/{ts}_demand_scale_results.csv", 'w') as write_fob:        
         for i, rf in enumerate(result_files):
             with open(rf, 'r') as read_fob:
                 lines = read_fob.readlines()
@@ -69,3 +51,22 @@ if __name__ == "__main__":
                         write_fob.write(l)
 
 
+# for (
+#     te_method,
+#     tp_method,
+#     network,
+#     t_class,
+#     scale,
+# ) in experiment_combinations:
+#     pool.apply_async(
+#         experiment,
+#         args=(
+#             te_method,
+#             tp_method,
+#             network,
+#             t_class,
+#             scale,
+#         ),
+#         error_callback=custom_error_callback,
+#         callback=custom_callback,
+#     )

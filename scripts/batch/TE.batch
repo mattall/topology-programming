@@ -1,0 +1,14 @@
+#!/bin/bash
+
+#SBATCH --account=durairajanlab        ### change this to your actual account for charging
+#SBATCH --partition=compute               ### queue to submit to
+#SBATCH --job-name=TE              ### job name
+#SBATCH --output=TE.out             ### file in which to store job stdout
+#SBATCH --error=TE.err              ### file in which to store job stderr
+#SBATCH --time=1-00:00:00                ### wall-clock time limit, in minutes
+#SBATCH --mem=500000                       ### memory limit per node, in MB
+#SBATCH --nodes=1                        ### number of nodes to use
+#SBATCH --ntasks-per-node=1              ### number of tasks to launch per node
+#SBATCH --cpus-per-task=60                ### number of cores for each task
+ 
+python scripts/TEvsTBEvsGreyLambda.py TE

@@ -167,7 +167,6 @@ class Gml_to_dot:
 
         self.write_dot_graph(vertices, edges, edge_capacity, out_file, unit=unit)
 
-
 def _link_on_path(path, link):
     # function adapted from:
     # https://www.geeksforgeeks.org/python-check-for-sublist-in-list/
@@ -178,7 +177,6 @@ def _link_on_path(path, link):
         for idx in range(len(path) - len(link) + 1)
     )
     return res
-
 
 def link_on_path(path, link):
     l2 = [link[1], link[0]]
@@ -343,6 +341,7 @@ def write_gml(G, name):
     with open(name, "w") as fob:
         fob.write("graph [\n")
         for node in sorted(G.nodes()):
+            if "h" in node: continue
             id = node.strip("s")
             fob.write("\tnode [\n")
             fob.write("\t\tid {}\n".format(id))
@@ -351,6 +350,7 @@ def write_gml(G, name):
                 fob.write("\t\t{} {}\n".format(key, value))
             fob.write("\t]\n")
         for s, t in G.edges():
+            if "h" in s or "h" in t: continue
             src = s.strip("s")
             dst = t.strip("s")
             fob.write("\tedge [\n")
@@ -361,7 +361,6 @@ def write_gml(G, name):
             fob.write("\t]\n")
         fob.write("]")
         return
-
 
 def is_subpath(a, b, input_path, distance=1):
     # Returns True if 'a' and 'b' are a subpath of 'path' separated by a fixed 'distance' whose default is 1.
