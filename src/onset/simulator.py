@@ -243,13 +243,13 @@ class Simulation:
         if True:
             if isfile(log_file):
                 self._system("rm {}".format(log_file))
-        try:
-            file_log_handler = FileHandler(log_file)
-        except FileNotFoundError:
-            makedirs(path.dirname(log_file), exist_ok=True)
-            file_log_handler = FileHandler(log_file)
-        file_log_handler.setFormatter(formatter)
-        logger.addHandler(file_log_handler)
+        # try:
+        #     file_log_handler = FileHandler(log_file)
+        # except FileNotFoundError:
+        #     makedirs(path.dirname(log_file), exist_ok=True)
+        #     file_log_handler = FileHandler(log_file)
+        # file_log_handler.setFormatter(formatter)
+        # logger.addHandler(file_log_handler)
 
     def _yates(self, topo_file, result_path, traffic_file=""):
         if traffic_file == "":
@@ -451,6 +451,9 @@ class Simulation:
         write_gml(gml_view, name)
         del gml_view
 
+    def get_iteration_abs_path(demand_factor, repeat):
+            return perform_sim(demand_factor, repeat, dry=True)
+
     def perform_sim(
         self,
         circuits=1,
@@ -459,8 +462,10 @@ class Simulation:
         repeat=False,
         unit="Gbps",
         demand_factor=1,
+        dry=False
     ):
         sim_param_tag = f"circuits-{circuits}_startIter-{start_iter}_endIter-{end_iter}_repeat-{repeat}_unit-{unit}_demandFactor-{demand_factor}"
+
         if end_iter == 0:
             end_iter = self.iterations
 
@@ -503,7 +508,12 @@ class Simulation:
         flux_circuits = (
             []
         )  # Stateful list of active circuits triggered from sig_add_circuits
-        j = 1
+        if repeat:
+            # j is 1 the first time we see a traffic matrix, and 2 the seond.
+            # if we are not repeating, then j should never be referenced.
+            j = 1
+        else:
+            j = float("NaN")
         # Open traffic file and pass a new line from the file for every iteration.
         with open(traffic, "rb") as fob:
             PREV_ITER_ABS_PATH = ""
@@ -524,17 +534,41 @@ class Simulation:
                 ITERATION_ABS_PATH = path.join(
                     EXPERIMENT_ABSOLUTE_PATH, ITERATION_ID
                 )
+                if False: #dry:
+                    return_data = ITERATION_ABS_PATH
+                    if i == end_iter: 
+                        if repeat and j == 2:
+                            return return_data
+                        elif repeat and j == 1:
+                            j += 1
+                        elif repeat is False:
+                            pass
+                        else:
+                            logger.error(f"Impossible path. i = {i}, j={j}, repeat = {repeat}, end_iter = {end_iter}, ITERATION_ABS_PATH = {ITERATION_ABS_PATH}")
+                    
+                        if i < start_iter:
+                            continue
+                        if i > end_iter:
+                            if repeat and i == (end_iter + 1) and j == 2:
+                                pass
+                            else:
+                                continue
+                        if repeat:
+                            j += 1
 
-                CONGESTION_PATH = path.join(
-                    EXPERIMENT_ABSOLUTE_PATH,
-                    ITERATION_ID,
-                    "EdgeCongestionVsIterations.dat",
-                )
-                MAX_CONGESTION_PATH = path.join(
-                    EXPERIMENT_ABSOLUTE_PATH,
-                    ITERATION_ID,
-                    "MaxCongestionVsIterations.dat",
-                )
+                    
+                    continue                    
+
+                # CONGESTION_PATH = path.join(
+                #     EXPERIMENT_ABSOLUTE_PATH,
+                #     ITERATION_ID,
+                #     "EdgeCongestionVsIterations.dat",
+                # )
+                # MAX_CONGESTION_PATH = path.join(
+                #     EXPERIMENT_ABSOLUTE_PATH,
+                #     ITERATION_ID,
+                #     "MaxCongestionVsIterations.dat",
+                # )
 
                 # Grab line from tm and throw it into a temp file to run yates.
                 if repeat and i == (end_iter + 1) and j == 2:
@@ -555,7 +589,11 @@ class Simulation:
                         pass
                     else:
                         continue
-                j += 1
+                if repeat:
+                    j += 1
+                if dry:
+                    return_data = ITERATION_ABS_PATH
+                    continue
                 temp_tm_i = self.nonce
                 temp_fob = open(self.nonce, "w")
                 temp_fob.write(tm_i_data_to_temp_file)
@@ -724,8 +762,6 @@ class Simulation:
                         shortcuts = find_shortcut_link(congested_edges)
                         for edge in shortcuts:
                             u, v = edge
-                            u = int(u)
-                            v = int(v)
                             for _ in range(circuits):
                                 self.wolf.add_circuit(u, v, 100)
                                 flux_circuits.append((u, v))
@@ -750,10 +786,12 @@ class Simulation:
                         ]
                         for edge in congested_edges:
                             u, v = edge.strip("()").replace("s", "").split(",")
-                            u = int(u)
-                            v = int(v)
+                            # u = int(u)
+                            # v = int(v)
                             for _ in range(circuits):
-                                self.wolf.add_circuit(u, v)
+                                added = self.wolf.add_circuit(u, v)
+                                if added == 0:
+                                    circuits_added = True
                         flux_circuits.extend(congested_edges)
                         sig_add_circuits = False
 
@@ -971,9 +1009,7 @@ class Simulation:
                             sig_drop_circuits = False
 
                 except BaseException as e:
-                    print("Unknown Error")
-                    print(repr(e))
-                    traceback.print_exc()
+                    logger.error("Unknown Error", exc_info=True, stack_info=True)
                     # self._system("rm %s" % temp_tm_i)
                     return return_data
 

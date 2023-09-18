@@ -11,6 +11,7 @@ from datetime import datetime
 from sys import argv
 pool = multiprocessing.Pool()
 
+
 if __name__ == "__main__":
 
     tp_methods = [argv[1]]
@@ -24,6 +25,11 @@ if __name__ == "__main__":
     experiment_combinations = list(product(
         te_methods, tp_methods, networks, t_classes, demand_scale
     ))
+    experiment_combinations = [
+
+        ("mcf","greylambda","Comcast","background","0.8"),
+        ("mcf","greylambda","Comcast","background-plus-flashcrowd","0.3")]
+
     print(len(experiment_combinations))
     result_files = sorted(
                         list(
@@ -39,16 +45,16 @@ if __name__ == "__main__":
 
     ts = datetime.isoformat(datetime.now()).replace('.', '_').replace(':', '_')
 
-    with open( "data/reports/{ts}_demand_scale_results.csv", 'w') as write_fob:        
+    with open( f"data/reports/{ts}_demand_scale_results.csv", 'w') as write_fob:        
         for i, rf in enumerate(result_files):
             with open(rf, 'r') as read_fob:
                 lines = read_fob.readlines()
-                if i == 0:
-                    for l in lines:
-                        write_fob.write(l)
-                else:
-                    for l in lines[1:]:
-                        write_fob.write(l)
+                # if i == 0:
+                for l in lines:
+                    write_fob.write(l)
+                # else:
+                #     for l in lines[1:]:
+                #         write_fob.write(l)
 
 
 # for (

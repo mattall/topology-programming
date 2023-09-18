@@ -102,16 +102,15 @@ class AlpWolf:
         # nx.relabel_nodes(self.G, lambda x: _sanitize(x))
         position = {}
         for node in self.G.nodes():
-            try:
+            if "Longitude" in self.G.nodes[node] and "Latitude" in self.G.nodes[node]:
                 position[node] = (
                     self.G.nodes()[node]["Longitude"],
                     self.G.nodes()[node]["Latitude"],
                 )
-            except KeyError:
+            else:
                 from numpy.random import random
-
-                logger.error(
-                    "Key Error for position of node. Generating Random position label"
+                logger.info(
+                    "position of node not defined. Generating Random position label"
                 )
                 long, lat = [int(x) for x in random(2) * 100]
                 logger.info(

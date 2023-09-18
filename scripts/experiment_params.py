@@ -29,6 +29,7 @@ n_ftx = {"TE": 0, "TBE": 0, "greylambda": 2}
 
 hosts = {
     "Comcast": 149,
+    "Tinet": 53
     # "Verizon": 116,
     # "azure": 113,
     # "Zayo": 96,
@@ -40,6 +41,7 @@ mcf_loss_factor = {
         "background": 1.210373,
         "background-plus-flashcrowd": 1.633346,
     },
+    "Tinet": {"background": 297.500000}
 }
 
 demand_scale = [
