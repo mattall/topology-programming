@@ -1,7 +1,9 @@
 from sys import argv, exit
 from networkx.classes.graph import Graph
 from onset.utilities.graph_utils import Gml_to_dot
-from .logger import logger
+# from onset.utilities.logger import NewLogger
+# logger = NewLogger().get_logger()
+from onset.utilities.logger import logger
 
 def main(argv):
     try:

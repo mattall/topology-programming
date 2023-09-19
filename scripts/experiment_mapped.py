@@ -1,21 +1,26 @@
 import sys
 import glob
 import os
-import logging
 sys.path.insert(0, "/home/mhall7/durairajanlab.matt/topology-programming/src/")
-from onset.simulator import Simulation
-from onset.utilities.post_process import read_result_val
 sys.path.insert(0, "/home/mhall7/durairajanlab.matt/topology-programming/scripts/")
 from experiment_params import *
+from copy import deepcopy
 # from onset.utilities.logger import logger
 
+DEBUG = False
 
 def experiment_mapped(args):
+    # from onset.utilities.logger import NewLogger
+    # logger = NewLogger().get_logger()
     from onset.utilities.logger import logger
+    from onset.utilities.post_process import read_result_val
+    from onset.simulator import Simulation
+
     pid = os.getpid()
     logger.info(f"Process-{pid} started with data: {args}")
     
-    te_method, tp_method, network, t_class, scale = args
+    # te_method, tp_method, network, t_class, scale = args
+    network, t_class, scale, te_method, tp_method = args
     experiment_name = "-".join((te_method, tp_method, network, t_class, scale))
     traffic_file = f"data/traffic/{t_class}_{network}-tm"
     my_sim = Simulation(
@@ -57,24 +62,39 @@ def experiment_mapped(args):
 
     except FileNotFoundError:
         logger.error(f"Failed to read Congestion, Loss, Throughput values. Expected them in: {res_path}")
-        result = my_sim.perform_sim(
-            demand_factor=demand_factor, repeat=repeat[tp_method]
-        )
+        if DEBUG:
+            pass
+        else:
+            result = my_sim.perform_sim(
+                demand_factor=demand_factor, repeat=repeat[tp_method]
+            )
 
 
     report_path = f"data/reports/{experiment_name}.csv"
-    with open(report_path, "w") as report_fob:
-        report_fob.write(f"{network},{t_class},{scale},{te_method},{tp_method},")
-        for tv in tracked_vars:
-            if tv in result \
-            and isinstance(result[tv], list) \
-            and len(result[tv]) > 0:
-                if tv == tracked_vars[-1]:
-                    report_fob.write(f"{result[tv][-1]}\n")
-                else:
-                    report_fob.write(f"{result[tv][-1]},")
-    logger.info(f"Wrote report to {report_path}")
-    return report_path
+    if DEBUG:
+        pass
+    elif isinstance(result, dict):
+        # save this result data to a new var, calling run_sim will nuke result.
+        result = deepcopy(result)
+        # make sure we have now found the correct result path. 
+        curr_res_path = get_result_path(my_sim)
+        if curr_res_path == res_path:
+            with open(report_path, "w") as report_fob:
+                report_fob.write(f"{network},{t_class},{scale},{te_method},{tp_method},")
+                for tv in tracked_vars:
+                    if tv in result \
+                    and isinstance(result[tv], list) \
+                    and len(result[tv]) > 0:
+                        if tv == tracked_vars[-1]:
+                            report_fob.write(f"{result[tv][-1]}\n")
+                        else:
+                            report_fob.write(f"{result[tv][-1]},")
+            logger.info(f"Wrote report to {report_path}")
+            return report_path
+        else:
+            logger.error(f"After sim, result path does not match. Expected: {res_path} got: {curr_res_path}")
+    else:
+        logger.error("Did not have a result to write. Execution of sim failed.")
 
 def experiment(te_method, tp_method, network, t_class, scale):
     args = (te_method, tp_method, network, t_class, scale)
@@ -146,14 +166,13 @@ if __name__ == "__main__":
     # c = "Tinet"
     # d = "background"
     # e = "1.0"
+    a = "Tinet"
+    b = "background"
+    c = "1.4"
+    d = "semimcfraekeft"
+    e = "greylambda"
+    experiment_mapped((a,b,c,d,e))
 
-    a = "semimcfraekeft"
-    b = "greylambda"
-    c = "Tinet"
-    d = "background"
-    e = "1.2"
-    experiment(a,b,c,d,e)
-
-    args = ("Comcast","background","0.8","mcf","greylambda")
-    args = ("Comcast","background-plus-flashcrowd","0.3","mcf","greylambda")
-    experiment(*args)
+    # args = ("Comcast","background","0.8","mcf","greylambda")
+    # args = ("Comcast","background-plus-flashcrowd","0.3","mcf","greylambda")
+    # experiment(*args)

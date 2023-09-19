@@ -9,12 +9,19 @@ from experiment_mapped import experiment, experiment_mapped
 from experiment_params import *
 from datetime import datetime
 from sys import argv
-pool = multiprocessing.Pool()
 
+# DEBUG = False
+DEBUG = True
+
+if DEBUG:
+    pass
+else:
+    pool = multiprocessing.Pool()
 
 if __name__ == "__main__":
-
-    tp_methods = [argv[1]]
+    # tp_methods = ['greylambda']
+    tp_methods = ['TBE', 'TE']
+    # tp_methods = [argv[1]]
     print(tp_methods)
     def custom_error_callback(error):
         print(f"Got an Error: {error}\n", flush=True)
@@ -23,29 +30,36 @@ if __name__ == "__main__":
         print(f"Wrote result to: {result_file}\n", flush=True)
 
     experiment_combinations = list(product(
-        te_methods, tp_methods, networks, t_classes, demand_scale
+        # te_methods, tp_methods, networks, t_classes, demand_scale
+        networks, t_classes, demand_scale, te_methods, tp_methods
     ))
-    experiment_combinations = [
+    # experiment_combinations = [
 
-        ("mcf","greylambda","Comcast","background","0.8"),
-        ("mcf","greylambda","Comcast","background-plus-flashcrowd","0.3")]
+    #     ("mcf","greylambda","Comcast","background","0.8"),
+    #     ("mcf","greylambda","Comcast","background-plus-flashcrowd","0.3")]
 
     print(len(experiment_combinations))
-    result_files = sorted(
-                        list(
-                            pool.map_async(
-                                experiment_mapped, 
-                                experiment_combinations, 
-                                callback=custom_callback, 
-                                error_callback=custom_error_callback).get()
+    if DEBUG:
+        for c in experiment_combinations:
+            experiment_mapped(c)
+        # map(experiment_mapped, experiment_combinations)
+        exit()
+    else:
+        result_files = sorted(
+                            list(
+                                pool.map_async(
+                                    experiment_mapped, 
+                                    experiment_combinations, 
+                                    callback=custom_callback, 
+                                    error_callback=custom_error_callback).get()
+                            )
                         )
-                    )
-    pool.close()
-    pool.join()
+        pool.close()
+        pool.join()
 
     ts = datetime.isoformat(datetime.now()).replace('.', '_').replace(':', '_')
 
-    with open( f"data/reports/{ts}_demand_scale_results.csv", 'w') as write_fob:        
+    with open(f"data/reports/{ts}_demand_scale_results.csv", 'w') as write_fob:        
         for i, rf in enumerate(result_files):
             with open(rf, 'r') as read_fob:
                 lines = read_fob.readlines()

@@ -11,7 +11,9 @@ from onset.optimization_two import Link_optimization
 from onset.constants import USER_HOME
 from onset.utilities.diff_compare import diff_compare
 from onset.utilities.gml_to_dot import Gml_to_dot
-from onset.utilities.logger import formatter, logger
+# from onset.utilities.logger import NewLogger
+# logger = NewLogger().get_logger()
+from onset.utilities.logger import logger
 from onset.utilities.plot_reconfig_time import get_reconfig_time
 from onset.utilities.plotters import (
     cdf_average_congestion,
@@ -141,12 +143,11 @@ class Simulation:
                 ).encode()
             ).hexdigest()
         )
-        print("Nonce: ", self.nonce)
+        logger.info(f"Nonce: {self.nonce}")
         logger.info(
-            "Initializing simulator: {} {} {}".format(
-                network_name, test_name, iterations
-            )
+            f"Initializing simulator: {network_name} {test_name} {iterations}"
         )
+        
         self.network_name = network_name
         self.num_hosts = int(num_hosts)
         self.test_name = test_name
@@ -229,20 +230,20 @@ class Simulation:
         system(command)
 
     def _init_logging(self):
-        print(
+        logger.debug(
             "Experiment Absolute Path: {}".format(
                 self.EXPERIMENT_ABSOLUTE_PATH
             )
         )
-        print("Experiment ID:            {}".format(self.EXPERIMENT_ID))
-        makedirs(self.EXPERIMENT_ABSOLUTE_PATH, exist_ok=True)
-        log_file = path.join(
-            self.EXPERIMENT_ABSOLUTE_PATH, "{}.log".format(self.EXPERIMENT_ID)
-        )
+        logger.info("Experiment ID:            {}".format(self.EXPERIMENT_ID))
+        # makedirs(self.EXPERIMENT_ABSOLUTE_PATH, exist_ok=True)
+        # log_file = path.join(
+        #     self.EXPERIMENT_ABSOLUTE_PATH, "{}.log".format(self.EXPERIMENT_ID)
+        # )
         # if self.start_clean:
-        if True:
-            if isfile(log_file):
-                self._system("rm {}".format(log_file))
+        # if True:
+        #     if isfile(log_file):
+        #         self._system("rm {}".format(log_file))
         # try:
         #     file_log_handler = FileHandler(log_file)
         # except FileNotFoundError:
@@ -451,9 +452,6 @@ class Simulation:
         write_gml(gml_view, name)
         del gml_view
 
-    def get_iteration_abs_path(demand_factor, repeat):
-            return perform_sim(demand_factor, repeat, dry=True)
-
     def perform_sim(
         self,
         circuits=1,
@@ -638,7 +636,7 @@ class Simulation:
                             type(new_circuit) == tuple
                             and len(new_circuit) == 2
                         ):
-                            print(
+                            logger.debug(
                                 "Adding {} ({}, {}) circuits.".format(
                                     circuits
                                 ),
@@ -785,13 +783,18 @@ class Simulation:
                             if edge_congestion_d[k] == 1
                         ]
                         for edge in congested_edges:
-                            u, v = edge.strip("()").replace("s", "").split(",")
-                            # u = int(u)
-                            # v = int(v)
+                            if isinstance(edge, str):
+                                u, v = edge.strip("()").replace("s", "").split(",")
+                            elif isinstance(edge, tuple) and len(edge) == 2:
+                                u, v = edge
+                            else:
+                                logger.error(f"Error, unable to unpack edge: {edge} of type: {type(edge)}")
+                                raise
                             for _ in range(circuits):
                                 added = self.wolf.add_circuit(u, v)
                                 if added == 0:
                                     circuits_added = True
+
                         flux_circuits.extend(congested_edges)
                         sig_add_circuits = False
 
@@ -1011,6 +1014,8 @@ class Simulation:
                 except BaseException as e:
                     logger.error("Unknown Error", exc_info=True, stack_info=True)
                     # self._system("rm %s" % temp_tm_i)
+                    if self.topology_programming_method == "greylambda":
+                        return -1
                     return return_data
 
                 # finally:
@@ -1079,7 +1084,7 @@ class Simulation:
                     exc_info=1,
                 )
                 exit(-1)
-            logger.debug("topology file check passed.")
+            logger.info(f"topology file check passed with base topology file: {base_topo_file}.")
             self.topo_file = base_topo_file
 
             # DON'T CALL nx.read_gml. Instead use FiberGraph.import_gml_graph

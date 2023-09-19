@@ -16,6 +16,8 @@ from networkx.algorithms.centrality.betweenness import (
     edge_betweenness_centrality,
 )
 from networkx.algorithms.centrality.betweenness import betweenness_centrality
+# from onset.utilities.logger import NewLogger
+# logger = NewLogger().get_logger()
 from onset.utilities.logger import logger
 from onset.utilities.graph_utils import read_json_graph
 # from pprint import pprint
@@ -93,8 +95,9 @@ class AlpWolf:
         # self.G = read_gml(path, label, destringizer)
         self.G = read_gml(path, label="id")
         # Note: Because of something weird in read_gml, must remake node IDs into strings manually.
-        if min(self.G.nodes) == 0:
-            node_to_str_map = {node: str(node + 1) for (node) in self.G.nodes}
+        min_node = min(self.G.nodes)
+        if isinstance(min_node, int):
+            node_to_str_map = {node: str(node - min_node + 1) for (node) in self.G.nodes}
             # node_to_str_map = {node: ("sw" + str(node)) for (node) in self.G.nodes}
             relabel_nodes(self.G, node_to_str_map, copy=False)
 
@@ -109,11 +112,11 @@ class AlpWolf:
                 )
             else:
                 from numpy.random import random
-                logger.info(
+                logger.debug(
                     "position of node not defined. Generating Random position label"
                 )
                 long, lat = [int(x) for x in random(2) * 100]
-                logger.info(
+                logger.debug(
                     "Setting (Longitude, Latitude) of Node, {}, to ({}, {})".format(
                         node, long, lat
                     )
@@ -162,7 +165,7 @@ class AlpWolf:
                     "Key Error for position of node. Generating Random position label"
                 )
                 long, lat = [int(x) for x in random(2) * 100]
-                logger.info(
+                logger.debug(
                     "Setting (Longitude, Latitude) of Node, {}, to ({}, {})".format(
                         node, long, lat
                     )
@@ -345,7 +348,7 @@ class AlpWolf:
         transponder_u: int = None,
         transponder_v: int = None,
     ) -> bool:
-        logger.info("Testing if we can add circuit {} {}.".format(u, v))
+        logger.debug("Testing if we can add circuit {} {}.".format(u, v))
         if transponder_u == None or transponder_v == None:
             transponder_u = self.get_available_transponder(
                 self.base_graph.nodes[u]["transponder"]
@@ -356,7 +359,7 @@ class AlpWolf:
             )
 
         if transponder_u == -1 or transponder_v == -1:
-            logger.info("Cannot add circuit. Transponder pair unavailable")
+            logger.debug("Cannot add circuit. Transponder pair unavailable")
             return False
         return True
 
@@ -428,8 +431,8 @@ class AlpWolf:
             self.logical_graph.add_edge(u, v)
             self.logical_graph[u][v]["capacity"] = capacity
 
-        logger.info("Successfully added circuit {} {}.".format(u, v))
-        logger.info(f"Total Circuits: {self.circuits[(u, v)]}\t Total Capacity: {self.logical_graph[u][v]['capacity']}")
+        logger.debug("Successfully added circuit {} {}.".format(u, v))
+        logger.debug(f"Total Circuits: {self.circuits[(u, v)]}\t Total Capacity: {self.logical_graph[u][v]['capacity']}")
         return 0
 
     def drop_circuit(
@@ -455,9 +458,9 @@ class AlpWolf:
             transponder_u (int, optional): transponder index in u that maps to v. Defaults to None.
             transponder_v (int, optional): transponder index in v that maps to u. Defaults to None.
         """
-        logger.info("Dropping circuit {} {}.".format(u, v))
+        logger.debug("Dropping circuit {} {}.".format(u, v))
         if self.circuits[(u, v)] == 0:
-            logger.info(
+            logger.debug(
                 "Cannot drop Circuit {} {} - does not exist.".format(u, v)
             )
             return 0
@@ -503,7 +506,7 @@ class AlpWolf:
             del self.circuits[(u, v)]
             del self.circuits[(v, u)]
 
-        logger.info("Successfully dropped circuit {} {}.".format(u, v))
+        logger.debug("Successfully dropped circuit {} {}.".format(u, v))
         return 0
 
     def cli_help(self):

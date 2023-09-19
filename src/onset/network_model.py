@@ -1,6 +1,6 @@
 from onset.utilities.graph_utils import read_json_graph, write_json_graph
 from onset.utilities.sysUtils import postfix_str
-from onset.utilities import logger
+from onset.utilities.logger import logger
 
 from onset.constants import SEED
 from onset.constants import IPV4

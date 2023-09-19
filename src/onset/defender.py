@@ -4,7 +4,10 @@ from os import path
 
 from onset.attacker import find_target_link
 from onset.constants import SCRIPT_HOME
+# from onset.utilities.logger import NewLogger
+# logger = NewLogger().get_logger()
 from onset.utilities.logger import logger
+
 from onset.utilities.post_process import (
     calc_percent_diff,
     get_candidate_links,
