@@ -710,6 +710,63 @@ class Simulation:
 
                         sig_add_circuits = False
 
+                    elif (  # Method from TDSC-23 - Link-flood DDoS Defense
+                        self.topology_programming_method == "onset_v2"
+                        and sig_add_circuits
+                    ):
+                        optimizer = Link_optimization(
+                            G               = self.wolf.logical_graph,
+                            demand_matrix   = self.nonce,
+                            network         = self.network_name,
+                            core_G          = self.wolf.base_graph.copy(as_view=True),
+                            txp_count       = self.wolf.get_transponders_count()
+                        )
+                        # optimizer.run_model()
+                        # if self.te_method == "-ecmp":
+                        #     max_load = 0.5
+                        #     if self.shakeroute:
+                        #         max_load = 10000.0
+                        # else:
+                        #     max_load = 0.8
+
+                        # optimizer.run_model_minimize_cost_v1(max_load)
+                        # optimizer.run_model_minimize_cost()
+                        new_circuit = []
+                        optimizer.LINK_CAPACITY *= max_load
+                        optimizer.run_model_mixed_objective()
+                        new_circuit = optimizer.get_links_to_add()
+                        # while len(new_circuit) == 0 and max_load < 5:
+                        #     optimizer.LINK_CAPACITY *= max_load
+                        #     optimizer.run_model_mixed_objective()
+                        #     new_circuit = optimizer.get_links_to_add()
+                        #     max_load += 0.25
+                        if len(new_circuit) == 0:
+                            # optimizer.BUDGET = 20
+                            optimizer.LINK_CAPACITY += optimizer.LINK_CAPACITY
+                            optimizer.run_model_mixed_objective()
+                            new_circuit = optimizer.get_links_to_add()
+
+                        circuit_tag = ""
+                        if type(new_circuit) == list and len(new_circuit) > 0:
+                            for nc in new_circuit:
+                                u, v = nc
+                                if circuit_tag == "":
+                                    circuit_tag += f"circuit-{u}-{v}"
+                                else:
+                                    circuit_tag += f".{u}-{v}"
+
+                                for _ in range(circuits):
+                                    self.wolf.add_circuit(u, v)
+
+                            circuits_added = True
+                            flux_circuits.extend(new_circuit)
+
+                        # elif new_circuit == []:
+                        #     print("Could Not Add New Circuit")
+                        #     self.exit_early = True
+
+                        sig_add_circuits = False
+
                     elif (  # Method from PDP+OTP HotNets-23
                         self.topology_programming_method == "OTP"
                         and sig_add_circuits
@@ -1169,21 +1226,33 @@ class Simulation:
                     traffic_file
                 ), "Error traffic file not found: {}".format(traffic_file)
                 logger.debug("traffic file found.")
-                lines = count_lines(traffic_file)
-                if lines < self.iterations:
+                line_count = count_lines(traffic_file)
+                if line_count < self.iterations:
                     logger.error(
                         "traffic file found, but has too few lines. expected: {} got: {}".format(
-                            self.iterations, lines
+                            self.iterations, line_count
                         )
                     )
                     assert False
                 logger.debug("traffic file line-count passed.")
-                M = loadtxt(traffic_file)
-                if sqrt(len(M)) != self.num_hosts:
-                    logger.error(
-                        "WRONG NUMBER OF ENTRIES IN MATRIX YOU FUCKING IDIOT"
-                    )
-                    assert False
+                # check total entries on each line is correct.
+                with open(traffic_file, 'r') as tm_fob:
+                    lines = tm_fob.readlines()
+                    last_line = lines.pop()
+                    # if (last_line.strip() != ""):
+                    #     logger.error(f"File: {traffic_file} needs to end with an empty/blank line.")
+                    #     assert False
+                    num_expected_entries = self.num_hosts ** 2
+                    for l in lines:
+                        num_entries = len(l.strip().split())
+                        if num_entries != num_expected_entries:                           
+                            logger.error(f"Traffic matrix (TM): {traffic_file}. Network hosts (n): {self.num_hosts}. Line in TM should have n^2 entries ({num_expected_entries}). Got {num_entries}.")
+                            assert False
+                    # M = loadtxt(traffic_file)
+                    # if sqrt(len(M)) != self.num_hosts:
+                    #     logger.error(                            
+                    #     )
+                    #     assert False
 
             except AssertionError:
                 if self.start_clean:
