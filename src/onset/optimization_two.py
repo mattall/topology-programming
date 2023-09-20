@@ -29,7 +29,7 @@ class Link_optimization:
         parallel_execution=False,
         txp_count=None,
         BUDGET=1,
-        compute_paths=False
+        compute_paths=False,
     ):
         self.G = G
         self.all_node_pairs = list(permutations(self.G.nodes, 2))
@@ -53,11 +53,11 @@ class Link_optimization:
         if isinstance(core_G, nx.Graph):
             self.core_G = core_G
             self.txp_count = [
-                2*len(core_G.nodes[x]["transponder"]) for x in core_G.nodes
+                2 * len(core_G.nodes[x]["transponder"]) for x in core_G.nodes
             ]
         else:
             self.core_G = self.G.copy(as_view=True)
-        
+
         # Only proceed if instance had not set self.txp_count.
         if self.txp_count is None:
             # set up a default self.txp_count if one isn't passed.
@@ -67,17 +67,20 @@ class Link_optimization:
                 ]
             # set to the passed value
             else:
-                self.txp_count = txp_count        
+                self.txp_count = txp_count
+
+        if isinstance(txp_count, list):
+            self.txp_count = txp_count
 
         self.nodes = self.core_G.nodes
         self.use_cache = use_cache
         self.PARALLEL = parallel_execution
         self.k = 1
         self.MAX_DISTANCE = 5000  # km
-        # self.MAX_DISTANCE = float("inf")  # km            
+        # self.MAX_DISTANCE = float("inf")  # km
         self.LINK_CAPACITY = 100 * 10**9  # bps
-        self.BUDGET = BUDGET      
-        self.super_graph = nx.Graph()        
+        self.BUDGET = BUDGET
+        self.super_graph = nx.Graph()
         self.model = None
         self.flow_vars = None
         self.flow_paths = tupledict()
@@ -93,7 +96,7 @@ class Link_optimization:
         self.add_candidate_links_to_super_graph()
         if compute_paths:
             self.get_shortest_paths()
-        
+
     def get_shortest_paths_from_k_link_super_graphs(self, k):
         # Run after finding candidate links
         # Given K, find every combination of k candidate links
@@ -157,17 +160,13 @@ class Link_optimization:
         for (i, j), (source, dest) in zip(
             permutations(range(len(self.G.nodes)), 2), self.all_node_pairs
         ):
-            self.demand_dict[(source, dest)] = float(
-                self.demand_matrix[dim * i + j]
-            )
+            self.demand_dict[(source, dest)] = float(self.demand_matrix[dim * i + j])
 
     def update_shortest_path_len(self, this_path_len, source, target):
         prev_path_len = self.core_shortest_path_len[(source, target)]
-        self.core_shortest_path_len[
-            (source, target)
-        ] = self.core_shortest_path_len[(target, source)] = min(
-            prev_path_len, this_path_len
-        )
+        self.core_shortest_path_len[(source, target)] = self.core_shortest_path_len[
+            (target, source)
+        ] = min(prev_path_len, this_path_len)
 
     def initialize_candidate_links(self):
         ########################################################
@@ -184,14 +183,10 @@ class Link_optimization:
             if (source, target) not in core_G.edges and sorted(
                 (source, target)
             ) not in candidate_links:
-                shortest_paths = list(
-                    nx.all_shortest_paths(core_G, source, target)
-                )
+                shortest_paths = list(nx.all_shortest_paths(core_G, source, target))
                 shortest_path_len = len(shortest_paths[0])
                 shortest_path_hops = shortest_path_len - 1
-                self.update_shortest_path_len(
-                    shortest_path_len, source, target
-                )
+                self.update_shortest_path_len(shortest_path_len, source, target)
                 if shortest_path_hops == 2:
                     hop_dist_ok = True
                 else:
@@ -256,9 +251,7 @@ class Link_optimization:
                 self.tunnel_list = []
                 self.tunnel_dict = defaultdict(list)
                 super_graph = self.super_graph
-                for source in tqdm(
-                    super_graph.nodes, desc="Pre-computing paths."
-                ):
+                for source in tqdm(super_graph.nodes, desc="Pre-computing paths."):
                     for target in super_graph.nodes:
                         if (
                             source != target
@@ -267,9 +260,9 @@ class Link_optimization:
                             s_t_paths = nx.shortest_simple_paths(
                                 super_graph, source, target
                             )
-                            shortest_s_t_path_len = (
-                                self.core_shortest_path_len[(source, target)]
-                            )
+                            shortest_s_t_path_len = self.core_shortest_path_len[
+                                (source, target)
+                            ]
                             for s_t_path in tqdm(
                                 s_t_paths,
                                 desc="Calculating ({}, {}) paths shorter than {} hops.".format(
@@ -318,9 +311,7 @@ class Link_optimization:
                     ):
                         s_t_paths = nx.shortest_simple_paths(G, source, target)
                         shortest_s_t_path_len = np.inf
-                        for s_t_path in tqdm(
-                            s_t_paths, desc="Path", leave=False
-                        ):
+                        for s_t_path in tqdm(s_t_paths, desc="Path", leave=False):
                             if shortest_s_t_path_len == np.inf:
                                 shortest_s_t_path_len = len(s_t_path)
                                 self.core_shortest_path_len[
@@ -350,17 +341,13 @@ class Link_optimization:
             return
 
     def save_paths(self):
-        with open(
-            "./data/paths/optimization/{}.json".format(self.network), "w"
-        ) as fob:
+        with open("./data/paths/optimization/{}.json".format(self.network), "w") as fob:
             return json.dump({"list": self.tunnel_list}, fob, indent=4)
 
     def load_original_paths(self):
         if self.use_cache:
             with open(
-                "./data/paths/optimization/{}_original.json".format(
-                    self.network
-                ),
+                "./data/paths/optimization/{}_original.json".format(self.network),
                 "r",
             ) as fob:
                 json_obj = json.load(fob)
@@ -375,10 +362,8 @@ class Link_optimization:
             "./data/paths/optimization/{}_original.json".format(self.network),
             "w",
         ) as fob:
-            return json.dump(
-                {"list": self.original_tunnel_list}, fob, indent=4
-            )
-    
+            return json.dump({"list": self.original_tunnel_list}, fob, indent=4)
+
     def get_flow_allocations(self):
         m = self.model
         flow_vars = self.flow_vars
@@ -386,29 +371,30 @@ class Link_optimization:
         prime_edges = self.prime_edges
         flow_paths = self.flow_paths
         if m.status == GRB.Status.OPTIMAL:
-            print("Optimal solution found.")        
-            for (source, target) in demand.keys():
+            print("Optimal solution found.")
+            for source, target in demand.keys():
                 paths = []
-                for (u, v) in prime_edges:
+                for u, v in prime_edges:
                     if flow_vars[source, target, u, v].x > 0:
-                        paths.append({
-                            "path": [u, v],
-                            "weight": flow_vars[source, target, u, v].x
-                        })
+                        paths.append(
+                            {
+                                "path": [u, v],
+                                "weight": flow_vars[source, target, u, v].x,
+                            }
+                        )
                 flow_paths[(source, target)] = paths
-                
+
                 print(f"Flow from {source} to {target}:")
                 for path in paths:
                     print(f"Path: {path['path']} - Weight: {path['weight']}")
-
 
     def mcf(self):
         LINK_CAPACITY = self.LINK_CAPACITY
 
         m = self.model = Model("MulticommodityFlow")
-        
+
         # Convert the graph to a directed graph
-        
+
         G_0 = self.G.to_directed()
         directionless_edges = self.super_graph.edges
         G_prime = self.super_graph.to_directed()
@@ -417,34 +403,36 @@ class Link_optimization:
         # Graphs should only differ in edges
         assert set(G_0.nodes) == set(G_prime.nodes)
 
-        # Get transponder count 
+        # Get transponder count
         txp_count = self.txp_count
-        
+
         # Get the list of nodes and edges
         nodes = list(G_0.nodes)
         initial_edges = list(G_0.edges)
         prime_edges = self.prime_edges = list(G_prime.edges)
-        
-        
+
         # Add integer variables for node degree
         node_degree_vars = m.addVars(
             len(nodes), vtype=GRB.INTEGER, name="node_degree", lb=0
         )
-        
+
         # Edge vars that can be toggled on or off.
-        edge_vars = m.addVars(prime_edges, vtype=GRB.BINARY, name="edge") 
+        edge_vars = m.addVars(prime_edges, vtype=GRB.BINARY, name="edge")
 
         # Initial edges, a constant vector accessible the same as edge_vars
-        initial_edge_vars = tupledict({(u, v): 1 if (u,v) in initial_edges else 0 for (u,v) in prime_edges })
+        initial_edge_vars = tupledict(
+            {(u, v): 1 if (u, v) in initial_edges else 0 for (u, v) in prime_edges}
+        )
 
         # The overlapping set of edges for initial_edge_vars and edge_vars
         link_intersection = m.addVars(
             prime_edges,
             vtype=GRB.BINARY,
             name="link_intersection",
-        )    
+        )
         m.addConstrs(
-            link_intersection[(u, v)] == min_(edge_vars[u,v], initial_edge_vars[u,v]) for (u, v) in prime_edges
+            link_intersection[(u, v)] == min_(edge_vars[u, v], initial_edge_vars[u, v])
+            for (u, v) in prime_edges
         )
 
         # Enforce max degree based on transponders at each node
@@ -457,71 +445,79 @@ class Link_optimization:
                     if u == vertex or v == vertex
                 )
             )
-            m.addConstr( txp_count[v_idx] >= node_degree_vars[v_idx])
-
-
+            m.addConstr(txp_count[v_idx] >= node_degree_vars[v_idx])
 
         # Add flow variables for commodities and edges
-        flow_vars = m.addVars(demand.keys(), prime_edges, vtype=GRB.CONTINUOUS, name="flow")
-        
+        flow_vars = m.addVars(
+            demand.keys(), prime_edges, vtype=GRB.CONTINUOUS, name="flow"
+        )
+
         # Add conservation of flow constraints for nodes and commodities
         for node in nodes:
-            for (source, target) in demand.keys():
-                inflow = quicksum(flow_vars[source, target, u, v] for (u, v) in G_prime.in_edges(node))
-                outflow = quicksum(flow_vars[source, target, u, v] for (u, v) in G_prime.out_edges(node))                
+            for source, target in demand.keys():
+                inflow = quicksum(
+                    flow_vars[source, target, u, v] for (u, v) in G_prime.in_edges(node)
+                )
+                outflow = quicksum(
+                    flow_vars[source, target, u, v]
+                    for (u, v) in G_prime.out_edges(node)
+                )
                 if node == source:
                     m.addConstr(inflow - outflow == -demand[source, target])
                 elif node == target:
                     m.addConstr(inflow - outflow == demand[source, target])
                 else:
                     m.addConstr(inflow - outflow == 0)
-        
+
         # Add capacity constraints for edges
         edge_capacity = tupledict()
-        for (u, v) in prime_edges:
-            edge_capacity[u, v] = m.addVar(vtype=GRB.CONTINUOUS, lb=0, ub=LINK_CAPACITY, name=f"capacity_{u}_{v}")
-            m.addConstr(edge_capacity[u, v] >= quicksum(flow_vars[source, target, u, v] for (source, target) in demand.keys()))
+        for u, v in prime_edges:
+            edge_capacity[u, v] = m.addVar(
+                vtype=GRB.CONTINUOUS, lb=0, ub=LINK_CAPACITY, name=f"capacity_{u}_{v}"
+            )
+            m.addConstr(
+                edge_capacity[u, v]
+                >= quicksum(
+                    flow_vars[source, target, u, v]
+                    for (source, target) in demand.keys()
+                )
+            )
 
         # Enforce symetrical bi-directional capacity
-        for (u, v) in directionless_edges:
+        for u, v in directionless_edges:
             m.addConstr(edge_capacity[u, v] == edge_capacity[v, u])
 
-
         # Add binary constraint on edges
-        for (u, v) in prime_edges:        
-            m.addConstr(edge_capacity[u,v] == edge_vars[(u,v)] * LINK_CAPACITY)
-        
-        # Set the objective to minimize the total flow        
+        for u, v in prime_edges:
+            m.addConstr(edge_capacity[u, v] == edge_vars[(u, v)] * LINK_CAPACITY)
+
+        # Set the objective to minimize the total flow
         # m.setObjective(quicksum(flow_vars[source, target, u, v] for (source, target) in demand.keys() for (u, v) in prime_edges), sense=GRB.MINIMIZE)
-        m.setObjective(quicksum(link_intersection[u,v] for (u,v) in prime_edges), sense=GRB.MINIMIZE)
-        
+        m.setObjective(
+            quicksum(link_intersection[u, v] for (u, v) in prime_edges),
+            sense=GRB.MINIMIZE,
+        )
+
         # Optimize the model
         m.optimize()
         self.flow_vars = flow_vars
         if m.status == GRB.Status.OPTIMAL:
             print("Optimal solution found.")
             resultant_edges = [
-                (u,v) 
-                for (u,v) in edge_vars
-                if edge_vars[(u,v)].x == 1
-            ] 
-            add_edges = [
-                e for e in resultant_edges if e not in self.G.edges
+                (u, v) for (u, v) in edge_vars if edge_vars[(u, v)].x == 1
             ]
-            drop_edges = [
-                e for e in self.G.edges if e not in resultant_edges
-            ]
+            add_edges = [e for e in resultant_edges if e not in self.G.edges]
+            drop_edges = [e for e in self.G.edges if e not in resultant_edges]
             G_new = nx.DiGraph()
             G_new.add_edges_from(resultant_edges)
-            assert(nx.is_strongly_connected(G_new))
+            assert nx.is_strongly_connected(G_new)
             add_edges = list(set([tuple(sorted((u, v))) for u, v in add_edges]))
             drop_edges = list(set([tuple(sorted((u, v))) for u, v in drop_edges]))
             return (add_edges, drop_edges)
 
-
         else:
             print("No optimal solution found.")
-        
+
         return -1
 
     def run_model_max_diff(self):
@@ -538,9 +534,7 @@ class Link_optimization:
         with Env() as env, Model("ONSET", env=env) as m:
             self.model = m
             m.setParam("NodefileStart", 2)
-            m.setParam(
-                "SoftMemLimit", 5
-            )  # Process dies if uses more than 5 GB
+            m.setParam("SoftMemLimit", 5)  # Process dies if uses more than 5 GB
 
             print("Initializing Optimizer variables")
             print("\tInitializing candidate_link_vars")
@@ -551,9 +545,7 @@ class Link_optimization:
                 name="candidate_links",
             )
             vertices = list(core_G.nodes)
-            initial_links = [
-                1 if e in self.G.edges else 0 for e in super_graph.edges
-            ]
+            initial_links = [1 if e in self.G.edges else 0 for e in super_graph.edges]
 
             link_intersection = m.addVars(
                 len(super_graph.edges),
@@ -566,9 +558,7 @@ class Link_optimization:
 
             print("\t initializing node degree constraint.")
             # degree of node must be <= to the total available transponders
-            txp_count = [
-                len(core_G.nodes[x]["transponder"]) for x in core_G.nodes
-            ]
+            txp_count = [len(core_G.nodes[x]["transponder"]) for x in core_G.nodes]
             node_degree_vars = m.addVars(
                 len(core_G.nodes), vtype=GRB.INTEGER, name="node_degree", lb=0
             )
@@ -687,8 +677,7 @@ class Link_optimization:
                 )
 
                 path_candidate_link_vars = [
-                    candid_link_vars[var_i]
-                    for var_i in path_candidate_links[p_i]
+                    candid_link_vars[var_i] for var_i in path_candidate_links[p_i]
                 ]
                 m.addConstr(
                     path_vars[p_i] == min_(path_candidate_link_vars),
@@ -698,15 +687,12 @@ class Link_optimization:
             #####################################################
             # Find demand per tunnel considering active tunnels #
             #####################################################
-            print(
-                "\tInitializing Find demand per tunnel considering active tunnels"
-            )
+            print("\tInitializing Find demand per tunnel considering active tunnels")
             for source, target in demand_dict:
                 P = self.tunnel_dict[(source, target)]
 
                 m.addConstr(
-                    demand_dict[(source, target)]
-                    <= quicksum(flow_p[p] for p in P),
+                    demand_dict[(source, target)] <= quicksum(flow_p[p] for p in P),
                     "flow_{}_{}".format(source, target),
                 )
 
@@ -723,11 +709,9 @@ class Link_optimization:
                 "optimization",
                 self.network + "_tunnels.pkl",
             )
-            
+
             print("Generating Link Tunnels: {}".format(link_tunnels_file))
-            network_tunnels = [
-                [] for _ in range(len(super_graph.edges))
-            ]
+            network_tunnels = [[] for _ in range(len(super_graph.edges))]
             link_index = list(super_graph.edges)[:]
             for tunnel_i, tunnel in tqdm(
                 enumerate(super_paths_list),
@@ -757,13 +741,13 @@ class Link_optimization:
 
                 m.addConstr(
                     link_util[link_i]
-                    == candid_link_vars[link_i] * quicksum(flow_p[i] for i in link_tunnels),
+                    == candid_link_vars[link_i]
+                    * quicksum(flow_p[i] for i in link_tunnels),
                     "link_demand_{}".format(link_i),
                 )
 
                 m.addConstr(
-                    self.LINK_CAPACITY
-                    >= link_util[link_i],
+                    self.LINK_CAPACITY >= link_util[link_i],
                     "link_utilization_{}".format(link_i),
                 )
 
@@ -780,27 +764,24 @@ class Link_optimization:
                     for i in range(len(candid_link_vars))
                     if candid_link_vars[i].x == 1
                 ]
-                add_edges = [
-                    e for e in resultant_edges if e not in self.G.edges
-                ]
-                drop_edges = [
-                    e for e in self.G.edges if e not in resultant_edges
-                ]
+                add_edges = [e for e in resultant_edges if e not in self.G.edges]
+                drop_edges = [e for e in self.G.edges if e not in resultant_edges]
                 return (resultant_edges, add_edges, drop_edges)
-            else: 
+            else:
                 m.computeIIS()
                 # Print out the IIS constraints and variables
-                print('\nThe following constraints and variables are in the IIS:')
+                print("\nThe following constraints and variables are in the IIS:")
                 for c in m.getConstrs():
-                    if c.IISConstr: print(f'\t{c.constrname}: {m.getRow(c)} {c.Sense} {c.RHS}')
+                    if c.IISConstr:
+                        print(f"\t{c.constrname}: {m.getRow(c)} {c.Sense} {c.RHS}")
 
                 for v in m.getVars():
-                    if v.IISLB: print(f'\t{v.varname} ≥ {v.LB}')
-                    if v.IISUB: print(f'\t{v.varname} ≤ {v.UB}')
+                    if v.IISLB:
+                        print(f"\t{v.varname} ≥ {v.LB}")
+                    if v.IISUB:
+                        print(f"\t{v.varname} ≤ {v.UB}")
 
-                m.write('iismodel.ilp')
-
-
+                m.write("iismodel.ilp")
 
     # def run_model_max_diff_ignore_demand(self):
     #     core_G = self.core_G
@@ -932,9 +913,7 @@ class Link_optimization:
 
 
 def work_log(identifier, total, candidate_link_list, G, network):
-    with open(
-        "./data/paths/optimization/{}_original.json".format(network), "r"
-    ) as fob:
+    with open("./data/paths/optimization/{}_original.json".format(network), "r") as fob:
         json_obj = json.load(fob)
         original_tunnel_list = json_obj["list"]
 
@@ -970,12 +949,8 @@ def work_log(identifier, total, candidate_link_list, G, network):
                 source != target
                 and "{}----{}".format(source, target) not in tunnel_dict
             ):
-                s_t_paths = nx.shortest_simple_paths(
-                    super_graph, source, target
-                )
-                shortest_s_t_path_len = original_shortest_s_t_path[
-                    (source, target)
-                ]
+                s_t_paths = nx.shortest_simple_paths(super_graph, source, target)
+                shortest_s_t_path_len = original_shortest_s_t_path[(source, target)]
                 # for s_t_path in tqdm(s_t_paths,
                 #                 desc="Calculating ({}, {}) paths shorter than {} hops.".format(
                 #                     source, target, shortest_s_t_path_len)):
@@ -987,9 +962,7 @@ def work_log(identifier, total, candidate_link_list, G, network):
                         reversed_path = list(reversed(s_t_path))
                         tunnel_list.append(s_t_path)
                         tunnel_list.append(reversed_path)
-                        tunnel_dict["{}----{}".format(source, target)].append(
-                            s_t_path
-                        )
+                        tunnel_dict["{}----{}".format(source, target)].append(s_t_path)
                         tunnel_dict["{}----{}".format(target, source)].append(
                             reversed_path
                         )
@@ -1014,9 +987,7 @@ def main():
 
         G = nx.read_gml(topo_path)
 
-        demand_matrix = (
-            "/home/m/src/topology-programming/data/traffic/ground_truth.txt"
-        )
+        demand_matrix = "/home/m/src/topology-programming/data/traffic/ground_truth.txt"
 
         # demand_matrix = "./data/traffic-2022-01-29/sprint_240Gbps.txt"
         # demand_matrix = "/home/matt/network_stability_sim/data/traffic/sprint_benign_50Gbps_targets_5_iteration_2_strength_200"
