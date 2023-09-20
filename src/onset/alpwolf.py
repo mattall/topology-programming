@@ -16,10 +16,12 @@ from networkx.algorithms.centrality.betweenness import (
     edge_betweenness_centrality,
 )
 from networkx.algorithms.centrality.betweenness import betweenness_centrality
+
 # from onset.utilities.logger import NewLogger
 # logger = NewLogger().get_logger()
 from onset.utilities.logger import logger
 from onset.utilities.graph_utils import read_json_graph
+
 # from pprint import pprint
 
 
@@ -50,7 +52,7 @@ class AlpWolf:
                 Used when fallow_tx_allocation_strategy = "file", contains a path to a file that explicitly states the number of fallow transponders per node.
 
         """
-        self.modulation = {"OOK", "BPSK", "QPSK", "8-QAM", "16-QAM" }
+        self.modulation = {"OOK", "BPSK", "QPSK", "8-QAM", "16-QAM"}
         self.circuit_bandwidth = 100  # Gb/s
         self.transponders_per_degree = 1
         self.base_graph_file = base_graph_file
@@ -63,7 +65,7 @@ class AlpWolf:
         self.fallow_tx_allocation_strategy = fallow_tx_allocation_strategy
         self.fallow_tx_allocation_file = fallow_tx_allocation_file
         self.n_super_nodes = ceil(self.n_nodes * 0.1)
-        self.initial_bandwidth_dict = defaultdict(lambda : defaultdict(float))
+        self.initial_bandwidth_dict = defaultdict(lambda: defaultdict(float))
         self.import_capacity = False
         self.bandwidth_restricted = False
         self.commands = {
@@ -89,7 +91,7 @@ class AlpWolf:
         else:
             logger.error(f"Unknown graph type: {path}")
             exit(-1)
-    
+
     def import_gml_graph(self, path):  # , label=None, destringizer=None):
         # MOVING THIS TO UTILITIES
         # self.G = read_gml(path, label, destringizer)
@@ -97,7 +99,9 @@ class AlpWolf:
         # Note: Because of something weird in read_gml, must remake node IDs into strings manually.
         min_node = min(self.G.nodes)
         if isinstance(min_node, int):
-            node_to_str_map = {node: str(node - min_node + 1) for (node) in self.G.nodes}
+            node_to_str_map = {
+                node: str(node - min_node + 1) for (node) in self.G.nodes
+            }
             # node_to_str_map = {node: ("sw" + str(node)) for (node) in self.G.nodes}
             relabel_nodes(self.G, node_to_str_map, copy=False)
 
@@ -112,6 +116,7 @@ class AlpWolf:
                 )
             else:
                 from numpy.random import random
+
                 logger.debug(
                     "position of node not defined. Generating Random position label"
                 )
@@ -137,7 +142,7 @@ class AlpWolf:
 
         set_node_attributes(self.G, color, "color")
         return self.G
-    
+
     def import_json_graph(self, path):  # , label=None, destringizer=None):
         G = self.G = read_json_graph(path, stringify=True, serialize=True)
         # Note: Because of something weird in read_gml, must remake node IDs into strings manually.
@@ -186,7 +191,7 @@ class AlpWolf:
 
         set_node_attributes(G, color, "color")
         return G
-    
+
     def _init_transponders(self):
         """Initializes transponders in the input graph.
 
@@ -210,8 +215,7 @@ class AlpWolf:
             for node_n in self.base_graph.nodes:
                 self.base_graph.nodes[node_n]["transponder"] = {}
                 transponder_count = (
-                    self.transponders_per_degree
-                    * self.base_graph.degree(node_n)
+                    self.transponders_per_degree * self.base_graph.degree(node_n)
                     + self.fallow_transponders
                 )
                 for i in range(transponder_count):
@@ -226,14 +230,12 @@ class AlpWolf:
                 if node_n in super_nodes:
                     logger.info("Node {} is a super node.".format(node_n))
                     transponder_count = int(
-                        self.transponders_per_degree
-                        * self.base_graph.degree(node_n)
+                        self.transponders_per_degree * self.base_graph.degree(node_n)
                         + self.fallow_transponders
                     )
                 else:
                     transponder_count = int(
-                        self.transponders_per_degree
-                        * self.base_graph.degree(node_n)
+                        self.transponders_per_degree * self.base_graph.degree(node_n)
                         + self.fallow_transponders / 2
                     )
                 for i in range(transponder_count):
@@ -259,23 +261,21 @@ class AlpWolf:
                 )
                 for i in range(transponder_count):
                     self.base_graph.nodes[node_n]["transponder"][i] = -1
-                    
+
         elif self.fallow_tx_allocation_strategy == "read_capacity":
-            self.import_capacity = True            
+            self.import_capacity = True
             for node_n in self.base_graph.nodes:
                 self.base_graph.nodes[node_n]["transponder"] = {}
                 assert self.transponders_per_degree == 1
                 # assert self.fallow_transponders == 0
-                
+
                 transponder_count = (
-                    self.transponders_per_degree
-                    * self.base_graph.degree(node_n)
+                    self.transponders_per_degree * self.base_graph.degree(node_n)
                     + self.fallow_transponders
-           
                 )
                 for i in range(transponder_count):
                     self.base_graph.nodes[node_n]["transponder"][i] = -1
-            
+
         else:
             raise ("Undefined")
 
@@ -287,18 +287,41 @@ class AlpWolf:
                 trans_v = self.get_available_transponder(
                     self.base_graph.nodes[v]["transponder"]
                 )
-                
-                if self.import_capacity is True and "capacity" in self.base_graph.edges[(u,v)]:
-                    capacity = self.base_graph.edges[(u,v)]["capacity"]
+
+                if (
+                    self.import_capacity is True
+                    and "capacity" in self.base_graph.edges[(u, v)]
+                ):
+                    capacity = self.base_graph.edges[(u, v)]["capacity"]
                 else:
                     capacity = self.circuit_bandwidth
-                    
+
                 if trans_u >= 0 and trans_v >= 0:
                     self.add_circuit(u, v, trans_u, trans_v, capacity=capacity)
                 else:
                     raise Exception(
                         "Error, insufficient transponders at nodes for circuit."
                     )
+
+    def get_transponders(self, node) -> dict:
+        return self.base_graph.nodes[node]["transponder"]
+
+    def get_available_transponder_count(self, node) -> int:
+        txps = self.get_transponders(node)  # get transponders at the node
+        count = 0
+        for t in txps:  # iterate over the tranponders
+            if txps[t] == -1:  # -1 indicates an un-assigned transponder.
+                count += 1
+        return count
+
+    def get_transponders(self) -> dict:
+        return {
+            node: self.base_graph.nodes[node]["transponder"]
+            for node in self.base_graph.nodes
+        }
+
+    def get_transponders_count(self) -> list:
+        return [self.get_transponders[node] for node in self.base_graph.nodes]
 
     def _init_position(self):
         """Sets Longitude and Latitude for nodes based on the input graph."""
@@ -369,7 +392,7 @@ class AlpWolf:
         v: str,
         transponder_u: int = None,
         transponder_v: int = None,
-        capacity: int = None
+        capacity: int = None,
     ) -> int:
         """Adds a circuit between nodes u and v.
 
@@ -395,7 +418,7 @@ class AlpWolf:
         """
         if capacity is None:
             capacity = self.circuit_bandwidth
-            
+
         # logger.info("Adding circuit {} {}.".format(u, v))
         if transponder_u == None or transponder_v == None:
             transponder_u = self.get_available_transponder(
@@ -432,15 +455,15 @@ class AlpWolf:
             self.logical_graph[u][v]["capacity"] = capacity
 
         logger.debug("Successfully added circuit {} {}.".format(u, v))
-        logger.debug(f"Total Circuits: {self.circuits[(u, v)]}\t Total Capacity: {self.logical_graph[u][v]['capacity']}")
+        logger.debug(
+            f"Total Circuits: {self.circuits[(u, v)]}\t Total Capacity: {self.logical_graph[u][v]['capacity']}"
+        )
         return 0
 
-    def drop_circuit(
-        self, u: str, v: str, transponder_u=None, transponder_v=None
-    ):
+    def drop_circuit(self, u: str, v: str, transponder_u=None, transponder_v=None):
         ####
         #### TODO: Does not handle capacities read from input graph eloquently.
-        ####        
+        ####
         """Remove the u, v circuit if it exists.
 
         Throws assertion error if the transponders for the nodes do not map correctly,
@@ -460,9 +483,7 @@ class AlpWolf:
         """
         logger.debug("Dropping circuit {} {}.".format(u, v))
         if self.circuits[(u, v)] == 0:
-            logger.debug(
-                "Cannot drop Circuit {} {} - does not exist.".format(u, v)
-            )
+            logger.debug("Cannot drop Circuit {} {} - does not exist.".format(u, v))
             return 0
 
         if transponder_u == None or transponder_v == None:
@@ -484,9 +505,9 @@ class AlpWolf:
         ), "While dropping circuit, node {}'s transponder did not map to {}. Instead it mapped to {}".format(
             u, v, self.base_graph.nodes[u]["transponder"][transponder_u]
         )
-        assert (
-            self.circuits[(u, v)] > 0
-        ), "No circuit to drop between {} and {}".format(u, v)
+        assert self.circuits[(u, v)] > 0, "No circuit to drop between {} and {}".format(
+            u, v
+        )
 
         # Drop assignments, reassigning transponder to -1.
         self.base_graph.nodes[v]["transponder"][transponder_v] = -1
@@ -605,16 +626,12 @@ class AlpWolf:
                 for s, t, btwness in adjacent_links:
                     if s in target_link:
                         candidate_a = (
-                            target_link[0]
-                            if s == target_link[1]
-                            else target_link[1]
+                            target_link[0] if s == target_link[1] else target_link[1]
                         )
                         candidate_b = t
                     elif t in target_link:
                         candidate_a = (
-                            target_link[0]
-                            if t == target_link[1]
-                            else target_link[1]
+                            target_link[0] if t == target_link[1] else target_link[1]
                         )
                         candidate_b = s
                     else:
@@ -653,9 +670,7 @@ class AlpWolf:
                         else:
                             node_neighbor_btwness = btwness[neighbor, node]
 
-                        adjacent_links.append(
-                            (node, neighbor, node_neighbor_btwness)
-                        )
+                        adjacent_links.append((node, neighbor, node_neighbor_btwness))
 
                 adjacent_links = sorted(
                     adjacent_links, key=lambda x: x[-1], reverse=True
@@ -703,9 +718,9 @@ class AlpWolf:
         """
         logger.info(self.base_graph.nodes[node_n]["transponder"])
 
-    def restrict_bandwidth(self, fraction:float):
+    def restrict_bandwidth(self, fraction: float):
         assert fraction < 1, "restriction should be a fraction of the whole"
-        if self.bandwidth_restricted: 
+        if self.bandwidth_restricted:
             print("Bandwidth is restricted, cannot restrict again")
             return
         else:
@@ -716,14 +731,16 @@ class AlpWolf:
                 self.logical_graph[u][v]["capacity"] *= fraction
             return
 
-    def relax_restricted_bandwidth(self):        
-        if not self.bandwidth_restricted: 
+    def relax_restricted_bandwidth(self):
+        if not self.bandwidth_restricted:
             print("Bandwidth is not restricted, nothing to do.")
             return
         else:
             self.bandwidth_restricted = False
             for u, v in self.logical_graph.edges:
-                self.logical_graph[u][v]["capacity"] = self.logical_graph[u][v]["capacity"]
+                self.logical_graph[u][v]["capacity"] = self.logical_graph[u][v][
+                    "capacity"
+                ]
             return
 
     def cli(self):
@@ -791,9 +808,7 @@ class AlpWolf:
                         if (u, v) in self.circuits:
                             self.drop_circuit(u, v)
                         else:
-                            logger.error(
-                                "Circuit {} not found.".format((u, v))
-                            )
+                            logger.error("Circuit {} not found.".format((u, v)))
                     else:
                         logger.error("Invalid command.")
 
