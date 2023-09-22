@@ -1,6 +1,6 @@
 {
-    // "workbench.colorTheme": "Default Dark+",
-    "workbench.colorTheme": "Visual Studio Light",
+    "workbench.colorTheme": "Default Dark+",
+    // "workbench.colorTheme": "Visual Studio Light",
 
     "esbonio.sphinx.confDir": "",
     "cSpell.words": [

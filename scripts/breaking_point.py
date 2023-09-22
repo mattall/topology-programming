@@ -52,14 +52,14 @@ from sys import exit
 # traffic = "data/traffic/video_tiered-tm"
 # experiment_name = "otp_plus_pdp"
 
-# traffic = "data/traffic/aggregate_tiered-tm"
-# experiment_name = "otp"
+traffic = "data/traffic/aggregate_tiered-tm"
+experiment_name = "otp"
 
 
 # te_method = "-mcf"
 
-network = "ground_truth"
-experiment_name = 
+# network = "ground_truth"
+# experiment_name = 
 
 my_sim = Simulation(network,
             hosts, 
