@@ -1,17 +1,14 @@
 import sys
 import glob
 import os
-sys.path.insert(0, "/home/mhall7/durairajanlab.matt/topology-programming/src/")
-sys.path.insert(0, "/home/mhall7/durairajanlab.matt/topology-programming/scripts/")
+sys.path.insert(0, "src/")
+sys.path.insert(0, "scripts/")
 from experiment_params import *
 from copy import deepcopy
-# from onset.utilities.logger import logger
 
 DEBUG = False
 
-def experiment_mapped(args):
-    # from onset.utilities.logger import NewLogger
-    # logger = NewLogger().get_logger()
+def experiment(args):    
     from onset.utilities.logger import logger
     from onset.utilities.post_process import read_result_val
     from onset.simulator import Simulation

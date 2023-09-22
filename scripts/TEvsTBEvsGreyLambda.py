@@ -5,7 +5,7 @@ import sys
 from itertools import product
 from os import path
 import multiprocessing
-from experiment_mapped import experiment, experiment_mapped
+from scripts.experiment import experiment
 from experiment_params import *
 from datetime import datetime
 from sys import argv
@@ -41,14 +41,14 @@ if __name__ == "__main__":
     print(len(experiment_combinations))
     if DEBUG:
         for c in experiment_combinations:
-            experiment_mapped(c)
-        # map(experiment_mapped, experiment_combinations)
+            experiment(c)
+        # map(experiment, experiment_combinations)
         exit()
     else:
         result_files = sorted(
                             list(
                                 pool.map_async(
-                                    experiment_mapped, 
+                                    experiment, 
                                     experiment_combinations, 
                                     callback=custom_callback, 
                                     error_callback=custom_error_callback).get()
