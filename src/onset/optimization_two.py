@@ -388,7 +388,7 @@ class Link_optimization:
                 for path in paths:
                     print(f"Path: {path['path']} - Weight: {path['weight']}")
 
-    def mcf(self):
+    def skinwalker(self):
         LINK_CAPACITY = self.LINK_CAPACITY
 
         m = self.model = Model("MulticommodityFlow")
