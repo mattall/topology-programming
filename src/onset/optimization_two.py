@@ -16,7 +16,18 @@ from onset.constants import SCRIPT_HOME
 # customs
 from onset.utilities.plot_reconfig_time import calc_haversine
 from onset.utilities.graph_utils import link_on_path
-
+from onset.utilities.sysUtils import clock
+def write_iss(m):
+    m.computeIIS()
+    for c in m.getConstrs():
+        if c.IISConstr:
+            print(f"\t{c.constrname}: {m.getRow(c)} {c.Sense} {c.RHS}")
+        for v in m.getVars():
+            if v.IISLB:
+                print(f"\t{v.varname} ≥ {v.LB}")
+            if v.IISUB:
+                print(f"\t{v.varname} ≤ {v.UB}")
+        m.write("iismodel.ilp")
 
 class Link_optimization:
     def __init__(
@@ -71,7 +82,10 @@ class Link_optimization:
 
         if isinstance(txp_count, list):
             self.txp_count = txp_count
-
+        
+        if isinstance(txp_count, dict):
+            self.txp_count = txp_count
+        
         self.nodes = self.core_G.nodes
         self.use_cache = use_cache
         self.PARALLEL = parallel_execution
@@ -388,7 +402,7 @@ class Link_optimization:
                 for path in paths:
                     print(f"Path: {path['path']} - Weight: {path['weight']}")
 
-    def skinwalker(self):
+    def mcf(self):
         LINK_CAPACITY = self.LINK_CAPACITY
 
         m = self.model = Model("MulticommodityFlow")
@@ -517,6 +531,145 @@ class Link_optimization:
 
         else:
             print("No optimal solution found.")
+
+        return -1
+    
+    def onset_optimizer(self):
+        LINK_CAPACITY = self.LINK_CAPACITY
+
+        m = self.model = Model("OnsetOptimization")
+
+        # Convert the graph to a directed graph
+
+        G_0 = self.G.to_directed()
+        directionless_edges = self.super_graph.edges
+        G_prime = self.super_graph.to_directed()
+        demand = self.demand_dict
+
+        # Graphs should only differ in edges
+        assert set(G_0.nodes) == set(G_prime.nodes)
+
+        # Get transponder count
+        txp_count = self.txp_count
+        assert isinstance(txp_count, dict), f"txp_count type error. expected <class 'dict'>, got: {type(txp_count)}"
+
+        # Get the list of nodes and edges
+        nodes = self.nodes
+
+       # ensure all nodes are reflected in txp_count. 
+        assert(set(txp_count.keys()) == set(nodes)), f"txp_count vs. nodes set mismatch error. The following sets should be equal. \n\tnodes: {set(nodes)}\n\ttxp_count.keys(): {set(txp_count.keys())}"
+
+        initial_edges = list(G_0.edges)
+        prime_edges = self.prime_edges = list(G_prime.edges)
+
+        # Add integer variables for node degree
+        node_degree_vars = m.addVars(
+            len(nodes), vtype=GRB.INTEGER, name="node_degree", lb=0
+        )
+
+        # Edge vars that can be toggled on or off.
+        edge_vars = m.addVars(prime_edges, vtype=GRB.BINARY, name="edge")
+
+        # Initial edges, a constant vector accessible the same as edge_vars
+        initial_edge_vars = tupledict(
+            {(u, v): 1 if (u, v) in initial_edges else 0 for (u, v) in prime_edges}
+        )
+
+        # The overlapping set of edges for initial_edge_vars and edge_vars
+        # link_intersection = m.addVars(
+        #     prime_edges,
+        #     vtype=GRB.BINARY,
+        #     name="link_intersection",
+        # )
+        # m.addConstrs(
+        #     link_intersection[(u, v)] == min_(edge_vars[u, v], initial_edge_vars[u, v])
+        #     for (u, v) in prime_edges
+        # )
+
+        # Enforce max degree based on transponders at each node
+        for v_idx, vertex in enumerate(nodes):
+            m.addConstr(
+                node_degree_vars[v_idx]
+                == sum(
+                    edge_vars[u, v]
+                    for (u, v) in edge_vars
+                    # if u == vertex or v == vertex
+                    if u == vertex # only interested in originating match
+                )
+            )
+            m.addConstr(txp_count[vertex] >= node_degree_vars[v_idx])
+
+        # Add flow variables for commodities and edges
+        flow_vars = m.addVars(
+            demand.keys(), prime_edges, vtype=GRB.CONTINUOUS, name="flow"
+        )
+
+        # Add conservation of flow constraints for nodes and commodities
+        for node in nodes:
+            for source, target in demand.keys():
+                inflow = quicksum(
+                    flow_vars[source, target, u, v] for (u, v) in G_prime.in_edges(node)
+                )
+                outflow = quicksum(
+                    flow_vars[source, target, u, v]
+                    for (u, v) in G_prime.out_edges(node)
+                )
+                if node == source:
+                    m.addConstr(inflow - outflow == -demand[source, target])
+                elif node == target:
+                    m.addConstr(inflow - outflow == demand[source, target])
+                else:
+                    m.addConstr(inflow - outflow == 0)
+
+        # Add capacity constraints for edges
+        edge_capacity = tupledict()
+        for u, v in prime_edges:
+            edge_capacity[u, v] = m.addVar(
+                vtype=GRB.CONTINUOUS, lb=0, ub=LINK_CAPACITY, name=f"capacity_{u}_{v}"
+            )
+            m.addConstr(
+                edge_capacity[u, v]
+                >= quicksum(
+                    flow_vars[source, target, u, v]
+                    for (source, target) in demand.keys()
+                )
+            )
+
+        # Enforce symetrical bi-directional capacity
+        for u, v in directionless_edges:
+            m.addConstr(edge_capacity[u, v] == edge_capacity[v, u])
+
+        # Add binary constraint on edges
+        for u, v in prime_edges:
+            m.addConstr(edge_capacity[u, v] == edge_vars[(u, v)] * LINK_CAPACITY)
+
+        # Set the objective to minimize the total flow
+        m.setObjective(quicksum(flow_vars[source, target, u, v] for (source, target) in demand.keys() for (u, v) in prime_edges), sense=GRB.MINIMIZE)
+        # m.setObjective(
+        #     quicksum(link_intersection[u, v] for (u, v) in prime_edges),
+        #     sense=GRB.MINIMIZE,
+        # )
+        m.update()
+        # Optimize the model
+        _, opt_time = clock( m.optimize )
+        self.flow_vars = flow_vars
+        if m.status == GRB.Status.OPTIMAL:
+            print("Optimal solution found.")
+            resultant_edges = [
+                (u, v) for (u, v) in edge_vars if edge_vars[(u, v)].x == 1
+            ]
+            add_edges = [e for e in resultant_edges if e not in self.G.edges]
+            drop_edges = [e for e in self.G.edges if e not in resultant_edges]
+            G_new = nx.DiGraph()
+            G_new.add_edges_from(resultant_edges)
+            assert nx.is_strongly_connected(G_new)
+            add_edges = list(set([tuple(sorted((u, v))) for u, v in add_edges]))
+            drop_edges = list(set([tuple(sorted((u, v))) for u, v in drop_edges]))
+            return ((add_edges, drop_edges), opt_time)
+
+        else:
+            print("No optimal solution found.")
+            write_iss(m)
 
         return -1
 
@@ -782,6 +935,7 @@ class Link_optimization:
                         print(f"\t{v.varname} ≤ {v.UB}")
 
                 m.write("iismodel.ilp")
+
 
     # def run_model_max_diff_ignore_demand(self):
     #     core_G = self.core_G

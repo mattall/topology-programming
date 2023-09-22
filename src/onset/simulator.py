@@ -484,7 +484,7 @@ class Simulation:
             "Throughput": [],
             "Link Bandwidth Coefficient": [],
             "Demand Factor": [],
-
+            "Optimization Time": [],
         }
         circuits_added = False
 
@@ -714,12 +714,13 @@ class Simulation:
                         self.topology_programming_method == "onset_v2"
                         and sig_add_circuits
                     ):
+                        txp_count_dict = self.wolf.get_txp_count() # Maps node NAMES to their total trandponders.
                         optimizer = Link_optimization(
-                            G               = self.wolf.logical_graph,
-                            demand_matrix   = self.nonce,
-                            network         = self.network_name,
-                            core_G          = self.wolf.base_graph.copy(as_view=True),
-                            txp_count       = self.wolf.get_transponders_count()
+                            G                   = self.wolf.logical_graph,
+                            demand_matrix_file  = self.nonce,
+                            network             = self.network_name,
+                            core_G              = self.wolf.base_graph.copy(as_view=True),
+                            txp_count           = txp_count_dict
                         )
                         # optimizer.run_model()
                         # if self.te_method == "-ecmp":
@@ -732,22 +733,26 @@ class Simulation:
                         # optimizer.run_model_minimize_cost_v1(max_load)
                         # optimizer.run_model_minimize_cost()
                         new_circuit = []
-                        optimizer.LINK_CAPACITY *= max_load
-                        optimizer.run_model_mixed_objective()
-                        new_circuit = optimizer.get_links_to_add()
-                        # while len(new_circuit) == 0 and max_load < 5:
-                        #     optimizer.LINK_CAPACITY *= max_load
-                        #     optimizer.run_model_mixed_objective()
-                        #     new_circuit = optimizer.get_links_to_add()
-                        #     max_load += 0.25
-                        if len(new_circuit) == 0:
-                            # optimizer.BUDGET = 20
-                            optimizer.LINK_CAPACITY += optimizer.LINK_CAPACITY
-                            optimizer.run_model_mixed_objective()
-                            new_circuit = optimizer.get_links_to_add()
+                        result_topo = []
+                        add_links = []
+                        drop_links = []
+                        # optimizer.LINK_CAPACITY *= max_load
+                        result = optimizer.onset_optimizer()
+                        try:
+                            ((add_edges, drop_edges), opt_time) = result
+
+                        except TypeError as e:
+                            logger.error(f"{e} Optimization failed to yield a solution.", exc_info=True, stack_info=True)
+                            ((add_edges, drop_edges), opt_time) = ([],[]), float("NaN")
 
                         circuit_tag = ""
-                        if type(new_circuit) == list and len(new_circuit) > 0:
+                        new_circuit = add_links[:]
+                        if drop_links:
+                            for drop_circuit in drop_links:
+                                u, v = drop_circuit
+                                self.wolf.drop_circuit(u, v)
+
+                        if add_links:
                             for nc in new_circuit:
                                 u, v = nc
                                 if circuit_tag == "":
@@ -755,11 +760,10 @@ class Simulation:
                                 else:
                                     circuit_tag += f".{u}-{v}"
 
-                                for _ in range(circuits):
-                                    self.wolf.add_circuit(u, v)
+                                self.wolf.add_circuit(u, v)
 
                             circuits_added = True
-                            flux_circuits.extend(new_circuit)
+                            # flux_circuits.extend(new_circuit)
 
                         # elif new_circuit == []:
                         #     print("Could Not Add New Circuit")
@@ -915,7 +919,7 @@ class Simulation:
                         add_links = []
                         drop_links = []
                         # optimizer.LINK_CAPACITY *= max_load
-                        add_links, drop_links = optimizer.skinwalker()
+                        add_links, drop_links = optimizer.mcf()
                         # result_topo, add_links, drop_links = optimizer.optimize()
                         # result_topo, add_links, drop_links = optimizer.run_model_max_diff_ignore_demand()
 
