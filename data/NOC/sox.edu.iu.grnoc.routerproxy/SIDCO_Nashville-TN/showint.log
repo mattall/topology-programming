@@ -1,0 +1,1658 @@
+Response from: 143.215.194.241
+
+Pagination disabled.
+rtr.sidco#show interface
+Ethernet1/1 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fafe (bia 444c.a8fb.fafe)
+  Description: "Available - optic w/ adapter [NO-MONITOR]"
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 40000000 kbit
+  Full-duplex, 40Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet2/1 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb02 (bia 444c.a8fb.fb02)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 40000000 kbit
+  Full-duplex, 40Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet3/1 is up, line protocol is up (connected)
+  Hardware is Ethernet, address is 444c.a8fb.fb06 (bia 444c.a8fb.fb06)
+  Description: "PARTICIPANT UAH via FDP1 25/26 | SOX-SIDCO-SIDCO-10GE-02056"
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Up 6 days, 2 hours, 54 minutes, 48 seconds
+  Loopback Mode : None
+  17 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 3.11 kbps (0.0% with framing overhead), 5 packets/sec
+  5 minutes output rate 286 Mbps (2.9% with framing overhead), 37916 packets/sec
+     34433461601 packets input, 15204267523660 bytes
+     Received 2533432 broadcasts, 61780494 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     1455106484937 packets output, 1586957589090855 bytes
+     Sent 1574308 broadcasts, 43351283 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet3/2 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb07 (bia 444c.a8fb.fb07)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet3/3 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb08 (bia 444c.a8fb.fb08)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet3/4 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb09 (bia 444c.a8fb.fb09)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet4/1 is up, line protocol is up (connected)
+  Hardware is Ethernet, address is 444c.a8fb.fb0a (bia 444c.a8fb.fb0a)
+  Description: "TO PARTICIPANT UA via FDP1 3/4 | SOX-SIDCO-SIDCO-10GE-02082"
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Up 150 days, 2 hours, 21 minutes, 50 seconds
+  Loopback Mode : None
+  13 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 95.9 Mbps (1.0% with framing overhead), 14290 packets/sec
+  5 minutes output rate 256 Mbps (2.6% with framing overhead), 23781 packets/sec
+     1282481815162 packets input, 302381964641749 bytes
+     Received 4635 broadcasts, 0 multicast
+     58024 runts, 0 giants
+     58339 input errors, 0 CRC, 0 alignment, 315 symbol, 0 input discards
+     0 PAUSE input
+     700129353450 packets output, 855299290853439 bytes
+     Sent 11 broadcasts, 13065232 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet4/2 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb0b (bia 444c.a8fb.fb0b)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet4/3 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb0c (bia 444c.a8fb.fb0c)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet4/4 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb0d (bia 444c.a8fb.fb0d)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet5/1 is up, line protocol is up (connected)
+  Hardware is Ethernet, address is 444c.a8fb.fb0e (bia 444c.a8fb.fb0e)
+  Description: TO: PARTICIPANT VUMC via fdp1 21/22 | SOX-SIDCO-SIDCO-10GE-02231
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Up 38 days, 8 hours, 26 minutes, 22 seconds
+  Loopback Mode : None
+  17 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 3.83 Gbps (39.3% with framing overhead), 614751 packets/sec
+  5 minutes output rate 7.22 Gbps (73.5% with framing overhead), 851843 packets/sec
+     7938526144459 packets input, 6639613366062662 bytes
+     Received 69 broadcasts, 3685537 multicast
+     0 runts, 0 giants
+     2 input errors, 2 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     9478638897011 packets output, 9718508578602865 bytes
+     Sent 15 broadcasts, 15374882 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 538605116 output discards
+     0 PAUSE output
+Ethernet5/2 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb0f (bia 444c.a8fb.fb0f)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet5/3 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb10 (bia 444c.a8fb.fb10)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet5/4 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb11 (bia 444c.a8fb.fb11)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet6/1 is down, line protocol is down (notconnect)
+  Hardware is Ethernet, address is 444c.a8fb.fb12 (bia 444c.a8fb.fb12)
+  Description: "Available - optic w/ adapter [NO-MONITOR]"
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet6/2 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb13 (bia 444c.a8fb.fb13)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet6/3 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb14 (bia 444c.a8fb.fb14)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet6/4 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb15 (bia 444c.a8fb.fb15)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet7/1 is up, line protocol is up (connected)
+  Hardware is Ethernet, address is 444c.a8fb.fb16 (bia 444c.a8fb.fb16)
+  Description: "TO: RTR.56MAR et-10/1/5 member#1 lag ae22 via ORNL | SOX-56MAR-SIDCO-100GE-02045"
+  Member of Port-Channel22
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 100000000 kbit
+  Full-duplex, 100Gb/s, auto negotiation: off, uni-link: disabled
+  Up 16 days, 36 minutes, 37 seconds
+  Loopback Mode : None
+  39 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 3.81 Gbps (3.9% with framing overhead), 453586 packets/sec
+  5 minutes output rate 3.24 Gbps (3.3% with framing overhead), 451097 packets/sec
+     7692163597621 packets input, 8370615958760944 bytes
+     Received 1538126 broadcasts, 19178516 multicast
+     4 runts, 0 giants
+     6 input errors, 1 CRC, 0 alignment, 1 symbol, 0 input discards
+     0 PAUSE input
+     10202747343852 packets output, 10499319906535623 bytes
+     Sent 2532359 broadcasts, 58184052 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet8/1 is down, line protocol is notpresent (notconnect)
+  Hardware is Ethernet, address is 444c.a8fb.fb1a (bia 444c.a8fb.fb1a)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Loopback Mode : None
+  0 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet8/2 is down, line protocol is notpresent (notconnect)
+  Hardware is Ethernet, address is 444c.a8fb.fb1b (bia 444c.a8fb.fb1b)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Loopback Mode : None
+  0 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet8/3 is down, line protocol is notpresent (notconnect)
+  Hardware is Ethernet, address is 444c.a8fb.fb1c (bia 444c.a8fb.fb1c)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Loopback Mode : None
+  0 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet8/4 is down, line protocol is notpresent (notconnect)
+  Hardware is Ethernet, address is 444c.a8fb.fb1d (bia 444c.a8fb.fb1d)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Loopback Mode : None
+  0 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet9/1 is up, line protocol is up (connected)
+  Hardware is Ethernet, address is 444c.a8fb.fb1e (bia 444c.a8fb.fb1e)
+  Description: "PARTICIPANT UAB 100G via FDP1 13/14 | SOX-SIDCO-SIDCO-100GE-02048"
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 100000000 kbit
+  Full-duplex, 100Gb/s, auto negotiation: off, uni-link: disabled
+  Up 243 days, 2 hours, 23 minutes, 23 seconds
+  Loopback Mode : None
+  5 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 2.58 kbps (0.0% with framing overhead), 5 packets/sec
+  5 minutes output rate 1.64 Gbps (1.7% with framing overhead), 218506 packets/sec
+     21320582734 packets input, 17345748941114 bytes
+     Received 6097793 broadcasts, 0 multicast
+     1 runts, 0 giants
+     1 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     1943608862331 packets output, 1691135017744110 bytes
+     Sent 47787 broadcasts, 15040398 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet10/1 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb22 (bia 444c.a8fb.fb22)
+  Description: "Available - adapter with no optic [NO-MONITOR]"
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet10/2 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb23 (bia 444c.a8fb.fb23)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet10/3 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb24 (bia 444c.a8fb.fb24)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet10/4 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb25 (bia 444c.a8fb.fb25)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet11/1 is up, line protocol is up (connected)
+  Hardware is Ethernet, address is 444c.a8fb.fb26 (bia 444c.a8fb.fb26)
+  Description: TO: [100G] TO: PARTICIPANT VANDY via FDP1 15/16 | SoX-SIDCO-SIDCO-100GE-02189
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 100000000 kbit
+  Full-duplex, 100Gb/s, auto negotiation: off, uni-link: disabled
+  Up 112 days, 11 hours, 29 minutes, 39 seconds
+  Loopback Mode : None
+  7 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 935 Mbps (1.0% with framing overhead), 155789 packets/sec
+  5 minutes output rate 3.37 Gbps (3.4% with framing overhead), 397855 packets/sec
+     6116108987097 packets input, 5686515718849586 bytes
+     Received 124 broadcasts, 2200074 multicast
+     0 runts, 0 giants
+     139 input errors, 126 CRC, 0 alignment, 13 symbol, 0 input discards
+     0 PAUSE input
+     10116768686563 packets output, 11269426047820279 bytes
+     Sent 9 broadcasts, 18444107 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet12/1 is down, line protocol is down (notconnect)
+  Hardware is Ethernet, address is 444c.a8fb.fb2a (bia 444c.a8fb.fb2a)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Loopback Mode : None
+  0 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet12/2 is down, line protocol is down (notconnect)
+  Hardware is Ethernet, address is 444c.a8fb.fb2b (bia 444c.a8fb.fb2b)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Loopback Mode : None
+  0 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet12/3 is down, line protocol is down (notconnect)
+  Hardware is Ethernet, address is 444c.a8fb.fb2c (bia 444c.a8fb.fb2c)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Loopback Mode : None
+  0 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet12/4 is down, line protocol is down (notconnect)
+  Hardware is Ethernet, address is 444c.a8fb.fb2d (bia 444c.a8fb.fb2d)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Loopback Mode : None
+  0 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet13/1 is up, line protocol is up (connected)
+  Hardware is Ethernet, address is 444c.a8fb.fb2e (bia 444c.a8fb.fb2e)
+  Description: "TO: RTR.56MAR et-9/1/5 member#2 lag ae22 via ORNL | SOX-56MAR-SIDCO-100GE-02368"
+  Member of Port-Channel22
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 100000000 kbit
+  Full-duplex, 100Gb/s, auto negotiation: off, uni-link: disabled
+  Up 16 days, 36 minutes, 37 seconds
+  Loopback Mode : None
+  39 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 3.66 Gbps (3.7% with framing overhead), 437675 packets/sec
+  5 minutes output rate 3.29 Gbps (3.4% with framing overhead), 449877 packets/sec
+     7698171871726 packets input, 8379773627558818 bytes
+     Received 158020 broadcasts, 23237576 multicast
+     0 runts, 0 giants
+     10 input errors, 9 CRC, 0 alignment, 1 symbol, 0 input discards
+     0 PAUSE input
+     10196145742903 packets output, 10479846404093058 bytes
+     Sent 201214 broadcasts, 63326979 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet15/1 is up, line protocol is up (connected)
+  Hardware is Ethernet, address is 444c.a8fb.fb32 (bia 444c.a8fb.fb32)
+  Description: "TO INTERNET2 AL2S core1.nash hun0/0/0/24 | SOX-SIDCO-SIDCO-100GE-02233"
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 100000000 kbit
+  Full-duplex, 100Gb/s, auto negotiation: off, uni-link: disabled
+  Up 276 days, 11 hours, 33 minutes, 50 seconds
+  Loopback Mode : None
+  5 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 7.53 Gbps (7.7% with framing overhead), 857995 packets/sec
+  5 minutes output rate 3.44 Gbps (3.5% with framing overhead), 544487 packets/sec
+     21563771454572 packets input, 24293750943283913 bytes
+     Received 369267 broadcasts, 36161132 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     12775060597117 packets output, 11818552975138591 bytes
+     Sent 195106 broadcasts, 53434740 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet17/1 is up, line protocol is up (connected)
+  Hardware is Ethernet, address is 444c.a8fb.fb36 (bia 444c.a8fb.fb36)
+  Description: "PARTICIPANT GT via LUMEN 100G | SOX-SIDCO-SIDCO-100GE-02274"
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 100000000 kbit
+  Full-duplex, 100Gb/s, auto negotiation: off, uni-link: disabled
+  Up 9 days, 22 hours, 55 minutes, 9 seconds
+  Loopback Mode : None
+  17 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 38.3 kbps (0.0% with framing overhead), 26 packets/sec
+  5 minutes output rate 74.7 Mbps (0.1% with framing overhead), 7942 packets/sec
+     54125706994 packets input, 6458554350372 bytes
+     Received 11549600 broadcasts, 62553116 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     446038128458 packets output, 573128460928675 bytes
+     Sent 26 broadcasts, 21128643 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet19/1 is down, line protocol is notpresent (notconnect)
+  Hardware is Ethernet, address is 444c.a8fb.fb3a (bia 444c.a8fb.fb3a)
+  Description: Available 100G [NO-MONITOR]
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 100000000 kbit
+  Full-duplex, 100Gb/s, auto negotiation: off, uni-link: disabled
+  Loopback Mode : None
+  0 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet21/1 is down, line protocol is notpresent (notconnect)
+  Hardware is Ethernet, address is 444c.a8fb.fb3e (bia 444c.a8fb.fb3e)
+  Description: Available 100G [NO-MONITOR]
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 100000000 kbit
+  Full-duplex, 100Gb/s, auto negotiation: off, uni-link: disabled
+  Loopback Mode : None
+  0 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet23/1 is up, line protocol is up (connected)
+  Hardware is Ethernet, address is 444c.a8fb.fb42 (bia 444c.a8fb.fb42)
+  Description: 100G: TO RTR.365DC et23/1 via Zayo | SOX-365DC-SIDCO-100GE-02185
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 100000000 kbit
+  Full-duplex, 100Gb/s, auto negotiation: off, uni-link: disabled
+  Up 320 days, 13 hours, 12 minutes, 20 seconds
+  Loopback Mode : None
+  9 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 5.51 Gbps (5.6% with framing overhead), 730835 packets/sec
+  5 minutes output rate 447 Mbps (0.5% with framing overhead), 67311 packets/sec
+     12305563983943 packets input, 12012668970495264 bytes
+     Received 9519992 broadcasts, 79173640 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     2638175251117 packets output, 1834627864096340 bytes
+     Sent 6134825 broadcasts, 63821546 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet25/1 is down, line protocol is down (notconnect)
+  Hardware is Ethernet, address is 444c.a8fb.fb46 (bia 444c.a8fb.fb46)
+  Description: Available 100G [NO-MONITOR]
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 100000000 kbit
+  Full-duplex, 100Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet26/1 is down, line protocol is down (notconnect)
+  Hardware is Ethernet, address is 444c.a8fb.fb4a (bia 444c.a8fb.fb4a)
+  Description: PARTICIPANT VUMC(40G) via FDP1 11/12 [NO-MONITOR] [PROVISIONING] | SOX-SIDCO-SIDCO-40GE-02458
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 40000000 kbit
+  Full-duplex, 40Gb/s, auto negotiation: off, uni-link: disabled
+  Loopback Mode : None
+  0 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet27/1 is down, line protocol is notpresent (notconnect)
+  Hardware is Ethernet, address is 444c.a8fb.fb4e (bia 444c.a8fb.fb4e)
+  Description: Available 100G [NO-MONITOR]
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 100000000 kbit
+  Full-duplex, 100Gb/s, auto negotiation: off, uni-link: disabled
+  Loopback Mode : None
+  0 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet28/1 is administratively down, line protocol is down (disabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb52 (bia 444c.a8fb.fb52)
+  Description: QSFP adapter with no optic [NO-MONITOR]"
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 40000000 kbit
+  Full-duplex, 40Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet29/1 is administratively down, line protocol is down (disabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb56 (bia 444c.a8fb.fb56)
+  Description: Available 100G [NO-MONITOR]
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 100000000 kbit
+  Full-duplex, 100Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet30/1 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb5a (bia 444c.a8fb.fb5a)
+  Description: "Available - optic w/ adapter [NO-MONITOR]"
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 40000000 kbit
+  Full-duplex, 40Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet31/1 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb5e (bia 444c.a8fb.fb5e)
+  Description: "Available - optic w/ adapter [NO-MONITOR]"
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 40000000 kbit
+  Full-duplex, 40Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet32/1 is up, line protocol is up (connected)
+  Hardware is Ethernet, address is 444c.a8fb.fb62 (bia 444c.a8fb.fb62)
+  Description: "TO PARTICIPANT MTSU via FDP2 29/30 | SOX-SIDCO-SIDCO-10GE-02373"
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Up 57 days, 15 hours, 9 minutes, 48 seconds
+  Loopback Mode : None
+  19 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 86.4 Mbps (0.9% with framing overhead), 27503 packets/sec
+  5 minutes output rate 2.21 Gbps (22.5% with framing overhead), 242493 packets/sec
+     450337448259 packets input, 459633043288912 bytes
+     Received 32371975 broadcasts, 7663575 multicast
+     0 runts, 0 giants
+     218 input errors, 197 CRC, 0 alignment, 21 symbol, 0 input discards
+     0 PAUSE input
+     5380478823113 packets output, 6164568410637543 bytes
+     Sent 2514424142 broadcasts, 518232230 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 141590 output discards
+     0 PAUSE output
+Ethernet32/2 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb63 (bia 444c.a8fb.fb63)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet32/3 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb64 (bia 444c.a8fb.fb64)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet32/4 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb65 (bia 444c.a8fb.fb65)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet33/1 is administratively down, line protocol is down (disabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb66 (bia 444c.a8fb.fb66)
+  Description: "TO PARTICIPANT GT via LEVEL3 [NO-MONITOR] [DECOMMISSIONING] | SOX-SIDCO-SIDCO-10GE-02060"
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet33/2 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb67 (bia 444c.a8fb.fb67)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet33/3 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb68 (bia 444c.a8fb.fb68)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet33/4 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb69 (bia 444c.a8fb.fb69)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet34/1 is up, line protocol is up (connected)
+  Hardware is Ethernet, address is 444c.a8fb.fafd
+  Description: "SERVICE PERFSONAR | SOX-SIDCO-SIDCO-10GE-01517"
+  Internet address is 143.215.193.38/31
+  Broadcast address is 255.255.255.255
+  IP MTU 9192 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Up 67 days, 11 hours, 38 minutes, 1 second
+  Loopback Mode : None
+  19 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 455 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 2.66 kbps (0.0% with framing overhead), 1 packets/sec
+     94964882689 packets input, 281991382700087 bytes
+     Received 6 broadcasts, 29 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     22762 PAUSE input
+     37091128704 packets output, 147683073633769 bytes
+     Sent 8 broadcasts, 3761841 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 30861 output discards
+     0 PAUSE output
+Ethernet34/2 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb6b (bia 444c.a8fb.fb6b)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet34/3 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb6c (bia 444c.a8fb.fb6c)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet34/4 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb6d (bia 444c.a8fb.fb6d)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet35/1 is up, line protocol is up (connected)
+  Hardware is Ethernet, address is 444c.a8fb.fb6e (bia 444c.a8fb.fb6e)
+  Description: "TO PARTICIPANT TNTECH via FDP2 27/28 | SOX-SIDCO-SIDCO-10GE-02360"
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Up 61 days, 19 hours, 42 minutes, 12 seconds
+  Loopback Mode : None
+  255 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 3.15 Mbps (0.0% with framing overhead), 628 packets/sec
+  5 minutes output rate 1.69 Mbps (0.0% with framing overhead), 546 packets/sec
+     419148188013 packets input, 662743545082439 bytes
+     Received 2522442664 broadcasts, 507431161 multicast
+     1 runts, 0 giants
+     135 input errors, 105 CRC, 0 alignment, 29 symbol, 0 input discards
+     0 PAUSE input
+     314980405102 packets output, 508469722804264 bytes
+     Sent 33065936 broadcasts, 38853556 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 8039579 output discards
+     629 PAUSE output
+Ethernet35/2 is down, line protocol is notpresent (notconnect)
+  Hardware is Ethernet, address is 444c.a8fb.fb6f (bia 444c.a8fb.fb6f)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Loopback Mode : None
+  0 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet35/3 is down, line protocol is notpresent (notconnect)
+  Hardware is Ethernet, address is 444c.a8fb.fb70 (bia 444c.a8fb.fb70)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Loopback Mode : None
+  0 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet35/4 is down, line protocol is notpresent (notconnect)
+  Hardware is Ethernet, address is 444c.a8fb.fb71 (bia 444c.a8fb.fb71)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Loopback Mode : None
+  0 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet36/1 is down, line protocol is down (notconnect)
+  Hardware is Ethernet, address is 444c.a8fb.fb72 (bia 444c.a8fb.fb72)
+  Description: "UAB Huntsville Medical Center via FDP2 31/32 [PROVISIONING] [NO-MONITOR] | SOX-SIDCO-SIDCO-10GE-02430"
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet36/2 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb73 (bia 444c.a8fb.fb73)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet36/3 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb74 (bia 444c.a8fb.fb74)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Ethernet36/4 is down, line protocol is down (errdisabled)
+  Hardware is Ethernet, address is 444c.a8fb.fb75 (bia 444c.a8fb.fb75)
+  Ethernet MTU 10178 bytes, Ethernet MRU 10200 bytes, BW 10000000 kbit
+  Full-duplex, 10Gb/s, auto negotiation: off, uni-link: disabled
+  Down 326 days, 13 hours, 20 minutes, 42 seconds
+  Loopback Mode : None
+  2 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 0 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 0 bps (0.0% with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Loopback0 is up, line protocol is up (connected)
+  Hardware is Loopback
+  Internet address is 143.215.194.241/32
+  Broadcast address is 255.255.255.255
+  IP MTU 65535 bytes (default)
+  Up 326 days, 13 hours, 23 minutes, 40 seconds
+Management1 is up, line protocol is up (connected)
+  Hardware is Ethernet, address is 444c.a8fb.fafc (bia 444c.a8fb.fafc)
+  Internet address is 143.215.223.246/28
+  Broadcast address is 255.255.255.255
+  IP MTU 1500 bytes (default), BW 100000 kbit
+  Full-duplex, 100Mb/s, auto negotiation: on, uni-link: n/a
+  Up 326 days, 13 hours, 23 minutes, 25 seconds
+  Loopback Mode : None
+  4 link status changes since last clear
+  Last clearing of "show interface" counters 326 days, 13:28:08 ago
+  5 minutes input rate 105 bps (0.0% with framing overhead), 0 packets/sec
+  5 minutes output rate 59 bps (0.0% with framing overhead), 0 packets/sec
+     1414292 packets input, 387001824 bytes
+     Received 18672 broadcasts, 945056 multicast
+     0 runts, 0 giants
+     0 input errors, 0 CRC, 0 alignment, 0 symbol, 0 input discards
+     0 PAUSE input
+     1205998 packets output, 200761629 bytes
+     Sent 26 broadcasts, 940477 multicast
+     0 output errors, 0 collisions
+     0 late collision, 0 deferred, 0 output discards
+     0 PAUSE output
+Port-Channel22 is up, line protocol is up (connected)
+  Hardware is Port-Channel, address is 444c.a8fb.fb16
+  Description: "TO: RTR.56MAR ae22 via ORNL | SOX-56MAR-SIDCO-LAG-02369"
+  Ethernet MTU 10178 bytes, BW 200000000 kbit
+  Full-duplex, 200Gb/s 
+  Active members in this channel: 2
+  ... Ethernet7/1 , Full-duplex, 100Gb/s
+  ... Ethernet13/1 , Full-duplex, 100Gb/s
+  Fallback mode is: off
+  Up 16 days, 36 minutes, 35 seconds
+  47 link status changes since last clear
+  Last clearing of "show interface" counters never
+  5 minutes input rate 7.48 Gbps (3.8% with framing overhead), 890358 packets/sec
+  5 minutes output rate 6.53 Gbps (3.3% with framing overhead), 901171 packets/sec
+     15390326085631 packets input, 16750380063926498 bytes
+     Received 1696146 broadcasts, 42415943 multicast
+     10 input errors, 0 input discards
+     20398870237885 packets output, 20979142268417704 bytes
+     Sent 2733571 broadcasts, 121510807 multicast
+     0 output errors, 0 output discards
+Vlan36 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: L3 PARTICIPANT VUMC | SOX-SIDCO-SIDCO-VLAN-02240
+  Internet address is 143.215.193.30/31
+  Broadcast address is 255.255.255.255
+  IPv6 link-local address is fe80::464c:a8ff:fefb:fafd/64
+  IPv6 global unicast address(es):
+    2607:f7b8:1f02:c11e::1, subnet is 2607:f7b8:1f02:c11e::/64
+  IP MTU 9170 bytes
+  Up 38 days, 8 hours, 26 minutes, 22 seconds
+Vlan40 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: [TRCPS] L3 PARTICIPANT VUMC | SoX-SIDCO-SIDCO-VLAN-02267
+  Internet address is 143.215.194.190/31
+  Broadcast address is 255.255.255.255
+  IPv6 link-local address is fe80::464c:a8ff:fefb:fafd/64
+  IPv6 global unicast address(es):
+    2607:f7b8:1f02:c2be::1, subnet is 2607:f7b8:1f02:c2be::/64
+  IP MTU 9170 bytes
+  Up 38 days, 8 hours, 26 minutes, 22 seconds
+Vlan43 is down, line protocol is lowerlayerdown (notconnect)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: L3 PARTICIPANT VUMC [NO-MONITOR] | SOX-SIDCO-SIDCO-VLAN-02464
+  Internet address is 143.215.193.92/31
+  Broadcast address is 255.255.255.255
+  IP MTU 9170 bytes
+  Down 78 days, 21 hours, 41 minutes, 7 seconds
+Vlan44 is down, line protocol is lowerlayerdown (notconnect)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: [TRCPS] L3 PARTICIPANT VUMC [NO-MONITOR] | SOX-SIDCO-SIDCO-VLAN-02465
+  Internet address is 143.215.193.94/31
+  Broadcast address is 255.255.255.255
+  IP MTU 9170 bytes
+  Down 78 days, 21 hours, 36 minutes, 21 seconds
+Vlan52 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: L3 BB: rtr.356dc et23/1 | SOX-365DC-SIDCO-VLAN-02186
+  Internet address is 143.215.194.52/31
+  Broadcast address is 255.255.255.255
+  IP MTU 9170 bytes
+  Up 320 days, 13 hours, 12 minutes, 20 seconds
+Vlan74 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: "BB L3 rtr.codac via Level3 [NO-MONITOR] [PROVISIONING] | SOX-CODAC-SIDCO-VLAN-02335"
+  Internet address is 143.215.193.74/31
+  Broadcast address is 255.255.255.255
+  IPv6 link-local address is fe80::464c:a8ff:fefb:fafd/64
+  IPv6 global unicast address(es):
+    2607:f7b8:1f02:c14a::1, subnet is 2607:f7b8:1f02:c14a::/64
+  IP MTU 1500 bytes (default)
+  Up 9 days, 22 hours, 55 minutes, 9 seconds
+Vlan76 is administratively down, line protocol is down (disabled)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: "[TRCPS] BB L3 rtr.codac via Level3 [NO-MONITOR] [PROVISIONING] | SOX-CODAC-SIDCO-VLAN-02336"
+  Internet address is 143.215.193.76/31
+  Broadcast address is 255.255.255.255
+  IP MTU 1500 bytes (default)
+  Down 326 days, 13 hours, 23 minutes, 36 seconds
+Vlan180 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: "[TRCPS] BB rtr.56mar ae22 via ORNL 200G wave | SoX-56MAR-SIDCO-VLAN-02219"
+  Internet address is 143.215.192.5/31
+  Broadcast address is 255.255.255.255
+  IPv6 link-local address is fe80::464c:a8ff:fefb:fafd/64
+  IPv6 global unicast address(es):
+    2607:f7b8:1f02:c004::2, subnet is 2607:f7b8:1f02:c004::/64
+  IP MTU 9170 bytes
+  Up 16 days, 36 minutes, 35 seconds
+Vlan192 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: "L3 BB rtr.56mar via ORNL wave | SOX-56MAR-SIDCO-VLAN-02053"
+  Internet address is 143.215.192.1/31
+  Broadcast address is 255.255.255.255
+  IPv6 link-local address is fe80::464c:a8ff:fefb:fafd/64
+  IPv6 global unicast address(es):
+    2607:f7b8:1f02:c000::2, subnet is 2607:f7b8:1f02:c000::/64
+  IP MTU 9170 bytes
+  Up 16 days, 36 minutes, 35 seconds
+Vlan201 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: "L3 PARTICIPANT MTSU | SOX-SIDCO-SIDCO-VLAN-02374"
+  Internet address is 161.45.254.235/31
+  Broadcast address is 255.255.255.255
+  IP MTU 9170 bytes
+  Up 57 days, 15 hours, 9 minutes, 48 seconds
+Vlan202 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: "[TRCPS] L3 PARTICIPANT MTSU | SOX-SIDCO-SIDCO-VLAN-02394"
+  Internet address is 161.45.254.237/31
+  Broadcast address is 255.255.255.255
+  IP MTU 9170 bytes
+  Up 57 days, 15 hours, 9 minutes, 48 seconds
+Vlan394 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: "L3 PEER MREN | SOX-SIDCO-SIDCO-VLAN-01500"
+  Internet address is 143.215.193.17/30
+  Broadcast address is 255.255.255.255
+  IP MTU 9000 bytes
+  Up 276 days, 11 hours, 33 minutes, 50 seconds
+Vlan401 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: "L3 ISP INTERNET2 NASH router | SOX-SIDCO-SIDCO-VLAN-02242"
+  Internet address is 143.215.193.21/31
+  Broadcast address is 255.255.255.255
+  IPv6 link-local address is fe80::464c:a8ff:fefb:fafd/64
+  IPv6 global unicast address(es):
+    2607:f7b8:1f02:c114::2, subnet is 2607:f7b8:1f02:c114::/64
+  IP MTU 9000 bytes
+  Up 276 days, 11 hours, 33 minutes, 50 seconds
+Vlan402 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: "[TRCPS] L3 ISP INTERNET2 TRCPS Cinc router | SOX-SIDCO-SIDCO-VLAN-02243"
+  Internet address is 143.215.193.23/31
+  Broadcast address is 255.255.255.255
+  IPv6 link-local address is fe80::464c:a8ff:fefb:fafd/64
+  IPv6 global unicast address(es):
+    2607:f7b8:1f02:c116::2, subnet is 2607:f7b8:1f02:c116::/64
+  IP MTU 9000 bytes
+  Up 276 days, 11 hours, 33 minutes, 50 seconds
+Vlan522 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: L3 PARTICIPANT VANDY | SOX-SIDCO-SIDCO-VLAN-02196
+  Internet address is 192.111.110.53/30
+  Broadcast address is 255.255.255.255
+  IPv6 link-local address is fe80::464c:a8ff:fefb:fafd/64
+  IPv6 global unicast address(es):
+    2607:8a00:12:558::2, subnet is 2607:8a00:12:558::/64
+  IP MTU 1500 bytes (default)
+  Up 112 days, 11 hours, 29 minutes, 39 seconds
+Vlan523 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: [TRCPS] L3 PARTICIPANT VANDY | SOX-SIDCO-SIDCO-VLAN-02197
+  Internet address is 192.111.110.57/30
+  Broadcast address is 255.255.255.255
+  IPv6 link-local address is fe80::464c:a8ff:fefb:fafd/64
+  IPv6 global unicast address(es):
+    2607:8a00:f000:523::2, subnet is 2607:8a00:f000:523::/64
+  IP MTU 1500 bytes (default)
+  Up 112 days, 11 hours, 29 minutes, 39 seconds
+Vlan567 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: [TRCPS] L3 PARTICIPANT AUBURN | SOX-365DC-SIDCO-VLAN-02258
+  Internet address is 131.204.254.34/30
+  Broadcast address is 255.255.255.255
+  IP MTU 1500 bytes (default)
+  Up 320 days, 13 hours, 12 minutes, 20 seconds
+Vlan568 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: L3 PARTICIPANT AUBURN | SOX-365DC-SIDCO-VLAN-02257"
+  Internet address is 131.204.254.38/30
+  Broadcast address is 255.255.255.255
+  IP MTU 1500 bytes (default)
+  Up 320 days, 13 hours, 12 minutes, 20 seconds
+Vlan612 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: "BB L3 rtr.56mar via Cinci router [NOTIFY] | SXoX-56MAR-SIDCO-VLAN-02070"
+  Internet address is 143.215.192.7/31
+  Broadcast address is 255.255.255.255
+  IPv6 link-local address is fe80::464c:a8ff:fefb:fafd/64
+  IPv6 global unicast address(es):
+    2607:f7b8:1f02:c006::2, subnet is 2607:f7b8:1f02:c006::/64
+  IP MTU 9170 bytes
+  Up 276 days, 11 hours, 33 minutes, 50 seconds
+Vlan614 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: "[TRCPS] L3 BB: To rtr.56mar et-8/1/2.614 | SOX-56MAR-SIDCO-VLAN-01998"
+  Internet address is 143.215.192.3/31
+  Broadcast address is 255.255.255.255
+  IPv6 link-local address is fe80::464c:a8ff:fefb:fafd/64
+  IPv6 global unicast address(es):
+    2607:f7b8:1f02:c002::2, subnet is 2607:f7b8:1f02:c002::/64
+  IP MTU 9170 bytes
+  Up 276 days, 11 hours, 33 minutes, 50 seconds
+Vlan620 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: [NO-MONITOR]
+  IP MTU 1500 bytes (default)
+  Up 16 days, 36 minutes, 35 seconds
+Vlan823 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: "L3 PARTICIPANT UAH | SOX-SIDCO-SIDCO-VLAN-02091"
+  Internet address is 146.229.255.145/31
+  Broadcast address is 255.255.255.255
+  IPv6 link-local address is fe80::464c:a8ff:fefb:fafd/64
+  IPv6 global unicast address(es):
+    2620:26:2000:2553::1, subnet is 2620:26:2000:2553::/64
+  IP MTU 9170 bytes
+  Up 6 days, 2 hours, 54 minutes, 48 seconds
+Vlan824 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: "[TRCPS] L3 PARTICIPANT UAH | SOX-SIDCO-SIDCO-VLAN-02092"
+  Internet address is 146.229.255.147/31
+  Broadcast address is 255.255.255.255
+  IPv6 link-local address is fe80::464c:a8ff:fefb:fafd/64
+  IPv6 global unicast address(es):
+    2620:26:2000:2554::1, subnet is 2620:26:2000:2554::/64
+  IP MTU 9170 bytes
+  Up 6 days, 2 hours, 54 minutes, 48 seconds
+Vlan905 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: "L3 PARTICIPANT GT | SOX-SIDCO-SIDCO-VLAN-02280"
+  Internet address is 143.215.192.26/31
+  Broadcast address is 255.255.255.255
+  IPv6 link-local address is fe80::464c:a8ff:fefb:fafd/64
+  IPv6 global unicast address(es):
+    2607:f7b8:1f02:c01a::1, subnet is 2607:f7b8:1f02:c01a::/64
+  IP MTU 9170 bytes
+  Up 9 days, 22 hours, 55 minutes, 9 seconds
+Vlan911 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: "[TRCPS] L3 PARTICIPANT GT | SOX-SIDCO-SIDCO-VLAN-02281"
+  Internet address is 143.215.192.28/31
+  Broadcast address is 255.255.255.255
+  IPv6 link-local address is fe80::464c:a8ff:fefb:fafd/64
+  IPv6 global unicast address(es):
+    2607:f7b8:1f02:c01c::1, subnet is 2607:f7b8:1f02:c01c::/64
+  IP MTU 9170 bytes
+  Up 9 days, 22 hours, 55 minutes, 9 seconds
+Vlan1109 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: L3 PARTICIPANT TNTECH [NO-MONITOR] | SOX-SIDCO-SIDCO-VLAN-02363
+  Internet address is 149.149.248.1/29
+  Broadcast address is 255.255.255.255
+  IPv6 link-local address is fe80::464c:a8ff:fefb:fafd/64
+  IPv6 global unicast address(es):
+    2620:88:6000::1, subnet is 2620:88:6000::/64
+  IP MTU 9170 bytes
+  Up 61 days, 19 hours, 42 minutes, 12 seconds
+Vlan1126 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: "L3 PARTICIPANT UAB | SOX-SIDCO-SIDCO-VLAN-01515"
+  Internet address is 138.26.220.81/29
+  Broadcast address is 255.255.255.255
+  IP MTU 9170 bytes
+  Up 326 days, 13 hours, 20 minutes, 39 seconds
+Vlan1129 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: "[TRCPS] L3 PARTICIPANT UAB | SOX-SIDCO-SIDCO-VLAN-02012"
+  Internet address is 138.26.220.30/30
+  Broadcast address is 255.255.255.255
+  IP MTU 1500 bytes (default)
+  Up 243 days, 2 hours, 23 minutes, 23 seconds
+Vlan1155 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: "[TRCPS] L3 PARTICIPANT TNTECH | SOX-SIDCO-SIDCO-VLAN-02474"
+  Internet address is 149.149.251.241/29
+  Broadcast address is 255.255.255.255
+  IP MTU 9170 bytes
+  Up 27 days, 16 hours, 21 minutes, 22 seconds
+Vlan1720 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: "L3 PARTICIPANT UA | SOX-SIDCO-SIDCO-VLAN-02084"
+  Internet address is 130.160.15.237/30
+  Broadcast address is 255.255.255.255
+  IP MTU 9170 bytes
+  Up 150 days, 2 hours, 21 minutes, 50 seconds
+Vlan1721 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: "[TRCPS] L3 PARTICIPANT UA | SOX-SIDCO-SIDCO-VLAN-02085"
+  Internet address is 130.160.15.197/30
+  Broadcast address is 255.255.255.255
+  IP MTU 9170 bytes
+  Up 150 days, 2 hours, 21 minutes, 50 seconds
+Vlan3657 is up, line protocol is up (connected)
+  Hardware is Vlan, address is 444c.a8fb.fafd (bia 444c.a8fb.fafd)
+  Description: description L3 PARTICIPANT EMORY | SOX-SIDCO-SIDCO-VLAN-02350
+  Internet address is 163.246.200.89/31
+  Broadcast address is 255.255.255.255
+  IP MTU 1500 bytes (default)
+  Up 276 days, 11 hours, 33 minutes, 50 seconds

@@ -1,0 +1,25 @@
+LAG AE3 - (56MAR_Atlanta -> SW1.55Mar) : 40 Gbps 
+
+   1. 56MAR_Atlanta-xe-0/2/0 -> SW1.55Mar-eth1/21 : 10 Gbps
+        Description: TO SW1.55MAR eth1/21 via MUX CH1590 1 of 4 LAG AE3 [NO-MONITOR] | SOX-56MAR-55MAR-10GE-01884
+   2.
+   3.
+   4.  
+
+
+AE18 xe-0/2/1.0 via FDP3 21/22
+    Utilization.            
+
+
+    1. 56MAR_Atlanta-xe-0/2/1 -> AMAZON : 10 Gbps
+        Description: PEER AMAZON #1 - 1 of 2 of AE18 via FDP3 21/22 | SOX-56MAR-56MAR-10GE-02339
+        Utilization. 
+            in:     1.4/10 Gbps. 
+            out:    0.02/10 Gbps out
+    2. 
+
+56MAR_Atlanta-xe-0/2/2 > ? : 10 Gbps
+    Description: Description: PARTICIPANT AUGST via FDP5 29/30 PN DWDM PN0110 | SOX-56MAR-56MAR-10GE-01642
+
+56MAR_Atlanta-xe-0/2/3 -> ? : 10 Gbps
+      Description: PARTICIPANT CAU via FDP2 45/46 | SOX-56MAR-56MAR-10GE-02284

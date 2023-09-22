@@ -1,0 +1,104 @@
+{
+    "name": "SIDCO_Nashville-TN",
+    "address": "143.215.194.241",
+    "physical_interfaces": {
+        "Ethernet1/1": {
+            "hw address": "444c.a8fb.fb06",
+            "description": "\"PARTICIPANT UAH via FDP1 25/26 | SOX-SIDCO-SIDCO-10GE-02056\"\n",
+            "speed": "10000000 kbit",
+            "input rate": "3.11 kbps",
+            "output rate": "286 Mbps"
+        },
+        "Ethernet3/2": {
+            "hw address": "444c.a8fb.fb0a",
+            "description": "\"TO PARTICIPANT UA via FDP1 3/4 | SOX-SIDCO-SIDCO-10GE-02082\"\n",
+            "speed": "10000000 kbit",
+            "input rate": "95.9 Mbps",
+            "output rate": "256 Mbps"
+        },
+        "Ethernet4/2": {
+            "hw address": "444c.a8fb.fb0e",
+            "description": "TO: PARTICIPANT VUMC via fdp1 21/22 | SOX-SIDCO-SIDCO-10GE-02231\n",
+            "speed": "10000000 kbit",
+            "input rate": "3.83 Gbps",
+            "output rate": "7.22 Gbps"
+        },
+        "Ethernet5/2": {
+            "hw address": "444c.a8fb.fb16",
+            "description": "\"TO: RTR.56MAR et-10/1/5 member#1 lag ae22 via ORNL | SOX-56MAR-SIDCO-100GE-02045\"\n",
+            "speed": "100000000 kbit",
+            "input rate": "3.81 Gbps",
+            "output rate": "3.24 Gbps"
+        },
+        "Ethernet8/1": {
+            "hw address": "444c.a8fb.fb1e",
+            "description": "\"PARTICIPANT UAB 100G via FDP1 13/14 | SOX-SIDCO-SIDCO-100GE-02048\"\n",
+            "speed": "100000000 kbit",
+            "input rate": "2.58 kbps",
+            "output rate": "1.64 Gbps"
+        },
+        "Ethernet10/1": {
+            "hw address": "444c.a8fb.fb26",
+            "description": "TO: [100G] TO: PARTICIPANT VANDY via FDP1 15/16 | SoX-SIDCO-SIDCO-100GE-02189\n",
+            "speed": "100000000 kbit",
+            "input rate": "935 Mbps",
+            "output rate": "3.37 Gbps"
+        },
+        "Ethernet12/1": {
+            "hw address": "444c.a8fb.fb2e",
+            "description": "\"TO: RTR.56MAR et-9/1/5 member#2 lag ae22 via ORNL | SOX-56MAR-SIDCO-100GE-02368\"\n",
+            "speed": "100000000 kbit",
+            "input rate": "3.66 Gbps",
+            "output rate": "3.29 Gbps"
+        },
+        "Ethernet15/1": {
+            "hw address": "444c.a8fb.fb32",
+            "description": "\"TO INTERNET2 AL2S core1.nash hun0/0/0/24 | SOX-SIDCO-SIDCO-100GE-02233\"\n",
+            "speed": "100000000 kbit",
+            "input rate": "7.53 Gbps",
+            "output rate": "3.44 Gbps"
+        },
+        "Ethernet17/1": {
+            "hw address": "444c.a8fb.fb36",
+            "description": "\"PARTICIPANT GT via LUMEN 100G | SOX-SIDCO-SIDCO-100GE-02274\"\n",
+            "speed": "100000000 kbit",
+            "input rate": "38.3 kbps",
+            "output rate": "74.7 Mbps"
+        },
+        "Ethernet19/1": {
+            "hw address": "444c.a8fb.fb42",
+            "description": "100G: TO RTR.365DC et23/1 via Zayo | SOX-365DC-SIDCO-100GE-02185\n",
+            "speed": "100000000 kbit",
+            "input rate": "5.51 Gbps",
+            "output rate": "447 Mbps"
+        },
+        "Ethernet25/1": {
+            "hw address": "444c.a8fb.fb62",
+            "description": "\"TO PARTICIPANT MTSU via FDP2 29/30 | SOX-SIDCO-SIDCO-10GE-02373\"\n",
+            "speed": "10000000 kbit",
+            "input rate": "86.4 Mbps",
+            "output rate": "2.21 Gbps"
+        },
+        "Ethernet32/2": {
+            "hw address": "444c.a8fb.fafd",
+            "description": "\"SERVICE PERFSONAR | SOX-SIDCO-SIDCO-10GE-01517\"\n",
+            "speed": "10000000 kbit",
+            "input rate": "455 bps",
+            "output rate": "2.66 kbps"
+        },
+        "Ethernet34/2": {
+            "hw address": "444c.a8fb.fb6e",
+            "description": "\"TO PARTICIPANT TNTECH via FDP2 27/28 | SOX-SIDCO-SIDCO-10GE-02360\"\n",
+            "speed": "10000000 kbit",
+            "input rate": "3.15 Mbps",
+            "output rate": "1.69 Mbps"
+        },
+        "Ethernet35/2": {
+            "hw address": "143.215.194.241",
+            "description": "\"TO: RTR.56MAR ae22 via ORNL | SOX-56MAR-SIDCO-LAG-02369\"\n",
+            "speed": "200000000 kbit",
+            "input rate": "7.48 Gbps",
+            "output rate": "6.53 Gbps"
+        }
+    }
+}

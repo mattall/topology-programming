@@ -1,0 +1,153 @@
+{
+    "name": "56MAR_Atlanta_GA",
+    "address": "143.215.194.253",
+    "physical_interfaces":{
+        "ae0": {
+            "description": "PEER GOOGLE PNI peering #1 | SOX-56MAR-56MAR-LAG-01852",
+            "speed": "20Gbps",
+            "hw address": "78:19:f7:b8:77:c0",
+            "input rate": "3722794144 bps",
+            "output rate": "432 bps"
+        },
+        "ae1": {
+            "description": "TO PARTICIPANT FLR LAG's Connection | SOX-56MAR-56MAR-LAG-02016",
+            "speed": "20Gbps",
+            "hw address": "78:19:f7:b8:77:c1",
+            "input rate": "2376 bps",
+            "output rate": "664 bps"
+        },
+        "ae2": {
+            "description": "PARTICIPANT UGA - MAIN BOyD LAG'd Connection | SOX-56MAR-56MAR-LAG-02133",
+            "speed": "20Gbps",
+            "hw address": "78:19:f7:b8:77:c2",
+            "input rate": "697805392 bps",
+            "output rate": "3627953544 bps"
+        },
+        "ae3": {
+            "description": "SW1.55MAR LAG'd Connection | SOX-55MAR-56MAR-LAG-01892",
+            "speed": "40Gbps",
+            "hw address": "78:19:f7:b8:77:c3",
+            "input rate": "0 bps",
+            "output rate": "232 bps"
+        },
+        "ae4": {
+            "description": "TO PARTICIPANT UA LAG'd connection | SOX-56MAR-56MAR-LAG-02095",
+            "speed": "20Gbps",
+            "hw address": "78:19:f7:b8:77:c5",
+            "input rate": "226104136 bps",
+            "output rate": "506390160 bps"
+        },
+        "ae6": {
+            "description": "TO PARTICIPANT PNET LAG's Connection | SOX-56MAR-56MAR-LAG-02028",
+            "speed": "30Gbps",
+            "hw address": "78:19:f7:b8:77:c6",
+            "input rate": "657897952 bps",
+            "output rate": "4743572208 bps"
+        },
+        "ae7": {
+            "description": "ISP GTT LAG'd peering (13Gbps) | SOX-56MAR-56MAR-LAG-02226",
+            "speed": "20Gbps",
+            "hw address": "78:19:f7:b8:77:c7",
+            "input rate": "2204304984 bps",
+            "output rate": "848219608 bps"
+        },
+        "ae8": {
+            "description": "SW2.56MAR LAG'd Connection | SOX-56MAR-56MAR-LAG-01862",
+            "speed": "10Gbps",
+            "hw address": "78:19:f7:b8:77:c8",
+            "input rate": "712 bps",
+            "output rate": "32280 bps"
+        },
+        "ae9": {
+            "description": "TO PARTICIPANT ASC LAG's Connection | SOX-56MAR-56MAR-LAG-01866",
+            "speed": "30Gbps",
+            "hw address": "78:19:f7:b8:77:ca",
+            "input rate": "676294088 bps",
+            "output rate": "2063463944 bps"
+        },
+        "ae11": {
+            "description": "L3 PEER FACE LAG'd Connection 1 [PRIV] | SOX-56MAR-56MAR-LAG-02006",
+            "speed": "10Gbps",
+            "hw address": "78:19:f7:b8:77:cb",
+            "input rate": "2846519656 bps",
+            "output rate": "73228856 bps"
+        },
+        "ae12": {
+            "description": "L3 PEER FACE LAG'd connection 2 [PRIV] | SOX-56MAR-56MAR-LAG-02009",
+            "speed": "10Gbps",
+            "hw address": "78:19:f7:b8:77:cc",
+            "input rate": "2658649416 bps",
+            "output rate": "87830768 bps"
+        },
+        "ae13": {
+            "description": "PARTICIPANT UGA - Backup HSC LAG'd Connection | SOX-56MAR-56MAR-LAG-02134",
+            "speed": "20Gbps",
+            "hw address": "78:19:f7:b8:77:cd",
+            "input rate": "686366800 bps",
+            "output rate": "3610605536 bps"
+        },
+        "ae14": {
+            "description": "TO: PEER APPLE LAG'd connection #1 [priv] | SOX-56MAR-56MAR-LAG-02236",
+            "speed": "20Gbps",
+            "hw address": "78:19:f7:b8:77:ce",
+            "input rate": "1459121328 bps",
+            "output rate": "2891512 bps"
+        },
+        "ae15": {
+            "description": "TO: PEER APPLE LAG'd connection #2 [priv] | SOX-56MAR-56MAR-LAG-02237",
+            "speed": "20Gbps",
+            "hw address": "78:19:f7:b8:77:cf",
+            "input rate": "1017712504 bps",
+            "output rate": "12248024 bps"
+        },
+        "ae16": {
+            "description": "TO: PARTICIPANT CLEMSON LAG'd connection | SOX-56MAR-56MAR-LAG-02269",
+            "speed": "20Gbps",
+            "hw address": "7a:19:f7:b8:70:b5",
+            "input rate": "934848000 bps",
+            "output rate": "4210331976 bps"
+        },
+        "ae17": {
+            "description": "PEER AMAZON LAG#1 (VC-117681) | SOX-56MAR-56MAR-LAG-02278",
+            "speed": "20Gbps",
+            "hw address": "7a:19:f7:b8:70:b6",
+            "input rate": "3150138504 bps",
+            "output rate": "33752944 bps"
+        },
+        "ae18": {
+            "description": "PEER AMAZON LAG#2 (VC-117680) | SOX-56MAR-56MAR-LAG-02285",
+            "speed": "20Gbps",
+            "hw address": "7a:19:f7:b8:70:b7",
+            "input rate": "3942336232 bps",
+            "output rate": "42952792 bps"
+        },
+        "ae19": {
+            "description": "Cogent LAG (1-300423293) Blended ISP | SOX-56MAR-56MAR-LAG-02308",
+            "speed": "20Gbps",
+            "hw address": "7a:19:f7:b8:70:b8",
+            "input rate": "1192799640 bps",
+            "output rate": "1228956328 bps"
+        },
+        "ae20": {
+            "description": "bbsw2.56mar port-channel LAG | SOX-56MAR-56MAR-LAG-02311",
+            "speed": "80Gbps",
+            "hw address": "7a:19:f7:b8:70:c9",
+            "input rate": "2147779240 bps",
+            "output rate": "4692700920 bps"
+        },
+        "ae21": {
+            "description": "PEER GOOGLE PNI peering #2 | SOX-56MAR-56MAR-LAG-02433",
+            "speed": "20Gbps",
+            "hw address": "7a:19:f7:b8:70:ca",
+            "input rate": "2871639296 bps",
+            "output rate": "4882190872 bps"
+        },
+        "ae22": {
+            "description": "BB to RTR.SIDCO po22 via ORNL path | SOX-56MAR-SIDCO-LAG-02369",
+            "speed": "200Gbps",
+            "hw address": "7a:19:f7:b8:70:cb",
+            "input rate": "5514564680 bps",
+            "output rate": "6160784312 bps"
+        }
+    }
+}

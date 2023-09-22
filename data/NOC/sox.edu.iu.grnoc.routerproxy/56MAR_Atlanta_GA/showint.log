@@ -1,0 +1,2506 @@
+Response from: 143.215.194.253
+..........................> show interfaces 
+Physical interface: lc-0/0/0, Enabled, Physical link is Up
+  Interface index: 213, SNMP ifIndex: 524
+  Speed: 800mbps
+  Device flags   : Present Running
+  Link flags     : None
+  Last flapped   : Never
+    Input packets : 0
+    Output packets: 0
+
+  Logical interface lc-0/0/0.32769 (Index 520) (SNMP ifIndex 525)
+    Flags: Up Encapsulation: ENET2
+    Bandwidth: 0
+    Input packets : 0
+    Output packets: 0
+    Protocol vpls, MTU: Unlimited
+
+Physical interface: pfe-0/0/0, Enabled, Physical link is Up
+  Interface index: 218, SNMP ifIndex: 1093
+  Speed: 800mbps
+  Device flags   : Present Running
+  Link flags     : None
+  Last flapped   : Never
+    Input packets : 0
+    Output packets: 0
+
+  Logical interface pfe-0/0/0.16383 (Index 524) (SNMP ifIndex 1179)
+    Flags: Up SNMP-Traps Encapsulation: ENET2
+    Bandwidth: 0
+    Input packets : 0
+    Output packets: 0
+    Protocol inet, MTU: Unlimited
+    Max nh cache: 0, New hold nh limit: 0, Curr nh cnt: 0, Curr new hold cnt: 0,
+    NH drop cnt: 0
+      Flags: None
+    Protocol inet6, MTU: Unlimited
+    Max nh cache: 0, New hold nh limit: 0, Curr nh cnt: 0, Curr new hold cnt: 0,
+    NH drop cnt: 0
+      Flags: None
+
+Physical interface: pfh-0/0/0, Enabled, Physical link is Up
+  Interface index: 217, SNMP ifIndex: 1091
+  Speed: 800mbps
+  Device flags   : Present Running
+  Link flags     : None
+  Last flapped   : Never
+    Input packets : 0
+    Output packets: 0
+
+  Logical interface pfh-0/0/0.16383 (Index 528) (SNMP ifIndex 1177)
+    Flags: Up SNMP-Traps Encapsulation: ENET2
+    Bandwidth: 0
+    Input packets : 0
+    Output packets: 0
+    Protocol inet, MTU: Unlimited
+    Max nh cache: 0, New hold nh limit: 0, Curr nh cnt: 0, Curr new hold cnt: 0,
+    NH drop cnt: 0
+      Flags: None
+
+  Logical interface pfh-0/0/0.16384 (Index 529) (SNMP ifIndex 609)
+    Flags: Up SNMP-Traps Encapsulation: ENET2
+    Bandwidth: 0
+    Input packets : 0
+    Output packets: 0
+    Protocol inet, MTU: Unlimited
+    Max nh cache: 0, New hold nh limit: 0, Curr nh cnt: 0, Curr new hold cnt: 0,
+    NH drop cnt: 0
+      Flags: None
+
+Physical interface: xe-0/0/0, Enabled, Physical link is Up
+  Interface index: 288, SNMP ifIndex: 556
+  Description: TO GOOGLE PNI #2 member 2 of 2 LAG ae21 via FDP9 19/20 [NO-MONITOR] | SOX-56MAR-56MAR-10GE-02432
+  Link-level type: Ethernet, MTU: 1514, MRU: 1522, LAN-PHY mode, Speed: 10Gbps,
+  BPDU Error: None, Loop Detect PDU Error: None, MAC-REWRITE Error: None,
+  Loopback: None, Source filtering: Disabled, Flow control: Disabled,
+  Speed Configuration: Auto
+  Pad to minimum frame size: Disabled
+  Device flags   : Present Running
+  Interface flags: SNMP-Traps Internal: 0x4000
+  Link flags     : None
+  CoS queues     : 8 supported, 8 maximum usable queues
+  Schedulers     : 0
+  Current address: 7a:19:f7:b8:70:ca, Hardware address: 78:19:f7:b8:70:00
+  Last flapped   : 2023-01-20 05:14:43 EST (20w6d 06:28 ago)
+  Input rate     : 2069035880 bps (231879 pps)
+  Output rate    : 2049043032 bps (361472 pps)
+  Active alarms  : None
+  Active defects : None
+  PCS statistics                      Seconds
+    Bit errors                             0
+    Errored blocks                         3
+  Link Degrade :                      
+    Link Monitoring                   :  Disable
+  Interface transmit statistics: Disabled
+
+  Logical interface xe-0/0/0.0 (Index 498) (SNMP ifIndex 643)
+    Flags: Up SNMP-Traps 0x4004000 Encapsulation: ENET2
+    Input packets : 2399391881540
+    Output packets: 438505478541
+    Protocol aenet, AE bundle: ae21.0
+
+Physical interface: xe-0/0/1, Enabled, Physical link is Up
+  Interface index: 289, SNMP ifIndex: 562
+  Description: TO: PARTICIPANT CLEMSON member 1 of 2 for LAG ae16 via home run to Clemson panel 3/4 | SOX-56MAR-56MAR-10GE-01608
+  Link-level type: Flexible-Ethernet, MTU: 9192, MRU: 9200, LAN-PHY mode,
+  Speed: 10Gbps, BPDU Error: None, Loop Detect PDU Error: None,
+  MAC-REWRITE Error: None, Loopback: None, Source filtering: Disabled,
+  Flow control: Disabled, Speed Configuration: Auto
+  Pad to minimum frame size: Disabled
+  Device flags   : Present Running
+  Interface flags: SNMP-Traps Internal: 0x4000
+  CoS queues     : 8 supported, 8 maximum usable queues
+  Schedulers     : 0
+  Current address: 7a:19:f7:b8:70:b5, Hardware address: 78:19:f7:b8:70:01
+  Last flapped   : 2023-06-01 09:28:06 EDT (2w0d 03:15 ago)
+  Input rate     : 364660720 bps (105276 pps)
+  Output rate    : 2546105632 bps (283495 pps)
+  Active alarms  : None
+  Active defects : None
+  PCS statistics                      Seconds
+    Bit errors                             0
+    Errored blocks                        10
+  Link Degrade :                      
+    Link Monitoring                   :  Disable
+  Interface transmit statistics: Disabled
+
+  Logical interface xe-0/0/1.816 (Index 905) (SNMP ifIndex 567)
+    Flags: Up SNMP-Traps 0x4000 VLAN-Tag [ 0x8100.816 ]  Encapsulation: ENET2
+    Input packets : 560096944907
+    Output packets: 380718589955
+    Protocol aenet, AE bundle: ae16.816
+
+  Logical interface xe-0/0/1.817 (Index 921) (SNMP ifIndex 568)
+    Flags: Up SNMP-Traps 0x4000 VLAN-Tag [ 0x8100.817 ]  Encapsulation: ENET2
+    Input packets : 2708187409606
+    Output packets: 3581517608871
+    Protocol aenet, AE bundle: ae16.817
+
+  Logical interface xe-0/0/1.819 (Index 922) (SNMP ifIndex 569)
+    Flags: Up SNMP-Traps 0x4000 VLAN-Tag [ 0x8100.819 ]  Encapsulation: ENET2
+    Input packets : 4429594591
+    Output packets: 1066388038696
+    Protocol aenet, AE bundle: ae16.819
+
+  Logical interface xe-0/0/1.830 (Index 906) (SNMP ifIndex 571)
+    Flags: Up SNMP-Traps 0x4000 VLAN-Tag [ 0x8100.830 ]  Encapsulation: ENET2
+    Input packets : 2936811389
+    Output packets: 2024116204
+    Protocol aenet, AE bundle: ae16.830
+
+  Logical interface xe-0/0/1.832 (Index 923) (SNMP ifIndex 1897)
+    Flags: Up SNMP-Traps 0x4000 VLAN-Tag [ 0x8100.832 ]  Encapsulation: ENET2
+    Input packets : 139247548132
+    Output packets: 183378501577
+    Protocol aenet, AE bundle: ae16.832
+
+  Logical interface xe-0/0/1.838 (Index 924) (SNMP ifIndex 724)
+    Flags: Up SNMP-Traps 0x4000 VLAN-Tag [ 0x8100.838 ]  Encapsulation: ENET2
+    Input packets : 58752001661
+    Output packets: 64734945732
+    Protocol aenet, AE bundle: ae16.838
+
+  Logical interface xe-0/0/1.973 (Index 907) (SNMP ifIndex 577)
+    Flags: Up SNMP-Traps 0x20004000 VLAN-Tag [ 0x8100.973 ] 
+    Encapsulation: VLAN-Bridge
+    Input packets : 4307970
+    Output packets: 9866212
+    Protocol aenet, AE bundle: ae16.973
+
+  Logical interface xe-0/0/1.1500 (Index 908) (SNMP ifIndex 1721)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1500 ] In(pop) Out(push 0x8100.1500) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol aenet, AE bundle: ae16.1500
+
+  Logical interface xe-0/0/1.1501 (Index 909) (SNMP ifIndex 1722)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1501 ] In(pop) Out(push 0x8100.1501) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol aenet, AE bundle: ae16.1501
+
+  Logical interface xe-0/0/1.1502 (Index 910) (SNMP ifIndex 1723)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1502 ] In(pop) Out(push 0x8100.1502) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol aenet, AE bundle: ae16.1502
+
+  Logical interface xe-0/0/1.1503 (Index 911) (SNMP ifIndex 1724)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1503 ] In(pop) Out(push 0x8100.1503) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol aenet, AE bundle: ae16.1503
+
+  Logical interface xe-0/0/1.1504 (Index 912) (SNMP ifIndex 1725)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1504 ] In(pop) Out(push 0x8100.1504) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol aenet, AE bundle: ae16.1504
+
+  Logical interface xe-0/0/1.1505 (Index 913) (SNMP ifIndex 1726)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1505 ] In(pop) Out(push 0x8100.1505) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol aenet, AE bundle: ae16.1505
+
+  Logical interface xe-0/0/1.1615 (Index 914) (SNMP ifIndex 578)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1615 ] In(pop) Out(push 0x8100.1615) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 2121547
+    Protocol aenet, AE bundle: ae16.1615
+
+  Logical interface xe-0/0/1.1751 (Index 915) (SNMP ifIndex 1228)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1751 ] In(pop) Out(push 0x8100.1751) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 14159223
+    Output packets: 0
+    Protocol aenet, AE bundle: ae16.1751
+
+  Logical interface xe-0/0/1.1755 (Index 916) (SNMP ifIndex 1325)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1755 ] In(pop) Out(push 0x8100.1755) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol aenet, AE bundle: ae16.1755
+
+  Logical interface xe-0/0/1.1756 (Index 917) (SNMP ifIndex 1327)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1756 ] In(pop) Out(push 0x8100.1756) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol aenet, AE bundle: ae16.1756
+
+  Logical interface xe-0/0/1.1757 (Index 918) (SNMP ifIndex 1329)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1757 ] In(pop) Out(push 0x8100.1757) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol aenet, AE bundle: ae16.1757
+
+  Logical interface xe-0/0/1.1758 (Index 919) (SNMP ifIndex 1330)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1758 ] In(pop) Out(push 0x8100.1758) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol aenet, AE bundle: ae16.1758
+
+  Logical interface xe-0/0/1.1759 (Index 920) (SNMP ifIndex 1333)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1759 ] In(pop) Out(push 0x8100.1759) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol aenet, AE bundle: ae16.1759
+
+  Logical interface xe-0/0/1.32767 (Index 925) (SNMP ifIndex 604)
+    Flags: Up SNMP-Traps 0x4004000 VLAN-Tag [ 0x0000.0 ]  Encapsulation: ENET2
+    Input packets : 29511884
+    Output packets: 1028414
+    Protocol aenet, AE bundle: ae16.32767
+
+Physical interface: xe-0/0/2, Enabled, Physical link is Up
+  Interface index: 290, SNMP ifIndex: 558
+  Description: TO ISP GTT (01084012) blended ISP via FDP3 1/2 member #1 of lag ae7 | SOX-56MAR-56MAR-10GE-02177
+  Link-level type: Ethernet, MTU: 1514, MRU: 1522, LAN-PHY mode, Speed: 10Gbps,
+  BPDU Error: None, Loop Detect PDU Error: None, MAC-REWRITE Error: None,
+  Loopback: None, Source filtering: Disabled, Flow control: Disabled,
+  Speed Configuration: Auto
+  Pad to minimum frame size: Disabled
+  Device flags   : Present Running
+  Interface flags: SNMP-Traps Internal: 0x4000
+  Link flags     : None
+  CoS queues     : 8 supported, 8 maximum usable queues
+  Schedulers     : 0
+  Current address: 78:19:f7:b8:77:c7, Hardware address: 78:19:f7:b8:70:02
+  Last flapped   : 2022-07-16 23:56:08 EDT (47w4d 12:47 ago)
+  Input rate     : 1441799240 bps (215019 pps)
+  Output rate    : 140539664 bps (65626 pps)
+  Active alarms  : None
+  Active defects : None
+  PCS statistics                      Seconds
+    Bit errors                             0
+    Errored blocks                         0
+  Link Degrade :                      
+    Link Monitoring                   :  Disable
+  Interface transmit statistics: Disabled
+
+  Logical interface xe-0/0/2.0 (Index 926) (SNMP ifIndex 914)
+    Flags: Up SNMP-Traps 0x4004000 Encapsulation: ENET2
+    Input packets : 4962278927364
+    Output packets: 2423431235488
+    Protocol aenet, AE bundle: ae7.0
+
+Physical interface: xe-0/0/3, Enabled, Physical link is Up
+  Interface index: 291, SNMP ifIndex: 559
+  Description: TO PEER APPLE [10GE] - conn #3 via FDP9 17/18 -  member 2 of 2 ae14 | SOX-56MAR-56MAR-10GE-02220
+  Link-level type: Ethernet, MTU: 9192, MRU: 9200, LAN-PHY mode, Speed: 10Gbps,
+  BPDU Error: None, Loop Detect PDU Error: None, MAC-REWRITE Error: None,
+  Loopback: None, Source filtering: Disabled, Flow control: Disabled,
+  Speed Configuration: Auto
+  Pad to minimum frame size: Disabled
+  Device flags   : Present Running
+  Interface flags: SNMP-Traps Internal: 0x4000
+  Link flags     : None
+  CoS queues     : 8 supported, 8 maximum usable queues
+  Schedulers     : 0
+  Current address: 78:19:f7:b8:77:ce, Hardware address: 78:19:f7:b8:70:03
+  Last flapped   : 2022-09-02 16:47:37 EDT (40w5d 19:55 ago)
+  Input rate     : 572760544 bps (66526 pps)
+  Output rate    : 1798240 bps (3170 pps)
+  Active alarms  : None
+  Active defects : None
+  PCS statistics                      Seconds
+    Bit errors                             0
+    Errored blocks                         3
+  Link Degrade :                      
+    Link Monitoring                   :  Disable
+  Interface transmit statistics: Disabled
+
+  Logical interface xe-0/0/3.0 (Index 927) (SNMP ifIndex 1678)
+    Flags: Up SNMP-Traps 0x4004000 Encapsulation: ENET2
+    Input packets : 3111413538894
+    Output packets: 54743537032
+    Protocol aenet, AE bundle: ae14.0
+
+Physical interface: lc-0/1/0, Enabled, Physical link is Up
+  Interface index: 214, SNMP ifIndex: 526
+  Speed: 800mbps
+  Device flags   : Present Running
+  Link flags     : None
+  Last flapped   : Never
+    Input packets : 0
+    Output packets: 0
+
+  Logical interface lc-0/1/0.32769 (Index 521) (SNMP ifIndex 527)
+    Flags: Up Encapsulation: ENET2
+    Bandwidth: 0
+    Input packets : 0
+    Output packets: 0
+    Protocol vpls, MTU: Unlimited
+
+Physical interface: pfe-0/1/0, Enabled, Physical link is Up
+  Interface index: 219, SNMP ifIndex: 1102
+  Speed: 800mbps
+  Device flags   : Present Running
+  Link flags     : None
+  Last flapped   : Never
+    Input packets : 0
+    Output packets: 0
+
+  Logical interface pfe-0/1/0.16383 (Index 525) (SNMP ifIndex 1232)
+    Flags: Up SNMP-Traps Encapsulation: ENET2
+    Bandwidth: 0
+    Input packets : 0
+    Output packets: 0
+    Protocol inet, MTU: Unlimited
+    Max nh cache: 0, New hold nh limit: 0, Curr nh cnt: 0, Curr new hold cnt: 0,
+    NH drop cnt: 0
+      Flags: None
+    Protocol inet6, MTU: Unlimited
+    Max nh cache: 0, New hold nh limit: 0, Curr nh cnt: 0, Curr new hold cnt: 0,
+    NH drop cnt: 0
+      Flags: None
+
+Physical interface: xe-0/1/0, Enabled, Physical link is Up
+  Interface index: 292, SNMP ifIndex: 584
+  Description: TO PEER APPLE conn #1 via FDP3 33/34 - member 1 of 2 ae15 | SOX-56MAR-56MAR-10GE-01624
+  Link-level type: Ethernet, MTU: 9192, MRU: 9200, LAN-PHY mode, Speed: 10Gbps,
+  BPDU Error: None, Loop Detect PDU Error: None, MAC-REWRITE Error: None,
+  Loopback: None, Source filtering: Disabled, Flow control: Disabled,
+  Speed Configuration: Auto
+  Pad to minimum frame size: Disabled
+  Device flags   : Present Running
+  Interface flags: SNMP-Traps Internal: 0x4000
+  Link flags     : None
+  CoS queues     : 8 supported, 8 maximum usable queues
+  Schedulers     : 0
+  Current address: 78:19:f7:b8:77:cf, Hardware address: 78:19:f7:b8:70:29
+  Last flapped   : 2022-07-16 23:56:08 EDT (47w4d 12:47 ago)
+  Input rate     : 786239280 bps (84185 pps)
+  Output rate    : 7810768 bps (15690 pps)
+  Active alarms  : None
+  Active defects : None
+  PCS statistics                      Seconds
+    Bit errors                             0
+    Errored blocks                         1
+  Link Degrade :                      
+    Link Monitoring                   :  Disable
+  Interface transmit statistics: Disabled
+
+  Logical interface xe-0/1/0.0 (Index 928) (SNMP ifIndex 1635)
+    Flags: Up SNMP-Traps 0x4004000 Encapsulation: ENET2
+    Input packets : 3138165117225
+    Output packets: 631203832173
+    Protocol aenet, AE bundle: ae15.0
+
+Physical interface: xe-0/1/1, Enabled, Physical link is Up
+  Interface index: 293, SNMP ifIndex: 585
+  Description: PEER COGENT 1-300254917 for UGA via FDP1 1/2 | SOX-56MAR-56MAR-10GE-02103
+  Link-level type: Ethernet-Bridge, MTU: 9192, MRU: 9200, LAN-PHY mode,
+  Speed: 10Gbps, BPDU Error: None, Loop Detect PDU Error: None,
+  MAC-REWRITE Error: None, Loopback: None, Source filtering: Disabled,
+  Flow control: Enabled, Speed Configuration: Auto
+  Pad to minimum frame size: Disabled
+  Device flags   : Present Running
+  Interface flags: SNMP-Traps Internal: 0x20004000
+  Link flags     : None
+  CoS queues     : 8 supported, 8 maximum usable queues
+  Schedulers     : 0
+  Current address: 78:19:f7:b8:70:2a, Hardware address: 78:19:f7:b8:70:2a
+  Last flapped   : 2023-03-18 01:51:44 EDT (12w5d 10:51 ago)
+  Input rate     : 1947128064 bps (207444 pps)
+  Output rate    : 102604616 bps (42153 pps)
+  Active alarms  : None
+  Active defects : None
+  PCS statistics                      Seconds
+    Bit errors                             0
+    Errored blocks                         4
+  Link Degrade :                      
+    Link Monitoring                   :  Disable
+  Interface transmit statistics: Disabled
+
+  Logical interface xe-0/1/1.0 (Index 929) (SNMP ifIndex 697)
+    Description: L2 PARTICIPANT UGA via COGENT | SOX-56MAR-56MAR-VLAN-02109
+    Flags: Up SNMP-Traps 0x24004000 Encapsulation: Ethernet-Bridge
+    Input packets : 4607842400668
+    Output packets: 1529628072739
+    Protocol bridge, MTU: 9192
+
+Physical interface: xe-0/1/2, Enabled, Physical link is Up
+  Interface index: 294, SNMP ifIndex: 587
+  Description: TO PEER APPLE conn #2 via FDP1 3/4 - member 1 of 2 ae14 | SOX-56MAR-56MAR-10GE-02073
+  Link-level type: Ethernet, MTU: 9192, MRU: 9200, LAN-PHY mode, Speed: 10Gbps,
+  BPDU Error: None, Loop Detect PDU Error: None, MAC-REWRITE Error: None,
+  Loopback: None, Source filtering: Disabled, Flow control: Disabled,
+  Speed Configuration: Auto
+  Pad to minimum frame size: Disabled
+  Device flags   : Present Running
+  Interface flags: SNMP-Traps Internal: 0x4000
+  Link flags     : None
+  CoS queues     : 8 supported, 8 maximum usable queues
+  Schedulers     : 0
+  Current address: 78:19:f7:b8:77:ce, Hardware address: 78:19:f7:b8:70:2b
+  Last flapped   : 2022-07-16 23:56:08 EDT (47w4d 12:47 ago)
+  Input rate     : 600435560 bps (67698 pps)
+  Output rate    : 2957768 bps (5031 pps)
+  Active alarms  : None
+  Active defects : None
+  PCS statistics                      Seconds
+    Bit errors                             0
+    Errored blocks                         1
+  Link Degrade :                      
+    Link Monitoring                   :  Disable
+  Interface transmit statistics: Disabled
+
+  Logical interface xe-0/1/2.0 (Index 930) (SNMP ifIndex 1311)
+    Flags: Up SNMP-Traps 0x4004000 Encapsulation: ENET2
+    Input packets : 3587756565882
+    Output packets: 64612101892
+    Protocol aenet, AE bundle: ae14.0
+
+Physical interface: xe-0/1/3, Enabled, Physical link is Up
+  Interface index: 295, SNMP ifIndex: 605
+  Description: TO ISP COGENT 1-300417472 via FDP2 1/2 | SOX-56MAR-56MAR-10GE-01640
+  Link-level type: Flexible-Ethernet, MTU: 9192, MRU: 9200, LAN-PHY mode,
+  Speed: 10Gbps, BPDU Error: None, Loop Detect PDU Error: None,
+  MAC-REWRITE Error: None, Loopback: None, Source filtering: Disabled,
+  Flow control: Enabled, Speed Configuration: Auto
+  Pad to minimum frame size: Disabled
+  Device flags   : Present Running
+  Interface flags: SNMP-Traps Internal: 0x4000
+  CoS queues     : 8 supported, 8 maximum usable queues
+  Schedulers     : 0
+  Current address: 78:19:f7:b8:70:2c, Hardware address: 78:19:f7:b8:70:2c
+  Last flapped   : 2023-03-18 01:51:33 EDT (12w5d 10:51 ago)
+  Input rate     : 550564216 bps (68092 pps)
+  Output rate    : 4554544 bps (1936 pps)
+  Active alarms  : None
+  Active defects : None
+  PCS statistics                      Seconds
+    Bit errors                             0
+    Errored blocks                         5
+  Link Degrade :                      
+    Link Monitoring                   :  Disable
+  Interface transmit statistics: Disabled
+
+  Logical interface xe-0/1/3.200 (Index 931) (SNMP ifIndex 794)
+    Description: L2 PARTICIPANT GT - BCDC COGENT #1 | SOX-56MAR-56MAR-VLAN-02026
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.200 ] In(pop) Out(push 0x8100.200) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 103991053
+    Output packets: 104798868058
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-0/1/3.204 (Index 932) (SNMP ifIndex 707)
+    Description: L2 PARTICIPANT MSM via COGENT | SOX-56MAR-56MAR-VLAN-02033
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.204 ] In(pop) Out(push 0x8100.204) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 178268369098
+    Output packets: 13556441
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-0/1/3.205 (Index 933) (SNMP ifIndex 2120)
+    Description: L2 USA to Cogent ISP | SoX-56MAR-56MAR-VLAN-02418
+    Flags: Up SNMP-Traps 0x20004000 VLAN-Tag [ 0x8100.205 ] 
+    Encapsulation: VLAN-Bridge
+    Input packets : 730621866110
+    Output packets: 7133895
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-0/1/3.32767 (Index 934) (SNMP ifIndex 796)
+    Flags: Up SNMP-Traps 0x4004000 VLAN-Tag [ 0x0000.0 ]  Encapsulation: ENET2
+    Input packets : 0
+    Output packets: 1038369
+    Protocol multiservice, MTU: Unlimited
+      Flags: None
+
+Physical interface: lc-0/2/0, Enabled, Physical link is Up
+  Interface index: 215, SNMP ifIndex: 528
+  Speed: 800mbps
+  Device flags   : Present Running
+  Link flags     : None
+  Last flapped   : Never
+    Input packets : 0
+    Output packets: 0
+
+  Logical interface lc-0/2/0.32769 (Index 522) (SNMP ifIndex 529)
+    Flags: Up Encapsulation: ENET2
+    Bandwidth: 0
+    Input packets : 0
+    Output packets: 0
+    Protocol vpls, MTU: Unlimited
+
+Physical interface: pfe-0/2/0, Enabled, Physical link is Up
+  Interface index: 220, SNMP ifIndex: 1175
+  Speed: 800mbps
+  Device flags   : Present Running
+  Link flags     : None
+  Last flapped   : Never
+    Input packets : 0
+    Output packets: 0
+
+  Logical interface pfe-0/2/0.16383 (Index 526) (SNMP ifIndex 1257)
+    Flags: Up SNMP-Traps Encapsulation: ENET2
+    Bandwidth: 0
+    Input packets : 0
+    Output packets: 0
+    Protocol inet, MTU: Unlimited
+    Max nh cache: 0, New hold nh limit: 0, Curr nh cnt: 0, Curr new hold cnt: 0,
+    NH drop cnt: 0
+      Flags: None
+    Protocol inet6, MTU: Unlimited
+    Max nh cache: 0, New hold nh limit: 0, Curr nh cnt: 0, Curr new hold cnt: 0,
+    NH drop cnt: 0
+      Flags: None
+
+Physical interface: xe-0/2/0, Enabled, Physical link is Up
+  Interface index: 296, SNMP ifIndex: 805
+  Description: TO SW1.55MAR eth1/21 via MUX CH1590 1 of 4 LAG AE3 [NO-MONITOR] | SOX-56MAR-55MAR-10GE-01884
+  Link-level type: Flexible-Ethernet, MTU: 9192, MRU: 9200, LAN-PHY mode,
+  Speed: 10Gbps, BPDU Error: None, Loop Detect PDU Error: None,
+  MAC-REWRITE Error: None, Loopback: None, Source filtering: Disabled,
+  Flow control: Disabled, Speed Configuration: Auto
+  Pad to minimum frame size: Disabled
+  Device flags   : Present Running
+  Interface flags: SNMP-Traps Internal: 0x4000
+  CoS queues     : 8 supported, 8 maximum usable queues
+  Schedulers     : 0
+  Current address: 78:19:f7:b8:77:c3, Hardware address: 78:19:f7:b8:70:52
+  Last flapped   : 2022-07-16 23:56:08 EDT (47w4d 12:47 ago)
+  Input rate     : 0 bps (0 pps)
+  Output rate    : 208 bps (0 pps)
+  Active alarms  : None
+  Active defects : None
+  PCS statistics                      Seconds
+    Bit errors                             0
+    Errored blocks                         0
+  Link Degrade :                      
+    Link Monitoring                   :  Disable
+  Interface transmit statistics: Disabled
+
+  Logical interface xe-0/2/0.32767 (Index 935) (SNMP ifIndex 875)
+    Flags: Up SNMP-Traps 0x4004000 VLAN-Tag [ 0x0000.0 ]  Encapsulation: ENET2
+    Input packets : 960464
+    Output packets: 16190792
+    Protocol aenet, AE bundle: ae3.32767
+
+Physical interface: xe-0/2/1, Enabled, Physical link is Up
+  Interface index: 297, SNMP ifIndex: 807
+  Description: TO: PEER AMAZON #1 - 1 of 2 of AE18 via FDP3 21/22 | SOX-56MAR-56MAR-10GE-02339
+  Link-level type: Ethernet, MTU: 1514, MRU: 1522, LAN-PHY mode, Speed: 10Gbps,
+  BPDU Error: None, Loop Detect PDU Error: None, MAC-REWRITE Error: None,
+  Loopback: None, Source filtering: Disabled, Flow control: Disabled,
+  Speed Configuration: Auto
+  Pad to minimum frame size: Disabled
+  Device flags   : Present Running
+  Interface flags: SNMP-Traps Internal: 0x4000
+  Link flags     : None
+  CoS queues     : 8 supported, 8 maximum usable queues
+  Schedulers     : 0
+  Current address: 7a:19:f7:b8:70:b7, Hardware address: 78:19:f7:b8:70:53
+  Last flapped   : 2023-02-14 00:37:19 EST (17w2d 11:05 ago)
+  Input rate     : 1452184568 bps (166792 pps)
+  Output rate    : 23859152 bps (28327 pps)
+  Active alarms  : None
+  Active defects : None
+  PCS statistics                      Seconds
+    Bit errors                             0
+    Errored blocks                         6
+  Link Degrade :                      
+    Link Monitoring                   :  Disable
+  Interface transmit statistics: Disabled
+
+  Logical interface xe-0/2/1.0 (Index 936) (SNMP ifIndex 1907)
+    Flags: Up SNMP-Traps 0x4004000 Encapsulation: ENET2
+    Input packets : 5591063247214
+    Output packets: 997523077899
+    Protocol aenet, AE bundle: ae18.0
+
+Physical interface: xe-0/2/2, Enabled, Physical link is Up
+  Interface index: 298, SNMP ifIndex: 808
+  Description: PARTICIPANT AUGST via FDP5 29/30 PN DWDM PN0110 | SOX-56MAR-56MAR-10GE-01642
+  Link-level type: Flexible-Ethernet, MTU: 1522, MRU: 1530, LAN-PHY mode,
+  Speed: 10Gbps, BPDU Error: None, Loop Detect PDU Error: None,
+  MAC-REWRITE Error: None, Loopback: None, Source filtering: Disabled,
+  Flow control: Enabled, Speed Configuration: Auto
+  Pad to minimum frame size: Disabled
+  Device flags   : Present Running
+  Interface flags: SNMP-Traps Internal: 0x4000
+  CoS queues     : 8 supported, 8 maximum usable queues
+  Schedulers     : 0
+  Current address: 78:19:f7:b8:70:54, Hardware address: 78:19:f7:b8:70:54
+  Last flapped   : 2023-06-13 19:45:25 EDT (1d 16:57 ago)
+  Input rate     : 272 bps (0 pps)
+  Output rate    : 1440 bps (3 pps)
+  Active alarms  : None
+  Active defects : None
+  PCS statistics                      Seconds
+    Bit errors                          4408
+    Errored blocks                  11288146
+  Link Degrade :                      
+    Link Monitoring                   :  Disable
+  Interface transmit statistics: Disabled
+
+  Logical interface xe-0/2/2.567 (Index 937) (SNMP ifIndex 1237)
+    Description: L2 PARTICIPANT UGA | SOX-56MAR-56MAR-VLAN-01644
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.567 ] In(pop) Out(push 0x8100.567) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 1522
+
+  Logical interface xe-0/2/2.572 (Index 938) (SNMP ifIndex 882)
+    Description: L2 PARTICIPANT UGA - MCG PROJECT | SOX-56MAR-56MAR-VLAN-01646
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.572 ] In(pop) Out(push 0x8100.572) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 21908681
+    Output packets: 83574666
+    Protocol bridge, MTU: 1522
+
+  Logical interface xe-0/2/2.32767 (Index 939) (SNMP ifIndex 891)
+    Flags: Up SNMP-Traps 0x4004000 VLAN-Tag [ 0x0000.0 ]  Encapsulation: ENET2
+    Input packets : 0
+    Output packets: 1038520
+    Protocol multiservice, MTU: Unlimited
+      Flags: None
+
+Physical interface: xe-0/2/3, Enabled, Physical link is Up
+  Interface index: 299, SNMP ifIndex: 809
+  Description: PARTICIPANT CAU via FDP2 45/46 | SOX-56MAR-56MAR-10GE-02284
+  Link-level type: Flexible-Ethernet, MTU: 1522, MRU: 1530, LAN-PHY mode,
+  Speed: 10Gbps, BPDU Error: None, Loop Detect PDU Error: None,
+  MAC-REWRITE Error: None, Loopback: None, Source filtering: Disabled,
+  Flow control: Enabled, Speed Configuration: Auto
+  Pad to minimum frame size: Disabled
+  Device flags   : Present Running
+  Interface flags: SNMP-Traps Internal: 0x4000
+  CoS queues     : 8 supported, 8 maximum usable queues
+  Schedulers     : 0
+  Current address: 78:19:f7:b8:70:55, Hardware address: 78:19:f7:b8:70:55
+  Last flapped   : 2023-06-09 02:42:30 EDT (6d 10:00 ago)
+  Input rate     : 39431520 bps (15565 pps)
+  Output rate    : 293615184 bps (32756 pps)
+  Active alarms  : None
+  Active defects : None
+  PCS statistics                      Seconds
+    Bit errors                             0
+    Errored blocks                        44
+  Link Degrade :                      
+    Link Monitoring                   :  Disable
+  Interface transmit statistics: Disabled
+
+  Logical interface xe-0/2/3.101 (Index 940) (SNMP ifIndex 1893)
+    Description: L3 PARTICIPANT CAU | SOX-56MAR-56MAR-VLAN-02320
+    Flags: Up SNMP-Traps 0x4000 VLAN-Tag [ 0x8100.101 ]  Encapsulation: ENET2
+    Input packets : 36666472068
+    Output packets: 10079250602
+    Protocol inet, MTU: 1500
+    Max nh cache: 75000, New hold nh limit: 75000, Curr nh cnt: 1,
+    Curr new hold cnt: 0, NH drop cnt: 0
+      Flags: Sendbcast-pkt-to-re, Sample-input
+      Addresses, Flags: Is-Preferred Is-Primary
+        Destination: 143.215.192.12/31, Local: 143.215.192.12
+    Protocol multiservice, MTU: Unlimited
+
+  Logical interface xe-0/2/3.102 (Index 941) (SNMP ifIndex 1894)
+    Description: [TRCPS] L3 PARTICIPANT CAU | SOX-56MAR-56MAR-VLAN-02321
+    Flags: Up SNMP-Traps 0x4000 VLAN-Tag [ 0x8100.102 ]  Encapsulation: ENET2
+    Input packets : 190648557643
+    Output packets: 348066792296
+    Protocol inet, MTU: 1500
+    Max nh cache: 75000, New hold nh limit: 75000, Curr nh cnt: 1,
+    Curr new hold cnt: 0, NH drop cnt: 0
+      Flags: Sendbcast-pkt-to-re
+      Addresses, Flags: Is-Preferred Is-Primary
+        Destination: 143.215.192.14/31, Local: 143.215.192.14
+    Protocol multiservice, MTU: Unlimited
+
+  Logical interface xe-0/2/3.103 (Index 942) (SNMP ifIndex 1921)
+    Description: [BLENDED] L3 PARTICIPANT CAU | SOX-56MAR-56MAR-VLAN-02354
+    Flags: Up SNMP-Traps 0x4000 VLAN-Tag [ 0x8100.103 ]  Encapsulation: ENET2
+    Input packets : 34275069979
+    Output packets: 67276217764
+    Protocol inet, MTU: 1500
+    Max nh cache: 75000, New hold nh limit: 75000, Curr nh cnt: 1,
+    Curr new hold cnt: 0, NH drop cnt: 0
+      Flags: Sendbcast-pkt-to-re
+      Addresses, Flags: Is-Preferred Is-Primary
+        Destination: 143.215.192.40/31, Local: 143.215.192.40
+    Protocol multiservice, MTU: Unlimited
+
+  Logical interface xe-0/2/3.32767 (Index 943) (SNMP ifIndex 1895)
+    Flags: Up SNMP-Traps 0x4004000 VLAN-Tag [ 0x0000.0 ]  Encapsulation: ENET2
+    Input packets : 0
+    Output packets: 738109
+    Protocol multiservice, MTU: Unlimited
+      Flags: None
+
+Physical interface: lc-0/3/0, Enabled, Physical link is Up
+  Interface index: 216, SNMP ifIndex: 530
+  Speed: 800mbps
+  Device flags   : Present Running
+  Link flags     : None
+  Last flapped   : Never
+    Input packets : 0
+    Output packets: 0
+
+  Logical interface lc-0/3/0.32769 (Index 523) (SNMP ifIndex 531)
+    Flags: Up Encapsulation: ENET2
+    Bandwidth: 0
+    Input packets : 0
+    Output packets: 0
+    Protocol vpls, MTU: Unlimited
+
+Physical interface: pfe-0/3/0, Enabled, Physical link is Up
+  Interface index: 221, SNMP ifIndex: 1176
+  Speed: 800mbps
+  Device flags   : Present Running
+  Link flags     : None
+  Last flapped   : Never
+    Input packets : 0
+    Output packets: 0
+
+  Logical interface pfe-0/3/0.16383 (Index 530) (SNMP ifIndex 1265)
+    Flags: Up SNMP-Traps Encapsulation: ENET2
+    Bandwidth: 0
+    Input packets : 0
+    Output packets: 0
+    Protocol inet, MTU: Unlimited
+    Max nh cache: 0, New hold nh limit: 0, Curr nh cnt: 0, Curr new hold cnt: 0,
+    NH drop cnt: 0
+      Flags: None
+    Protocol inet6, MTU: Unlimited
+    Max nh cache: 0, New hold nh limit: 0, Curr nh cnt: 0, Curr new hold cnt: 0,
+    NH drop cnt: 0
+      Flags: None
+
+Physical interface: xe-0/3/0, Enabled, Physical link is Up
+  Interface index: 300, SNMP ifIndex: 812
+  Description: TO GOOGLE PNI #2 member 1 of 2 LAG ae21 via FDP2 25/26 | SOX-56MAR-56MAR-10GE-02431
+  Link-level type: Ethernet, MTU: 1514, MRU: 1522, LAN-PHY mode, Speed: 10Gbps,
+  BPDU Error: None, Loop Detect PDU Error: None, MAC-REWRITE Error: None,
+  Loopback: None, Source filtering: Disabled, Flow control: Disabled,
+  Speed Configuration: Auto
+  Pad to minimum frame size: Disabled
+  Device flags   : Present Running
+  Interface flags: SNMP-Traps Internal: 0x4000
+  Link flags     : None
+  CoS queues     : 8 supported, 8 maximum usable queues
+  Schedulers     : 0
+  Current address: 7a:19:f7:b8:70:ca, Hardware address: 78:19:f7:b8:70:7b
+  Last flapped   : 2023-01-20 05:15:07 EST (20w6d 06:28 ago)
+  Input rate     : 1604003192 bps (208988 pps)
+  Output rate    : 1112245712 bps (290624 pps)
+  Active alarms  : None
+  Active defects : None
+  PCS statistics                      Seconds
+    Bit errors                             0
+    Errored blocks                         7
+  Link Degrade :                      
+    Link Monitoring                   :  Disable
+  Interface transmit statistics: Disabled
+
+  Logical interface xe-0/3/0.0 (Index 499) (SNMP ifIndex 644)
+    Flags: Up SNMP-Traps 0x4004000 Encapsulation: ENET2
+    Input packets : 3110606014052
+    Output packets: 462777006333
+    Protocol aenet, AE bundle: ae21.0
+
+Physical interface: xe-0/3/1, Enabled, Physical link is Up
+  Interface index: 301, SNMP ifIndex: 814
+  Description: PARTICIPANT ASC 10GE via FDP3 43/44 2 of 5 LAG AE10 | SOX-56MAR-56MAR-10GE-01657
+  Link-level type: Flexible-Ethernet, MTU: 9192, MRU: 9200, LAN-PHY mode,
+  Speed: 10Gbps, BPDU Error: None, Loop Detect PDU Error: None,
+  MAC-REWRITE Error: None, Loopback: None, Source filtering: Disabled,
+  Flow control: Disabled, Speed Configuration: Auto
+  Pad to minimum frame size: Disabled
+  Device flags   : Present Running
+  Interface flags: SNMP-Traps Internal: 0x4000
+  CoS queues     : 8 supported, 8 maximum usable queues
+  Schedulers     : 0
+  Current address: 78:19:f7:b8:77:ca, Hardware address: 78:19:f7:b8:70:7c
+  Last flapped   : 2023-04-23 23:02:22 EDT (7w3d 13:40 ago)
+  Input rate     : 180110984 bps (72274 pps)
+  Output rate    : 643073640 bps (75839 pps)
+  Active alarms  : None
+  Active defects : None
+  PCS statistics                      Seconds
+    Bit errors                             0
+    Errored blocks                         7
+  Link Degrade :                      
+    Link Monitoring                   :  Disable
+  Interface transmit statistics: Disabled
+
+  Logical interface xe-0/3/1.1103 (Index 944) (SNMP ifIndex 915)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1103 ] In(pop) Out(push 0x8100.1103) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 59886208287
+    Output packets: 741725844410
+    Protocol aenet, AE bundle: ae10.1103
+
+  Logical interface xe-0/3/1.1105 (Index 945) (SNMP ifIndex 916)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1105 ] In(pop) Out(push 0x8100.1105) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 2541522844954
+    Output packets: 2298160854269
+    Protocol aenet, AE bundle: ae10.1105
+
+  Logical interface xe-0/3/1.3464 (Index 946) (SNMP ifIndex 1683)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3464 ] In(pop) Out(push 0x8100.3464) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 7
+    Output packets: 0
+    Protocol aenet, AE bundle: ae10.3464
+
+  Logical interface xe-0/3/1.32767 (Index 947) (SNMP ifIndex 918)
+    Flags: Up SNMP-Traps 0x4004000 VLAN-Tag [ 0x0000.0 ]  Encapsulation: ENET2
+    Input packets : 29836444
+    Output packets: 1037779
+    Protocol aenet, AE bundle: ae10.32767
+
+Physical interface: xe-0/3/2, Enabled, Physical link is Up
+  Interface index: 302, SNMP ifIndex: 815
+  Description: TO PARTICIPANT UA 2of2 LAG'd via FDP3 7/8 | SOX-56MAR-56MAR-10GE-02096
+  Link-level type: Flexible-Ethernet, MTU: 9192, MRU: 9200, LAN-PHY mode,
+  Speed: 10Gbps, BPDU Error: None, Loop Detect PDU Error: None,
+  MAC-REWRITE Error: None, Loopback: None, Source filtering: Disabled,
+  Flow control: Disabled, Speed Configuration: Auto
+  Pad to minimum frame size: Disabled
+  Device flags   : Present Running
+  Interface flags: SNMP-Traps Internal: 0x4000
+  CoS queues     : 8 supported, 8 maximum usable queues
+  Schedulers     : 0
+  Current address: 78:19:f7:b8:77:c5, Hardware address: 78:19:f7:b8:70:7d
+  Last flapped   : 2022-07-16 23:56:09 EDT (47w4d 12:47 ago)
+  Input rate     : 87100008 bps (43453 pps)
+  Output rate    : 265897456 bps (32807 pps)
+  Active alarms  : None
+  Active defects : None
+  PCS statistics                      Seconds
+    Bit errors                             0
+    Errored blocks                         2
+  Link Degrade :                      
+    Link Monitoring                   :  Disable
+  Interface transmit statistics: Disabled
+
+  Logical interface xe-0/3/2.564 (Index 948) (SNMP ifIndex 1246)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.564 ] In(pop) Out(push 0x8100.564) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 95
+    Output packets: 137
+    Protocol aenet, AE bundle: ae5.564
+
+  Logical interface xe-0/3/2.869 (Index 949) (SNMP ifIndex 731)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.869 ] In(pop) Out(push 0x8100.869) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 96
+    Output packets: 90
+    Protocol aenet, AE bundle: ae5.869
+
+  Logical interface xe-0/3/2.1702 (Index 950) (SNMP ifIndex 740)
+    Flags: Up SNMP-Traps 0x4000 VLAN-Tag [ 0x8100.1702 ]  Encapsulation: ENET2
+    Input packets : 395673875826
+    Output packets: 539875631181
+    Protocol aenet, AE bundle: ae5.1702
+
+  Logical interface xe-0/3/2.1703 (Index 952) (SNMP ifIndex 739)
+    Flags: Up SNMP-Traps 0x4000 VLAN-Tag [ 0x8100.1703 ]  Encapsulation: ENET2
+    Input packets : 2114746078338
+    Output packets: 3317393810456
+    Protocol aenet, AE bundle: ae5.1703
+
+  Logical interface xe-0/3/2.1704 (Index 953) (SNMP ifIndex 738)
+    Flags: Up SNMP-Traps 0x4000 VLAN-Tag [ 0x8100.1704 ]  Encapsulation: ENET2
+    Input packets : 43645501851
+    Output packets: 244466777651
+    Protocol aenet, AE bundle: ae5.1704
+
+  Logical interface xe-0/3/2.1706 (Index 951) (SNMP ifIndex 729)
+    Flags: Up SNMP-Traps 0x4000 VLAN-Tag [ 0x8100.1706 ]  Encapsulation: ENET2
+    Input packets : 106159676
+    Output packets: 23508006
+    Protocol aenet, AE bundle: ae5.1706
+
+  Logical interface xe-0/3/2.1707 (Index 954) (SNMP ifIndex 726)
+    Flags: Up SNMP-Traps 0x4000 VLAN-Tag [ 0x8100.1707 ]  Encapsulation: ENET2
+    Input packets : 172164777
+    Output packets: 293917623
+    Protocol aenet, AE bundle: ae5.1707
+
+  Logical interface xe-0/3/2.1708 (Index 955) (SNMP ifIndex 733)
+    Flags: Up SNMP-Traps 0x4000 VLAN-Tag [ 0x8100.1708 ]  Encapsulation: ENET2
+    Input packets : 6333048958
+    Output packets: 37164547
+    Protocol aenet, AE bundle: ae5.1708
+
+  Logical interface xe-0/3/2.32767 (Index 956) (SNMP ifIndex 930)
+    Flags: Up SNMP-Traps 0x4004000 VLAN-Tag [ 0x0000.0 ]  Encapsulation: ENET2
+    Input packets : 31083200
+    Output packets: 16190982
+    Protocol aenet, AE bundle: ae5.32767
+
+Physical interface: xe-0/3/3, Enabled, Physical link is Up
+  Interface index: 303, SNMP ifIndex: 817
+  Description: PARTICIPANT UAH 10GE via FDP2 39/40 | SOX-56MAR-56MAR-10GE-01658
+  Link-level type: Flexible-Ethernet, MTU: 9192, MRU: 9200, LAN-PHY mode,
+  Speed: 10Gbps, BPDU Error: None, Loop Detect PDU Error: None,
+  MAC-REWRITE Error: None, Loopback: None, Source filtering: Disabled,
+  Flow control: Enabled, Speed Configuration: Auto
+  Pad to minimum frame size: Disabled
+  Device flags   : Present Running
+  Interface flags: SNMP-Traps Internal: 0x4000
+  CoS queues     : 8 supported, 8 maximum usable queues
+  Schedulers     : 0
+  Current address: 78:19:f7:b8:70:7e, Hardware address: 78:19:f7:b8:70:7e
+  Last flapped   : 2022-07-16 23:56:10 EDT (47w4d 12:47 ago)
+  Input rate     : 160761040 bps (66768 pps)
+  Output rate    : 1354205672 bps (140384 pps)
+  Active alarms  : None
+  Active defects : None
+  PCS statistics                      Seconds
+    Bit errors                             0
+    Errored blocks                         1
+  Link Degrade :                      
+    Link Monitoring                   :  Disable
+  Interface transmit statistics: Disabled
+
+  Logical interface xe-0/3/3.507 (Index 957) (SNMP ifIndex 1274)
+    Description: L2 PARTICIPANT UAH | SOX-56MAR-56MAR-VLAN-01659
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.507 ] In(pop) Out(push 0x8100.507) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 13964043
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-0/3/3.800 (Index 958) (SNMP ifIndex 931)
+    Description: L3 PARTICIPANT UAH | SOX-56MAR-56MAR-VLAN-01660
+    Flags: Up SNMP-Traps 0x4000 VLAN-Tag [ 0x8100.800 ]  Encapsulation: ENET2
+    Input packets : 333853977357
+    Output packets: 311499796772
+    Protocol inet, MTU: 9170
+    Max nh cache: 75000, New hold nh limit: 75000, Curr nh cnt: 1,
+    Curr new hold cnt: 0, NH drop cnt: 0
+      Flags: Sendbcast-pkt-to-re, User-MTU, Sample-input
+      Addresses, Flags: Is-Preferred Is-Primary
+        Destination: 146.229.255.188/30, Local: 146.229.255.190,
+        Broadcast: 146.229.255.191
+    Protocol multiservice, MTU: Unlimited
+
+  Logical interface xe-0/3/3.810 (Index 963) (SNMP ifIndex 1942)
+    Description: [TRCPS] L3 PARTICIPANT UAH | SOX-56MAR-56MAR-VLAN-01980
+    Flags: Up SNMP-Traps 0x4000 VLAN-Tag [ 0x8100.810 ]  Encapsulation: ENET2
+    Input packets : 1413774054513
+    Output packets: 3310677425778
+    Protocol inet, MTU: 9170
+    Max nh cache: 75000, New hold nh limit: 75000, Curr nh cnt: 1,
+    Curr new hold cnt: 0, NH drop cnt: 0
+      Flags: Sendbcast-pkt-to-re
+      Addresses, Flags: Is-Preferred Is-Primary
+        Destination: 146.229.255.180/30, Local: 146.229.255.182,
+        Broadcast: 146.229.255.183
+    Protocol multiservice, MTU: Unlimited
+
+  Logical interface xe-0/3/3.811 (Index 964) (SNMP ifIndex 1943)
+    Description: [BLENDED] L3 PARTICIPANT UAH | SOX-56MAR-56MAR-VLAN-01979
+    Flags: Up SNMP-Traps 0x4000 VLAN-Tag [ 0x8100.811 ]  Encapsulation: ENET2
+    Input packets : 286448476562
+    Output packets: 53919549930
+    Protocol inet, MTU: 9170
+    Max nh cache: 75000, New hold nh limit: 75000, Curr nh cnt: 1,
+    Curr new hold cnt: 0, NH drop cnt: 0
+      Flags: Sendbcast-pkt-to-re
+      Addresses, Flags: Is-Preferred Is-Primary
+        Destination: 146.229.255.184/30, Local: 146.229.255.186,
+        Broadcast: 146.229.255.187
+    Protocol multiservice, MTU: Unlimited
+
+  Logical interface xe-0/3/3.815 (Index 959) (SNMP ifIndex 1315)
+    Description: L3 PARTICIPANT UAH - OOB connection | SOX-56MAr-56MAR-VLAN-02275
+    Flags: Up SNMP-Traps 0x4000 VLAN-Tag [ 0x8100.815 ]  Encapsulation: ENET2
+    Input packets : 15674575
+    Output packets: 3195043
+    Protocol inet, MTU: 9170
+    Max nh cache: 75000, New hold nh limit: 75000, Curr nh cnt: 1,
+    Curr new hold cnt: 0, NH drop cnt: 0
+      Flags: Sendbcast-pkt-to-re
+      Addresses, Flags: Is-Preferred Is-Primary
+        Destination: 143.215.193.42/31, Local: 143.215.193.42
+    Protocol inet6, MTU: 9170
+    Max nh cache: 75000, New hold nh limit: 75000, Curr nh cnt: 2,
+    Curr new hold cnt: 0, NH drop cnt: 0
+      Addresses, Flags: Is-Preferred Is-Primary
+        Destination: 2607:f7b8:1f02:c12a::/64, Local: 2607:f7b8:1f02:c12a::1
+      Addresses, Flags: Is-Preferred
+        Destination: fe80::/64, Local: fe80::7a19:f703:2fb8:707e
+    Protocol multiservice, MTU: Unlimited
+
+  Logical interface xe-0/3/3.850 (Index 960) (SNMP ifIndex 1681)
+    Description: L2 PARTICIPANT UAH BACKUP to NASH | SOX-56MAR-SIDCO-VLAN-02239
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.850 ] In(pop) Out(push 0x8100.850) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 26853321
+    Output packets: 32652431
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-0/3/3.869 (Index 961) (SNMP ifIndex 933)
+    Description: L2 PARTICIPANT UAH via UA | SOX-56MAR-56MAR-VLAN-01662
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.869 ] In(pop) Out(push 0x8100.869) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 13964289
+    Output packets: 13964340
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-0/3/3.870 (Index 962) (SNMP ifIndex 934)
+    Description: L2 PARTICIPANT UAB via ASC | SOX-56MAR-56MAR-VLAN-01634
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.870 ] In(pop) Out(push 0x8100.870) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-0/3/3.32767 (Index 965) (SNMP ifIndex 935)
+    Flags: Up SNMP-Traps 0x4004000 VLAN-Tag [ 0x0000.0 ]  Encapsulation: ENET2
+    Input packets : 933271
+    Output packets: 1038431
+    Protocol multiservice, MTU: Unlimited
+      Flags: None
+
+Physical interface: lc-1/0/0, Enabled, Physical link is Up
+  Interface index: 253, SNMP ifIndex: 1401
+  Speed: 800mbps
+  Device flags   : Present Running
+  Link flags     : None
+  Last flapped   : Never
+    Input packets : 0
+    Output packets: 0
+
+  Logical interface lc-1/0/0.32769 (Index 555) (SNMP ifIndex 1402)
+    Flags: Up Encapsulation: ENET2
+    Bandwidth: 0
+    Input packets : 0
+    Output packets: 0
+    Protocol vpls, MTU: Unlimited
+
+Physical interface: pfe-1/0/0, Enabled, Physical link is Up
+  Interface index: 256, SNMP ifIndex: 1406
+  Speed: 800mbps
+  Device flags   : Present Running
+  Link flags     : None
+  Last flapped   : Never
+    Input packets : 0
+    Output packets: 0
+
+  Logical interface pfe-1/0/0.16383 (Index 557) (SNMP ifIndex 1409)
+    Flags: Up SNMP-Traps Encapsulation: ENET2
+    Bandwidth: 0
+    Input packets : 0
+    Output packets: 0
+    Protocol inet, MTU: Unlimited
+    Max nh cache: 0, New hold nh limit: 0, Curr nh cnt: 0, Curr new hold cnt: 0,
+    NH drop cnt: 0
+      Flags: None
+    Protocol inet6, MTU: Unlimited
+    Max nh cache: 0, New hold nh limit: 0, Curr nh cnt: 0, Curr new hold cnt: 0,
+    NH drop cnt: 0
+      Flags: None
+
+Physical interface: pfh-1/0/0, Enabled, Physical link is Up
+  Interface index: 255, SNMP ifIndex: 1405
+  Speed: 800mbps
+  Device flags   : Present Running
+  Link flags     : None
+  Last flapped   : Never
+    Input packets : 0
+    Output packets: 0
+
+  Logical interface pfh-1/0/0.16383 (Index 559) (SNMP ifIndex 1408)
+    Flags: Up SNMP-Traps Encapsulation: ENET2
+    Bandwidth: 0
+    Input packets : 0
+    Output packets: 0
+    Protocol inet, MTU: Unlimited
+    Max nh cache: 0, New hold nh limit: 0, Curr nh cnt: 0, Curr new hold cnt: 0,
+    NH drop cnt: 0
+      Flags: None
+
+  Logical interface pfh-1/0/0.16384 (Index 560) (SNMP ifIndex 613)
+    Flags: Up SNMP-Traps Encapsulation: ENET2
+    Bandwidth: 0
+    Input packets : 0
+    Output packets: 0
+    Protocol inet, MTU: Unlimited
+    Max nh cache: 0, New hold nh limit: 0, Curr nh cnt: 0, Curr new hold cnt: 0,
+    NH drop cnt: 0
+      Flags: None
+
+Physical interface: xe-1/0/0, Enabled, Physical link is Up
+  Interface index: 332, SNMP ifIndex: 1414
+  Description: TO SW1.55MAR eth1/22 via MUX CH1490 2 of 4 LAG AE3 [NO-MONITOR] | SOX-56MAR-55MAR-10GE-01885
+  Link-level type: Flexible-Ethernet, MTU: 9192, MRU: 9200, LAN-PHY mode,
+  Speed: 10Gbps, BPDU Error: None, Loop Detect PDU Error: None,
+  MAC-REWRITE Error: None, Loopback: None, Source filtering: Disabled,
+  Flow control: Disabled, Speed Configuration: Auto
+  Pad to minimum frame size: Disabled
+  Device flags   : Present Running
+  Interface flags: SNMP-Traps Internal: 0x4000
+  CoS queues     : 8 supported, 8 maximum usable queues
+  Schedulers     : 0
+  Current address: 78:19:f7:b8:77:c3, Hardware address: 78:19:f7:b8:70:a5
+  Last flapped   : 2022-07-16 23:58:43 EDT (47w4d 12:44 ago)
+  Input rate     : 0 bps (0 pps)
+  Output rate    : 0 bps (0 pps)
+  Active alarms  : None
+  Active defects : None
+  PCS statistics                      Seconds
+    Bit errors                             2
+    Errored blocks                         2
+  Link Degrade :                      
+    Link Monitoring                   :  Disable
+  Interface transmit statistics: Disabled
+
+  Logical interface xe-1/0/0.32767 (Index 1116) (SNMP ifIndex 1425)
+    Flags: Up SNMP-Traps 0x4004000 VLAN-Tag [ 0x0000.0 ]  Encapsulation: ENET2
+    Input packets : 960464
+    Output packets: 1038337
+    Protocol aenet, AE bundle: ae3.32767
+
+Physical interface: xe-1/0/1, Enabled, Physical link is Up
+  Interface index: 333, SNMP ifIndex: 1411
+  Description: TO PARTICIPANT PNET 10GE via FDP6 39/40 2 of 3 LAG AE6 | SOX-56MAR-56MAR-10GE-02027
+  Link-level type: Flexible-Ethernet, MTU: 9192, MRU: 9200, LAN-PHY mode,
+  Speed: 10Gbps, BPDU Error: None, Loop Detect PDU Error: None,
+  MAC-REWRITE Error: None, Loopback: None, Source filtering: Disabled,
+  Flow control: Disabled, Speed Configuration: Auto
+  Pad to minimum frame size: Disabled
+  Device flags   : Present Running
+  Interface flags: SNMP-Traps Internal: 0x4000
+  CoS queues     : 8 supported, 8 maximum usable queues
+  Schedulers     : 0
+  Current address: 78:19:f7:b8:77:c6, Hardware address: 78:19:f7:b8:70:a6
+  Last flapped   : 2022-07-16 23:58:43 EDT (47w4d 12:44 ago)
+  Input rate     : 273456264 bps (55019 pps)
+  Output rate    : 1018210944 bps (130990 pps)
+  Active alarms  : None
+  Active defects : None
+  PCS statistics                      Seconds
+    Bit errors                             2
+    Errored blocks                         2
+  Link Degrade :                      
+    Link Monitoring                   :  Disable
+  Interface transmit statistics: Disabled
+
+  Logical interface xe-1/0/1.134 (Index 1117) (SNMP ifIndex 818)
+    Flags: Up SNMP-Traps 0x4000 VLAN-Tag [ 0x8100.134 ]  Encapsulation: ENET2
+    Input packets : 308184887522
+    Output packets: 249704280099
+    Protocol aenet, AE bundle: ae6.134
+
+  Logical interface xe-1/0/1.138 (Index 1129) (SNMP ifIndex 816)
+    Flags: Up SNMP-Traps 0x4000 VLAN-Tag [ 0x8100.138 ]  Encapsulation: ENET2
+    Input packets : 791871602
+    Output packets: 3337265714181
+    Protocol aenet, AE bundle: ae6.138
+
+  Logical interface xe-1/0/1.140 (Index 1130) (SNMP ifIndex 813)
+    Flags: Up SNMP-Traps 0x4000 VLAN-Tag [ 0x8100.140 ]  Encapsulation: ENET2
+    Input packets : 51830856
+    Output packets: 717797708273
+    Protocol aenet, AE bundle: ae6.140
+
+  Logical interface xe-1/0/1.145 (Index 361) (SNMP ifIndex 683)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.145 ] In(pop) Out(push 0x8100.145) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 359076
+    Output packets: 33533391
+    Protocol aenet, AE bundle: ae6.145
+
+  Logical interface xe-1/0/1.1000 (Index 1118) (SNMP ifIndex 2005)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1000 ] In(pop) Out(push 0x8100.1000) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol aenet, AE bundle: ae6.1000
+
+  Logical interface xe-1/0/1.1001 (Index 1119) (SNMP ifIndex 2006)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1001 ] In(pop) Out(push 0x8100.1001) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol aenet, AE bundle: ae6.1001
+
+  Logical interface xe-1/0/1.1002 (Index 1120) (SNMP ifIndex 2007)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1002 ] In(pop) Out(push 0x8100.1002) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol aenet, AE bundle: ae6.1002
+
+  Logical interface xe-1/0/1.1003 (Index 1121) (SNMP ifIndex 2008)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1003 ] In(pop) Out(push 0x8100.1003) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol aenet, AE bundle: ae6.1003
+
+  Logical interface xe-1/0/1.1004 (Index 1122) (SNMP ifIndex 2009)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1004 ] In(pop) Out(push 0x8100.1004) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol aenet, AE bundle: ae6.1004
+
+  Logical interface xe-1/0/1.1005 (Index 1123) (SNMP ifIndex 2010)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1005 ] In(pop) Out(push 0x8100.1005) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol aenet, AE bundle: ae6.1005
+
+  Logical interface xe-1/0/1.1006 (Index 1124) (SNMP ifIndex 2011)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1006 ] In(pop) Out(push 0x8100.1006) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol aenet, AE bundle: ae6.1006
+
+  Logical interface xe-1/0/1.1007 (Index 1125) (SNMP ifIndex 2012)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1007 ] In(pop) Out(push 0x8100.1007) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol aenet, AE bundle: ae6.1007
+
+  Logical interface xe-1/0/1.1008 (Index 1126) (SNMP ifIndex 2013)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1008 ] In(pop) Out(push 0x8100.1008) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol aenet, AE bundle: ae6.1008
+
+  Logical interface xe-1/0/1.1009 (Index 1127) (SNMP ifIndex 2014)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1009 ] In(pop) Out(push 0x8100.1009) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol aenet, AE bundle: ae6.1009
+
+  Logical interface xe-1/0/1.1010 (Index 1128) (SNMP ifIndex 2015)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1010 ] In(pop) Out(push 0x8100.1010) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol aenet, AE bundle: ae6.1010
+
+  Logical interface xe-1/0/1.32767 (Index 1131) (SNMP ifIndex 798)
+    Flags: Up SNMP-Traps 0x4004000 VLAN-Tag [ 0x0000.0 ]  Encapsulation: ENET2
+    Input packets : 28531734
+    Output packets: 1038417
+    Protocol aenet, AE bundle: ae6.32767
+
+Physical interface: xe-1/0/2, Enabled, Physical link is Down
+  Interface index: 334, SNMP ifIndex: 1412
+  Description: [NO-MONITOR] Available - patched to FDP6 37/38
+  Link-level type: Flexible-Ethernet, MTU: 9192, MRU: 9200, LAN-PHY mode,
+  Speed: 10Gbps, BPDU Error: None, Loop Detect PDU Error: None,
+  MAC-REWRITE Error: None, Loopback: None, Source filtering: Disabled,
+  Flow control: Enabled, Speed Configuration: Auto
+  Pad to minimum frame size: Disabled
+  Device flags   : Present Running Down
+  Interface flags: Hardware-Down SNMP-Traps Internal: 0x4000
+  CoS queues     : 8 supported, 8 maximum usable queues
+  Schedulers     : 0
+  Current address: 78:19:f7:b8:70:a7, Hardware address: 78:19:f7:b8:70:a7
+  Last flapped   : 2022-07-16 23:58:41 EDT (47w4d 12:44 ago)
+  Input rate     : 0 bps (0 pps)
+  Output rate    : 0 bps (0 pps)
+  Active alarms  : LINK
+  Active defects : LINK, LOCAL-FAULT
+  PCS statistics                      Seconds
+    Bit errors                             0
+    Errored blocks                         0
+  Link Degrade :                      
+    Link Monitoring                   :  Disable
+  Interface transmit statistics: Disabled
+
+  Logical interface xe-1/0/2.32767 (Index 1132) (SNMP ifIndex 804)
+    Flags: Device-Down SNMP-Traps 0x4004000 VLAN-Tag [ 0x0000.0 ] 
+    Encapsulation: ENET2
+    Input packets : 0
+    Output packets: 0
+    Protocol multiservice, MTU: Unlimited
+      Flags: None
+
+Physical interface: xe-1/0/3, Enabled, Physical link is Up
+  Interface index: 335, SNMP ifIndex: 1413
+  Description: TO ISP ARELION IC-310469 via FDP2 15/16 | SOX-56MAR-56MAR-10GE-01664
+  Link-level type: Flexible-Ethernet, MTU: 1522, MRU: 1530, LAN-PHY mode,
+  Speed: 10Gbps, BPDU Error: None, Loop Detect PDU Error: None,
+  MAC-REWRITE Error: None, Loopback: None, Source filtering: Disabled,
+  Flow control: Enabled, Speed Configuration: Auto
+  Pad to minimum frame size: Disabled
+  Device flags   : Present Running
+  Interface flags: SNMP-Traps Internal: 0x4000
+  CoS queues     : 8 supported, 8 maximum usable queues
+  Schedulers     : 0
+  Current address: 78:19:f7:b8:70:a8, Hardware address: 78:19:f7:b8:70:a8
+  Last flapped   : 2022-07-16 23:58:43 EDT (47w4d 12:44 ago)
+  Input rate     : 2353032000 bps (288595 pps)
+  Output rate    : 1068007256 bps (196883 pps)
+  Active alarms  : None
+  Active defects : None
+  PCS statistics                      Seconds
+    Bit errors                             2
+    Errored blocks                         2
+  Link Degrade :                      
+    Link Monitoring                   :  Disable
+  Interface transmit statistics: Disabled
+
+  Logical interface xe-1/0/3.11 (Index 1135) (SNMP ifIndex 1714)
+    Description: [BLENDED] L3 BB: to ARELION ISP ATLANTA BLENDED | SOX-56MAR-56MAR-VLAN-01665
+    Flags: Up SNMP-Traps 0x4000 VLAN-Tag [ 0x8100.11 ]  Encapsulation: ENET2
+    Input packets : 3597665635356
+    Output packets: 1389619861596
+    Protocol inet, MTU: 1500
+    Max nh cache: 75000, New hold nh limit: 75000, Curr nh cnt: 1,
+    Curr new hold cnt: 0, NH drop cnt: 0
+      Flags: Sendbcast-pkt-to-re
+      Addresses, Flags: Is-Preferred Is-Primary
+        Destination: 62.115.52.228/30, Local: 62.115.52.230,
+        Broadcast: 62.115.52.231
+    Protocol multiservice, MTU: Unlimited
+
+  Logical interface xe-1/0/3.12 (Index 1136) (SNMP ifIndex 1716)
+    Description: [BLENDED] L2 PARTICIPANT FLR via ARELION | SOX-56MAR-56MAR-VLAN-01668
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.12 ] In(pop) Out(push 0x8100.12) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 18345955
+    Output packets: 0
+    Protocol bridge, MTU: 1522
+
+  Logical interface xe-1/0/3.13 (Index 1133) (SNMP ifIndex 1712)
+    Description: L2 PARTICIPANT GT via ARELION | SOX-56MAR-56MAR-VLAN-01808
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.13 ] In(pop) Out(push 0x8100.13) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 7141295923
+    Output packets: 557251939
+    Protocol bridge, MTU: 1522
+
+  Logical interface xe-1/0/3.1250 (Index 1134) (SNMP ifIndex 1564)
+    Description: L2 PARTICIPANT FLR for ARELION IC-339889 | SOX-56MAR-56MAR-VLAN-02214
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1250 ] In(pop) Out(push 0x8100.1250) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 6369119389460
+    Output packets: 1071600148666
+    Protocol bridge, MTU: 1522
+
+  Logical interface xe-1/0/3.32767 (Index 1137) (SNMP ifIndex 1713)
+    Flags: Up SNMP-Traps 0x4004000 VLAN-Tag [ 0x0000.0 ]  Encapsulation: ENET2
+    Input packets : 0
+    Output packets: 1038367
+    Protocol multiservice, MTU: Unlimited
+      Flags: None
+
+Physical interface: et-1/1/0, Enabled, Physical link is Down
+  Interface index: 336, SNMP ifIndex: 1415
+  Description: TO EMORY for INTERNET2 via fdp9 21/22 [NO-MONITOR] [PROVISIONING] | SOX-56MAR-56MAR-100GE-02468
+  Link-level type: Ethernet, MTU: 1514, MRU: 1522, Speed: 100Gbps,
+  BPDU Error: None, Loop Detect PDU Error: None, Loopback: Disabled,
+  Source filtering: Disabled, Flow control: Enabled
+  Pad to minimum frame size: Disabled
+  Device flags   : Present Running Down
+  Interface flags: Hardware-Down SNMP-Traps Internal: 0x4000
+  Link flags     : None
+  CoS queues     : 8 supported, 8 maximum usable queues
+  Schedulers     : 0
+  Current address: 78:19:f7:b8:70:ce, Hardware address: 78:19:f7:b8:70:ce
+  Last flapped   : 2022-07-16 23:58:42 EDT (47w4d 12:44 ago)
+  Input rate     : 0 bps (0 pps)
+  Output rate    : 0 bps (0 pps)
+  Active alarms  : LINK
+  Active defects : LINK, LOCAL-FAULT
+  PCS statistics                      Seconds
+    Bit errors                             0
+    Errored blocks                         0
+  Ethernet FEC statistics              Errors
+    FEC Corrected Errors                    0
+    FEC Uncorrected Errors                  0
+    FEC Corrected Errors Rate               0
+    FEC Uncorrected Errors Rate             0
+  Link Degrade :                      
+    Link Monitoring                   :  Disable
+  Interface transmit statistics: Disabled
+
+Physical interface: lc-1/2/0, Enabled, Physical link is Up
+  Interface index: 254, SNMP ifIndex: 1403
+  Speed: 800mbps
+  Device flags   : Present Running
+  Link flags     : None
+  Last flapped   : Never
+    Input packets : 0
+    Output packets: 0
+
+  Logical interface lc-1/2/0.32769 (Index 556) (SNMP ifIndex 1404)
+    Flags: Up Encapsulation: ENET2
+    Bandwidth: 0
+    Input packets : 0
+    Output packets: 0
+    Protocol vpls, MTU: Unlimited
+
+Physical interface: pfe-1/2/0, Enabled, Physical link is Up
+  Interface index: 257, SNMP ifIndex: 1407
+  Speed: 800mbps
+  Device flags   : Present Running
+  Link flags     : None
+  Last flapped   : Never
+    Input packets : 0
+    Output packets: 0
+
+  Logical interface pfe-1/2/0.16383 (Index 561) (SNMP ifIndex 1410)
+    Flags: Up SNMP-Traps Encapsulation: ENET2
+    Bandwidth: 0
+    Input packets : 0
+    Output packets: 0
+    Protocol inet, MTU: Unlimited
+    Max nh cache: 0, New hold nh limit: 0, Curr nh cnt: 0, Curr new hold cnt: 0,
+    NH drop cnt: 0
+      Flags: None
+    Protocol inet6, MTU: Unlimited
+    Max nh cache: 0, New hold nh limit: 0, Curr nh cnt: 0, Curr new hold cnt: 0,
+    NH drop cnt: 0
+      Flags: None
+
+Physical interface: xe-1/2/0, Enabled, Physical link is Up
+  Interface index: 337, SNMP ifIndex: 1416
+  Description: PARTICIPANT ASC 10GE via FDP4 9/10 3 of 5 LAG AE10 | SOX-56MAR-56MAR-10GE-01714
+  Link-level type: Flexible-Ethernet, MTU: 9192, MRU: 9200, LAN-PHY mode,
+  Speed: 10Gbps, BPDU Error: None, Loop Detect PDU Error: None,
+  MAC-REWRITE Error: None, Loopback: None, Source filtering: Disabled,
+  Flow control: Disabled, Speed Configuration: Auto
+  Pad to minimum frame size: Disabled
+  Device flags   : Present Running
+  Interface flags: SNMP-Traps Internal: 0x4000
+  CoS queues     : 8 supported, 8 maximum usable queues
+  Schedulers     : 0
+  Current address: 78:19:f7:b8:77:ca, Hardware address: 78:19:f7:b8:70:f7
+  Last flapped   : 2023-04-23 23:02:23 EDT (7w3d 13:40 ago)
+  Input rate     : 170069184 bps (63198 pps)
+  Output rate    : 772805672 bps (85604 pps)
+  Active alarms  : None
+  Active defects : None
+  PCS statistics                      Seconds
+    Bit errors                             8
+    Errored blocks                         9
+  Link Degrade :                      
+    Link Monitoring                   :  Disable
+  Interface transmit statistics: Disabled
+
+  Logical interface xe-1/2/0.1103 (Index 1138) (SNMP ifIndex 1593)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1103 ] In(pop) Out(push 0x8100.1103) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 57636730371
+    Output packets: 765161610301
+    Protocol aenet, AE bundle: ae10.1103
+
+  Logical interface xe-1/2/0.1105 (Index 1139) (SNMP ifIndex 1592)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1105 ] In(pop) Out(push 0x8100.1105) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 2572580371733
+    Output packets: 2294466494236
+    Protocol aenet, AE bundle: ae10.1105
+
+  Logical interface xe-1/2/0.3464 (Index 1140) (SNMP ifIndex 1684)
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3464 ] In(pop) Out(push 0x8100.3464) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 1
+    Output packets: 0
+    Protocol aenet, AE bundle: ae10.3464
+
+  Logical interface xe-1/2/0.32767 (Index 1141) (SNMP ifIndex 1590)
+    Flags: Up SNMP-Traps 0x4004000 VLAN-Tag [ 0x0000.0 ]  Encapsulation: ENET2
+    Input packets : 29836339
+    Output packets: 1037803
+    Protocol aenet, AE bundle: ae10.32767
+
+Physical interface: xe-1/2/1, Enabled, Physical link is Up
+  Interface index: 338, SNMP ifIndex: 1417
+  Description: PARTICIPANT CDC 10GE [LR] via FDP2 27/28 | SOX-56MAR-56MAR-10GE-01715
+  Link-level type: Flexible-Ethernet, MTU: 9000, MRU: 9008, LAN-PHY mode,
+  Speed: 10Gbps, BPDU Error: None, Loop Detect PDU Error: None,
+  MAC-REWRITE Error: None, Loopback: None, Source filtering: Disabled,
+  Flow control: Enabled, Speed Configuration: Auto
+  Pad to minimum frame size: Disabled
+  Device flags   : Present Running
+  Interface flags: SNMP-Traps Internal: 0x4000
+  CoS queues     : 8 supported, 8 maximum usable queues
+  Schedulers     : 0
+  Current address: 78:19:f7:b8:70:f8, Hardware address: 78:19:f7:b8:70:f8
+  Last flapped   : 2023-05-06 09:19:57 EDT (5w5d 03:23 ago)
+  Input rate     : 425981640 bps (183743 pps)
+  Output rate    : 138235112 bps (133476 pps)
+  Active alarms  : None
+  Active defects : None
+  PCS statistics                      Seconds
+    Bit errors                             4
+    Errored blocks                         4
+  Link Degrade :                      
+    Link Monitoring                   :  Disable
+  Interface transmit statistics: Disabled
+
+  Logical interface xe-1/2/1.140 (Index 1142) (SNMP ifIndex 1546)
+    Description: L3 PARTICIPANT CDC | SOX-56MAR-56MAR-VLAN-01717
+    Flags: Up SNMP-Traps 0x4000 VLAN-Tag [ 0x8100.140 ]  Encapsulation: ENET2
+    Input packets : 3565885535889
+    Output packets: 661573851213
+    Protocol inet, MTU: 8978
+    Max nh cache: 75000, New hold nh limit: 75000, Curr nh cnt: 1,
+    Curr new hold cnt: 0, NH drop cnt: 0
+      Flags: Sendbcast-pkt-to-re, Sample-input
+      Addresses, Flags: Is-Preferred Is-Primary
+        Destination: 143.215.194.48/30, Local: 143.215.194.49,
+        Broadcast: 143.215.194.51
+    Protocol multiservice, MTU: Unlimited
+
+  Logical interface xe-1/2/1.141 (Index 1143) (SNMP ifIndex 1547)
+    Description: L2 PARTICIPANT CDC - Azure East Primary | SOX-56MAR-56MAR-VLAN-02209;
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.141 ] In(pop) Out(push 0x8100.141) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 33222437
+    Output packets: 2173942
+    Protocol bridge, MTU: 9000
+
+  Logical interface xe-1/2/1.142 (Index 1144) (SNMP ifIndex 1548)
+    Description: L2 PARTICIPANT CDC - Azure East Backup | SOX-56MAR-56MAR-VLAN-02210;
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.142 ] In(pop) Out(push 0x8100.142) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 12003143
+    Output packets: 2073721
+    Protocol bridge, MTU: 9000
+
+  Logical interface xe-1/2/1.143 (Index 1145) (SNMP ifIndex 1549)
+    Description: L2 PARTICIPANT CDC - Azure Central Primary | SOX-56MAR-56MAR-VLAN-02211;
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.143 ] In(pop) Out(push 0x8100.143) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 39791475
+    Output packets: 18657000
+    Protocol bridge, MTU: 9000
+
+  Logical interface xe-1/2/1.144 (Index 1146) (SNMP ifIndex 1550)
+    Description: L2 PARTICIPANT CDC - Azure Central Backup | SOX-56MAR-56MAR-VLAN-02212;
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.144 ] In(pop) Out(push 0x8100.144) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 17449960
+    Output packets: 27189240
+    Protocol bridge, MTU: 9000
+
+  Logical interface xe-1/2/1.32767 (Index 1147) (SNMP ifIndex 1551)
+    Flags: Up SNMP-Traps 0x4004000 VLAN-Tag [ 0x0000.0 ]  Encapsulation: ENET2
+    Input packets : 0
+    Output packets: 866056
+    Protocol multiservice, MTU: Unlimited
+      Flags: None
+
+Physical interface: xe-1/2/2, Enabled, Physical link is Up
+  Interface index: 339, SNMP ifIndex: 1418
+  Description: PARTICIPANT SOX CORSA-GENI-SWITCH port 1 [NO-MONITOR] | SOX-56MAR-56MAR-10GE-02067
+  Link-level type: Flexible-Ethernet, MTU: 9192, MRU: 9200, LAN-PHY mode,
+  Speed: 10Gbps, BPDU Error: None, Loop Detect PDU Error: None,
+  MAC-REWRITE Error: None, Loopback: None, Source filtering: Disabled,
+  Flow control: Enabled, Speed Configuration: Auto
+  Pad to minimum frame size: Disabled
+  Device flags   : Present Running
+  Interface flags: SNMP-Traps Internal: 0x4000
+  CoS queues     : 8 supported, 8 maximum usable queues
+  Schedulers     : 0
+  Current address: 78:19:f7:b8:70:f9, Hardware address: 78:19:f7:b8:70:f9
+  Last flapped   : 2022-07-16 23:58:44 EDT (47w4d 12:44 ago)
+  Input rate     : 0 bps (0 pps)
+  Output rate    : 1328 bps (1 pps)
+  Active alarms  : None
+  Active defects : None
+  PCS statistics                      Seconds
+    Bit errors                             2
+    Errored blocks                         1
+  Link Degrade :                      
+    Link Monitoring                   :  Disable
+  Interface transmit statistics: Disabled
+
+  Logical interface xe-1/2/2.1416 (Index 1148) (SNMP ifIndex 1689)
+    Description: GT GENI | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1416 ] In(pop) Out(push 0x8100.1416) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 47094407
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.1662 (Index 1149) (SNMP ifIndex 1076)
+    Description: GT GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1662 ] In(pop) Out(push 0x8100.1662) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.1722 (Index 1150) (SNMP ifIndex 1080)
+    Description: GT GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1722 ] In(pop) Out(push 0x8100.1722) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.1725 (Index 1151) (SNMP ifIndex 1083)
+    Description: GT GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1725 ] In(pop) Out(push 0x8100.1725) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.1805 (Index 1152) (SNMP ifIndex 1316)
+    Description: L2 PARTICIPANT GT - SDX 1805 | SOX-56MAR-56MAR-VLAN-02207
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1805 ] In(pop) Out(push 0x8100.1805) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.1806 (Index 1153) (SNMP ifIndex 1319)
+    Description: L2 PARTICIPANT GT - SDX 1808 | SOX-56MAR-56MAR-VLAN-02208
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.1806 ] In(pop) Out(push 0x8100.1806) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3500 (Index 1154) (SNMP ifIndex 1108)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3500 ] In(pop) Out(push 0x8100.3500) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3501 (Index 1155) (SNMP ifIndex 1109)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3501 ] In(pop) Out(push 0x8100.3501) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3502 (Index 1156) (SNMP ifIndex 1111)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3502 ] In(pop) Out(push 0x8100.3502) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3503 (Index 1157) (SNMP ifIndex 1112)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3503 ] In(pop) Out(push 0x8100.3503) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3504 (Index 1158) (SNMP ifIndex 1113)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3504 ] In(pop) Out(push 0x8100.3504) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3505 (Index 1159) (SNMP ifIndex 1114)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3505 ] In(pop) Out(push 0x8100.3505) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3506 (Index 1160) (SNMP ifIndex 1117)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3506 ] In(pop) Out(push 0x8100.3506) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3507 (Index 1161) (SNMP ifIndex 1119)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3507 ] In(pop) Out(push 0x8100.3507) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3508 (Index 1162) (SNMP ifIndex 1122)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3508 ] In(pop) Out(push 0x8100.3508) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3509 (Index 1163) (SNMP ifIndex 1123)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3509 ] In(pop) Out(push 0x8100.3509) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3510 (Index 1164) (SNMP ifIndex 1124)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3510 ] In(pop) Out(push 0x8100.3510) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3511 (Index 1165) (SNMP ifIndex 1128)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3511 ] In(pop) Out(push 0x8100.3511) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3512 (Index 1166) (SNMP ifIndex 1131)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3512 ] In(pop) Out(push 0x8100.3512) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3513 (Index 1167) (SNMP ifIndex 1136)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3513 ] In(pop) Out(push 0x8100.3513) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3514 (Index 1168) (SNMP ifIndex 1137)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3514 ] In(pop) Out(push 0x8100.3514) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3515 (Index 1169) (SNMP ifIndex 1141)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3515 ] In(pop) Out(push 0x8100.3515) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3516 (Index 1170) (SNMP ifIndex 1142)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3516 ] In(pop) Out(push 0x8100.3516) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3517 (Index 1171) (SNMP ifIndex 1143)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3517 ] In(pop) Out(push 0x8100.3517) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3518 (Index 1172) (SNMP ifIndex 1144)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3518 ] In(pop) Out(push 0x8100.3518) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3519 (Index 1173) (SNMP ifIndex 1145)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3519 ] In(pop) Out(push 0x8100.3519) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3520 (Index 1174) (SNMP ifIndex 1029)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3520 ] In(pop) Out(push 0x8100.3520) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 1439
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3521 (Index 1175) (SNMP ifIndex 1033)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3521 ] In(pop) Out(push 0x8100.3521) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 335
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3522 (Index 1176) (SNMP ifIndex 1034)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3522 ] In(pop) Out(push 0x8100.3522) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 61
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3523 (Index 1177) (SNMP ifIndex 1035)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3523 ] In(pop) Out(push 0x8100.3523) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 52
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3524 (Index 1178) (SNMP ifIndex 1036)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3524 ] In(pop) Out(push 0x8100.3524) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3525 (Index 1179) (SNMP ifIndex 1037)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3525 ] In(pop) Out(push 0x8100.3525) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3526 (Index 1180) (SNMP ifIndex 1038)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3526 ] In(pop) Out(push 0x8100.3526) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3527 (Index 1181) (SNMP ifIndex 1039)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3527 ] In(pop) Out(push 0x8100.3527) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3528 (Index 1182) (SNMP ifIndex 1049)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3528 ] In(pop) Out(push 0x8100.3528) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3529 (Index 1183) (SNMP ifIndex 1050)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3529 ] In(pop) Out(push 0x8100.3529) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3530 (Index 1184) (SNMP ifIndex 1051)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3530 ] In(pop) Out(push 0x8100.3530) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3531 (Index 1185) (SNMP ifIndex 1053)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3531 ] In(pop) Out(push 0x8100.3531) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3532 (Index 1186) (SNMP ifIndex 1054)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3532 ] In(pop) Out(push 0x8100.3532) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3533 (Index 1187) (SNMP ifIndex 1058)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3533 ] In(pop) Out(push 0x8100.3533) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3534 (Index 1188) (SNMP ifIndex 1061)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3534 ] In(pop) Out(push 0x8100.3534) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3535 (Index 1189) (SNMP ifIndex 1062)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3535 ] In(pop) Out(push 0x8100.3535) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3536 (Index 1190) (SNMP ifIndex 1070)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3536 ] In(pop) Out(push 0x8100.3536) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3537 (Index 1191) (SNMP ifIndex 1071)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3537 ] In(pop) Out(push 0x8100.3537) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3538 (Index 1192) (SNMP ifIndex 1072)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3538 ] In(pop) Out(push 0x8100.3538) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3539 (Index 1193) (SNMP ifIndex 1073)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3539 ] In(pop) Out(push 0x8100.3539) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3540 (Index 1194) (SNMP ifIndex 1150)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3540 ] In(pop) Out(push 0x8100.3540) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3541 (Index 1195) (SNMP ifIndex 1151)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3541 ] In(pop) Out(push 0x8100.3541) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3542 (Index 1196) (SNMP ifIndex 1152)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3542 ] In(pop) Out(push 0x8100.3542) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3543 (Index 1197) (SNMP ifIndex 1153)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3543 ] In(pop) Out(push 0x8100.3543) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3544 (Index 1198) (SNMP ifIndex 1154)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3544 ] In(pop) Out(push 0x8100.3544) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3545 (Index 1199) (SNMP ifIndex 1160)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3545 ] In(pop) Out(push 0x8100.3545) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3546 (Index 1200) (SNMP ifIndex 1161)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3546 ] In(pop) Out(push 0x8100.3546) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3547 (Index 1201) (SNMP ifIndex 1162)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3547 ] In(pop) Out(push 0x8100.3547) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3548 (Index 1202) (SNMP ifIndex 1163)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3548 ] In(pop) Out(push 0x8100.3548) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3549 (Index 1203) (SNMP ifIndex 1170)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3549 ] In(pop) Out(push 0x8100.3549) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 263
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3550 (Index 1204) (SNMP ifIndex 1184)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3550 ] In(pop) Out(push 0x8100.3550) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3551 (Index 1205) (SNMP ifIndex 1185)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3551 ] In(pop) Out(push 0x8100.3551) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3552 (Index 1206) (SNMP ifIndex 1186)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3552 ] In(pop) Out(push 0x8100.3552) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3553 (Index 1207) (SNMP ifIndex 1189)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3553 ] In(pop) Out(push 0x8100.3553) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3554 (Index 1208) (SNMP ifIndex 1190)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3554 ] In(pop) Out(push 0x8100.3554) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3555 (Index 1209) (SNMP ifIndex 1192)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3555 ] In(pop) Out(push 0x8100.3555) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3556 (Index 1210) (SNMP ifIndex 1193)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3556 ] In(pop) Out(push 0x8100.3556) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3557 (Index 1211) (SNMP ifIndex 1194)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3557 ] In(pop) Out(push 0x8100.3557) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3558 (Index 1212) (SNMP ifIndex 1195)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3558 ] In(pop) Out(push 0x8100.3558) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3559 (Index 1213) (SNMP ifIndex 1196)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3559 ] In(pop) Out(push 0x8100.3559) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3560 (Index 1214) (SNMP ifIndex 1197)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3560 ] In(pop) Out(push 0x8100.3560) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3561 (Index 1215) (SNMP ifIndex 1199)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3561 ] In(pop) Out(push 0x8100.3561) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3562 (Index 1216) (SNMP ifIndex 1202)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3562 ] In(pop) Out(push 0x8100.3562) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3563 (Index 1217) (SNMP ifIndex 1205)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3563 ] In(pop) Out(push 0x8100.3563) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3564 (Index 1218) (SNMP ifIndex 1207)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3564 ] In(pop) Out(push 0x8100.3564) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3565 (Index 1219) (SNMP ifIndex 1213)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3565 ] In(pop) Out(push 0x8100.3565) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3566 (Index 1220) (SNMP ifIndex 1214)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3566 ] In(pop) Out(push 0x8100.3566) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3567 (Index 1221) (SNMP ifIndex 1215)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3567 ] In(pop) Out(push 0x8100.3567) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3568 (Index 1222) (SNMP ifIndex 1218)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3568 ] In(pop) Out(push 0x8100.3568) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3569 (Index 1223) (SNMP ifIndex 1233)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3569 ] In(pop) Out(push 0x8100.3569) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3570 (Index 1224) (SNMP ifIndex 1234)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3570 ] In(pop) Out(push 0x8100.3570) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3571 (Index 1225) (SNMP ifIndex 1235)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3571 ] In(pop) Out(push 0x8100.3571) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3572 (Index 1226) (SNMP ifIndex 1236)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3572 ] In(pop) Out(push 0x8100.3572) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3573 (Index 1227) (SNMP ifIndex 1238)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3573 ] In(pop) Out(push 0x8100.3573) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3574 (Index 1228) (SNMP ifIndex 1240)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3574 ] In(pop) Out(push 0x8100.3574) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3575 (Index 1229) (SNMP ifIndex 1241)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3575 ] In(pop) Out(push 0x8100.3575) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3576 (Index 1230) (SNMP ifIndex 1242)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3576 ] In(pop) Out(push 0x8100.3576) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3577 (Index 1231) (SNMP ifIndex 1243)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3577 ] In(pop) Out(push 0x8100.3577) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3578 (Index 1232) (SNMP ifIndex 1250)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3578 ] In(pop) Out(push 0x8100.3578) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3579 (Index 1233) (SNMP ifIndex 1251)
+    Description: GT-GENI rack | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3579 ] In(pop) Out(push 0x8100.3579) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 0
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3921 (Index 1234) (SNMP ifIndex 1157)
+    Description: L2 PARTICIPANT GT | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3921 ] In(pop) Out(push 0x8100.3921) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 14408548
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.3922 (Index 1235) (SNMP ifIndex 896)
+    Description: L2 PARTICIPANT GT | SOX-GENI-MP-VLAN-01603
+    Flags: Up SNMP-Traps 0x20004000
+    VLAN-Tag [ 0x8100.3922 ] In(pop) Out(push 0x8100.3922) 
+    Encapsulation: VLAN-Bridge
+    Input packets : 0
+    Output packets: 14408548
+    Protocol bridge, MTU: 9192
+
+  Logical interface xe-1/2/2.32767 (Index 1236) (SNMP ifIndex 1844)
+    Flags: Up SNMP-Traps 0x4004000 VLAN-Tag [ 0x0000.0 ]  Encapsulation: ENET2
+    Input packets : 0
+    Output packets: 1038457
+    Protocol multiservice, MTU: Unlimited
+      Flags: None
+
+Physical interface: xe-1/2/3, Enabled, Physical link is Up
+  Interface index: 340, SNMP ifIndex: 1419
+  Description: TO PEER FACE 10GE via FDP2 17/18 LAG AE11 [PRIV] | SOX-56MAR-56MAR-10GE-02004
+  Link-level type: Ethernet, MTU: 1514, MRU: 1522, LAN-PHY mode, Speed: 10Gbps,
+  BPDU Error: None, Loop Detect PDU Error: None, MAC-REWRITE Error: None,
+  Loopback: None, Source filtering: Disabled, Flow control: Disabled,
+  Speed Configuration: Auto
+  Pad to minimum frame size: Disabled
+  Device flags   : Present Running
+  Interface flags: SNMP-Traps Internal: 0x4000
+  Link flags     : None
+  CoS queues     : 8 supported, 8 maximum usable queues
+  Schedulers     : 0
+  Current address: 78:19:f7:b8:77:cb, Hardware address: 78:19:f7:b8:70:fa
+  Last flapped   : 2023-02-22 13:24:55 EST (16w0d 22:18 ago)
+  Input rate     : 3322110800 bps (341882 pps)
+  Output rate    : 76960504 bps (54737 pps)
+  Active alarms  : None
+  Active defects : None
+  PCS statistics                      Seconds
+    Bit errors                             4
+    Errored blocks                         4
+  Link Degrade :                      
+    Link Monitoring                   :  Disable
+
+--- Maximum Output Exceeded ---

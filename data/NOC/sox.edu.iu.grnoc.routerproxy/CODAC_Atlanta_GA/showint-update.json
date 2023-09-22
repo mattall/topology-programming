@@ -1,0 +1,20 @@
+{
+    "name": "CODAC_Atlanta_GA",
+    "address": "143.215.194.244",
+    "physical_interfaces": {
+        "Ethernet1": {
+            "hw address": "985d.82b7.5266",
+            "description": "93180-130.207.252.44 eth1/17 [NO-MONITOR]\n",
+            "speed": "10000000 kbit",
+            "input rate": "25.0 kbps",
+            "output rate": "17.0 kbps"
+        },
+        "Ethernet2": {
+            "hw address": "985d.82b7.5267",
+            "description": "\"TO PARTICIPANT GT - FABRIC test rack via home run fiber [NO-MONITOR] [PROVISIONING] | SOX-CODAC-CODAC-10GE-02443\"\n",
+            "speed": "10000000 kbit",
+            "input rate": "8.47 kbps",
+            "output rate": "12.1 kbps"
+        }
+    }
+}

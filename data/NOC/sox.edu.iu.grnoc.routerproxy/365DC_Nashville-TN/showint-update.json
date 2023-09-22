@@ -1,0 +1,69 @@
+{
+    "name": "365DC_Nashville-TN",
+    "address": "143.215.194.53",
+    "physical_interfaces": {
+        "Ethernet1/1": {
+            "hw address": "444c.a8fc.29fe",
+            "description": "\"TO: ISP COGENT 1-300251459 via FDP1 1/2 | SOX-365DC-365DC-10GE-02187\"\n",
+            "speed": "10000000 kbit",
+            "input rate": "292 Mbps",
+            "output rate": "243 kbps"
+        },
+        "Ethernet1/2": {
+            "hw address": "444c.a8fc.2a06",
+            "description": "\"\"To: ISP Arelion [10GE] IC-338453 1 of 2 LAG PO11 via FDP1 7/8 | SOX-365DC-365DC-10GE-02191\"\n",
+            "speed": "10000000 kbit",
+            "input rate": "2.62 Gbps",
+            "output rate": "86.1 Mbps"
+        },
+        "Ethernet3/2": {
+            "hw address": "444c.a8fc.29fd",
+            "description": "SERVICE PERFSONAR [NO-MONITOR] | SOX-MPLEX-MPLEX-10GE-01528\n",
+            "speed": "10000000 kbit",
+            "input rate": "15.9 kbps",
+            "output rate": "12.5 kbps"
+        },
+        "Ethernet4/2": {
+            "hw address": "444c.a8fc.2a1a",
+            "description": "\"TO: ISP Arelion #2 IC-346444 2 of 2 LAG PO11 | SOX-365DC-365DC-10GE-02263\"\n",
+            "speed": "10000000 kbit",
+            "input rate": "2.65 Gbps",
+            "output rate": "170 Mbps"
+        },
+        "Ethernet8/2": {
+            "hw address": "444c.a8fc.2a26",
+            "description": "\"PARTICIPANT AUBURN via ATT | SOX-365DC-365DC-100GE-02377\"\n",
+            "speed": "100000000 kbit",
+            "input rate": "6.87 kbps",
+            "output rate": "10.8 kbps"
+        },
+        "Ethernet12/1": {
+            "hw address": "444c.a8fc.2a42",
+            "description": "\"[100G] TO: rtr.sidco eth23/1 via Zayo fiber FDP1 3/4 | SOX-365DC-SIDCO-100GE-02185\"\n",
+            "speed": "100000000 kbit",
+            "input rate": "439 Mbps",
+            "output rate": "5.75 Gbps"
+        },
+        "Ethernet25/1": {
+            "hw address": "444c.a8fc.2a6e",
+            "description": "\"Loopback test [NO-MONITOR]\"\n",
+            "speed": "40000000 kbit",
+            "input rate": "62 bps",
+            "output rate": "554 bps"
+        },
+        "Ethernet36/1": {
+            "hw address": "444c.a8fc.2a72",
+            "description": "\"Loopback test [NO-MONITOR]\"\n",
+            "speed": "40000000 kbit",
+            "input rate": "554 bps",
+            "output rate": "62 bps"
+        },
+        "Port-Channel11": {
+            "hw address": "444c.a8fc.2a06",
+            "description": "\"TO: ISP Arelion LAG | SOX-365DC-365DC-LAG-02261\"\n",
+            "speed": "20000000 kbit",
+            "input rate": "5.27 Gbps",
+            "output rate": "256 Mbps"
+        }
+    }
+}
