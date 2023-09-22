@@ -919,7 +919,7 @@ class Simulation:
                         add_links = []
                         drop_links = []
                         # optimizer.LINK_CAPACITY *= max_load
-                        add_links, drop_links = optimizer.mcf()
+                        add_links, drop_links = optimizer.skinwalker()
                         # result_topo, add_links, drop_links = optimizer.optimize()
                         # result_topo, add_links, drop_links = optimizer.run_model_max_diff_ignore_demand()
 

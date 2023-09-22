@@ -402,10 +402,10 @@ class Link_optimization:
                 for path in paths:
                     print(f"Path: {path['path']} - Weight: {path['weight']}")
 
-    def mcf(self):
+    def skinwalker(self):
         LINK_CAPACITY = self.LINK_CAPACITY
 
-        m = self.model = Model("MulticommodityFlow")
+        m = self.model = Model("Skinwalker")
 
         # Convert the graph to a directed graph
 
@@ -456,10 +456,11 @@ class Link_optimization:
                 == sum(
                     edge_vars[u, v]
                     for (u, v) in edge_vars
-                    if u == vertex or v == vertex
+                    # if u == vertex or v == vertex
+                    if u == vertex # only interested in originating match
                 )
             )
-            m.addConstr(txp_count[v_idx] >= node_degree_vars[v_idx])
+            m.addConstr(txp_count[vertex] >= node_degree_vars[v_idx])
 
         # Add flow variables for commodities and edges
         flow_vars = m.addVars(
