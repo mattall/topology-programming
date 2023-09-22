@@ -1,4 +1,5 @@
 from typing import DefaultDict
+from pprint import pprint
 import sys
 import os
 import csv
@@ -6,8 +7,8 @@ import csv
 # sys.path.append(os.path.abspath('./src'))
 # sys.path.append(os.path.abspath('./src/utilities'))
 
-sys.path.insert(0, "/home/mhall/topology-programming/src/")
-sys.path.insert(0, "/home/mhall/topology-programming/scripts/")
+sys.path.insert(0, "./src/")
+sys.path.insert(0, "./scripts/")
 
 from onset.simulator import Simulation
 from onset.utilities.post_process import post_proc_timeseries
@@ -17,19 +18,19 @@ from sys import argv
 
 def main(argv):
     if len(argv) == 1:
-        network               = "ANS"
-        hosts                 = "18"
+        network               = "surfNet"
+        hosts                 = "50"
         te_method             = "-mcf"
         traffic_type          = "coremelt"
-        iter_i                = '8'
-        experiment_tag        = "onset_file-3x2E11"
-        network_instance      = "ANS"
-        repeat                = "False" 
-        traffic_file          = "data/traffic/ANS_coremelt_links-3_volume-2.00e+11.txt"
+        iter_i                = '89'
+        experiment_tag        = "onset_coremelt"
+        network_instance      = "surfNet"
+        repeat                = "repeat" 
+        traffic_file          = "data/traffic/surfNet_coremelt_every_link_2.00e+11.txt"
         n_fallow_transponders = '1'
-        optical_strategy      = "onset"
+        optical_strategy      = "onset_v2"
         fallow_tx_allocation  = "file"
-        ftx_file              = "data/txp/ANS_1.txt"
+        ftx_file              = "data/txp/surfNet_0.txt"
 
         # network                 = 'Comcast'
         # hosts                   = 149
@@ -58,6 +59,11 @@ def main(argv):
         fallow_tx_allocation   ,\
         ftx_file               = argv
 
+    if (os.path.exists(traffic_file)):
+        pass
+    else: 
+        raise FileNotFoundError(traffic_file)
+    
     iter_i = int(iter_i)
     hosts = int(hosts)
     iterations = int(os.popen('wc -l ' + traffic_file).read().split()[0])
@@ -84,7 +90,7 @@ def main(argv):
     for key in result:
         data[key].extend(result[key])
 
-
+    pprint(data)
     # results_file = SCRIPT_HOME + "/data/results/{}_coremelt_every_link_{}_{}_{}".format(
     #     network, attack, net_iter.split('/')[1], iter_i) + ".csv"
     # print("writing results to: " + results_file)

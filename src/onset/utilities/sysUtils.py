@@ -2,13 +2,20 @@ from os import listdir, chdir, makedirs, path, system, remove, rmdir
 from pprint import pprint
 import shutil
 from subprocess import check_output, Popen, PIPE
-
+from time import process_time
 from ..constants import SCRIPT_HOME
 from .config import user, host
 import re
 
 from onset.constants import PLOT_DIR
 
+def clock(f, *args, **kwargs):
+    # clocks the time to run a function
+    # return (result, time) tuple 
+    start = process_time()
+    result = f(*args, **kwargs)
+    end = process_time()        
+    return result, (end-start)
 
 def count_lines(file_name):
     """counts number of lines in a files using 'wc -l' subprocess

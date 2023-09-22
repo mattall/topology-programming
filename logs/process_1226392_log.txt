@@ -1,0 +1,51 @@
+2023-09-20 12:46:41,442 - onset-proc-1226392 - logger - <module> - INFO - Log file: logs/process_1226392_log.txt.
+2023-09-20 12:46:42,728 - onset-proc-1226392 - simulator - __init__ - INFO - Nonce: ./.temp/d62c0db8111426928691b53f633085976862ba72
+2023-09-20 12:46:42,729 - onset-proc-1226392 - simulator - __init__ - INFO - Initializing simulator: ANS coremelt_onset_file-3x2E11 50
+2023-09-20 12:46:42,729 - onset-proc-1226392 - simulator - _init_logging - INFO - Experiment ID:            ANS_coremelt_onset_file-3x2E11_1__-mcf
+2023-09-20 12:46:42,729 - onset-proc-1226392 - simulator - verify_topo - INFO - topology file check passed with base topology file: /gpfs/projects/durairajanlab/mhall7/topology-programming/data/graphs/gml/ANS.gml.
+2023-09-20 12:46:43,090 - onset-proc-1226392 - simulator - _system - INFO - Calling system command: yates /gpfs/projects/durairajanlab/mhall7/topology-programming/data/results/ANS_coremelt_onset_file-3x2E11_1__-mcf/ANS_8-1-50_circuits-1_startIter-8_endIter-8_repeat-True_unit-Gbps_demandFactor-1.dot ./.temp/d62c0db8111426928691b53f633085976862ba72 ./.temp/d62c0db8111426928691b53f633085976862ba72 /gpfs/projects/durairajanlab/mhall7/topology-programming/data/hosts/ANS.hosts -mcf -num-tms 1 -out ANS_coremelt_onset_file-3x2E11_1__-mcf/ANS_8-1-50_circuits-1_startIter-8_endIter-8_repeat-True_unit-Gbps_demandFactor-1 -budget 3 >> ./.temp/d62c0db8111426928691b53f633085976862ba72_yates.out
+2023-09-20 12:46:44,104 - onset-proc-1226392 - simulator - _yates - INFO - Max congestion: 1.079344
+2023-09-20 12:47:12,647 - gurobipy.gurobipy - optimization_two - mcf - INFO - Set parameter WLSAccessID
+2023-09-20 12:47:12,647 - gurobipy.gurobipy - optimization_two - mcf - INFO - Set parameter WLSSecret
+2023-09-20 12:47:12,647 - gurobipy.gurobipy - optimization_two - mcf - INFO - Set parameter LicenseID to value 2406149
+2023-09-20 12:47:12,650 - gurobipy.gurobipy - optimization_two - mcf - INFO - Academic license - for non-commercial use only - registered to mhall7@uoregon.edu
+2023-09-20 12:47:13,833 - gurobipy.gurobipy - optimization_two - mcf - INFO - Gurobi Optimizer version 10.0.2 build v10.0.2rc0 (linux64)
+2023-09-20 12:47:13,834 - gurobipy.gurobipy - optimization_two - mcf - INFO - 
+2023-09-20 12:47:13,846 - gurobipy.gurobipy - optimization_two - mcf - INFO - CPU model: Intel(R) Xeon(R) CPU E5-2690 v4 @ 2.60GHz, instruction set [SSE2|AVX|AVX2]
+2023-09-20 12:47:13,846 - gurobipy.gurobipy - optimization_two - mcf - INFO - Thread count: 28 physical cores, 28 logical processors, using up to 28 threads
+2023-09-20 12:47:13,847 - gurobipy.gurobipy - optimization_two - mcf - INFO - 
+2023-09-20 12:47:13,848 - gurobipy.gurobipy - optimization_two - mcf - INFO - Academic license - for non-commercial use only - registered to mhall7@uoregon.edu
+2023-09-20 12:47:13,848 - gurobipy.gurobipy - optimization_two - mcf - INFO - Optimize a model with 5864 rows, 39570 columns and 118308 nonzeros
+2023-09-20 12:47:13,850 - gurobipy.gurobipy - optimization_two - mcf - INFO - Model fingerprint: 0xe7739387
+2023-09-20 12:47:13,850 - gurobipy.gurobipy - optimization_two - mcf - INFO - Model has 128 general constraints
+2023-09-20 12:47:13,850 - gurobipy.gurobipy - optimization_two - mcf - INFO - Variable types: 39296 continuous, 274 integer (256 binary)
+2023-09-20 12:47:13,851 - gurobipy.gurobipy - optimization_two - mcf - INFO - Coefficient statistics:
+2023-09-20 12:47:13,851 - gurobipy.gurobipy - optimization_two - mcf - INFO -   Matrix range     [1e+00, 1e+11]
+2023-09-20 12:47:13,851 - gurobipy.gurobipy - optimization_two - mcf - INFO -   Objective range  [1e+00, 1e+00]
+2023-09-20 12:47:13,851 - gurobipy.gurobipy - optimization_two - mcf - INFO -   Bounds range     [1e+00, 1e+11]
+2023-09-20 12:47:13,851 - gurobipy.gurobipy - optimization_two - mcf - INFO -   RHS range        [3e+00, 6e+10]
+2023-09-20 12:47:13,851 - gurobipy.gurobipy - optimization_two - mcf - INFO -   GenCon const rng [1e+00, 1e+00]
+2023-09-20 12:47:13,852 - gurobipy.gurobipy - optimization_two - mcf - INFO - Warning: Model contains large matrix coefficients
+2023-09-20 12:47:13,852 - gurobipy.gurobipy - optimization_two - mcf - INFO - Warning: Model contains large rhs
+2023-09-20 12:47:13,853 - gurobipy.gurobipy - optimization_two - mcf - INFO - Warning: Model contains large bounds
+2023-09-20 12:47:13,853 - gurobipy.gurobipy - optimization_two - mcf - INFO -          Consider reformulating model or setting NumericFocus parameter
+2023-09-20 12:47:13,853 - gurobipy.gurobipy - optimization_two - mcf - INFO -          to avoid numerical issues.
+2023-09-20 12:47:13,950 - gurobipy.gurobipy - optimization_two - mcf - INFO - Presolve removed 4737 rows and 32915 columns
+2023-09-20 12:47:13,950 - gurobipy.gurobipy - optimization_two - mcf - INFO - Presolve time: 0.10s
+2023-09-20 12:47:13,951 - gurobipy.gurobipy - optimization_two - mcf - INFO - Presolved: 1127 rows, 6655 columns, 19967 nonzeros
+2023-09-20 12:47:13,953 - gurobipy.gurobipy - optimization_two - mcf - INFO - Variable types: 6528 continuous, 127 integer (63 binary)
+2023-09-20 12:47:14,174 - gurobipy.gurobipy - optimization_two - mcf - INFO - 
+2023-09-20 12:47:14,174 - gurobipy.gurobipy - optimization_two - mcf - INFO - Root relaxation: infeasible, 1202 iterations, 0.06 seconds (0.06 work units)
+2023-09-20 12:47:14,174 - gurobipy.gurobipy - optimization_two - mcf - INFO - 
+2023-09-20 12:47:14,174 - gurobipy.gurobipy - optimization_two - mcf - INFO -     Nodes    |    Current Node    |     Objective Bounds      |     Work
+2023-09-20 12:47:14,174 - gurobipy.gurobipy - optimization_two - mcf - INFO -  Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+2023-09-20 12:47:14,174 - gurobipy.gurobipy - optimization_two - mcf - INFO - 
+2023-09-20 12:47:14,175 - gurobipy.gurobipy - optimization_two - mcf - INFO -      0     0 infeasible    0               - infeasible      -     -    0s
+2023-09-20 12:47:14,175 - gurobipy.gurobipy - optimization_two - mcf - INFO - 
+2023-09-20 12:47:14,175 - gurobipy.gurobipy - optimization_two - mcf - INFO - Explored 1 nodes (1202 simplex iterations) in 0.33 seconds (0.25 work units)
+2023-09-20 12:47:14,175 - gurobipy.gurobipy - optimization_two - mcf - INFO - Thread count was 28 (of 28 available processors)
+2023-09-20 12:47:14,175 - gurobipy.gurobipy - optimization_two - mcf - INFO - 
+2023-09-20 12:47:14,175 - gurobipy.gurobipy - optimization_two - mcf - INFO - Solution count 0
+2023-09-20 12:47:14,175 - gurobipy.gurobipy - optimization_two - mcf - INFO - 
+2023-09-20 12:47:14,176 - gurobipy.gurobipy - optimization_two - mcf - INFO - Model is infeasible
+2023-09-20 12:47:14,176 - gurobipy.gurobipy - optimization_two - mcf - INFO - Best objective -, best bound -, gap -

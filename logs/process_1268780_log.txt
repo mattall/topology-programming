@@ -1,0 +1,5 @@
+2023-09-20 18:55:41,010 - onset-proc-1268780 - logger - <module> - INFO - Log file: logs/process_1268780_log.txt.
+2023-09-20 18:55:42,765 - onset-proc-1268780 - simulator - __init__ - INFO - Nonce: ./.temp/e430ce771ea673b23b6be42b7b69c3e6ac230e9f
+2023-09-20 18:55:42,765 - onset-proc-1268780 - simulator - __init__ - INFO - Initializing simulator: surfNet coremelt_onset_coremelt 136
+2023-09-20 18:55:42,766 - onset-proc-1268780 - simulator - _init_logging - INFO - Experiment ID:            surfNet_coremelt_onset_coremelt_1__-mcf
+2023-09-20 18:55:42,766 - onset-proc-1268780 - simulator - verify_topo - INFO - topology file check passed with base topology file: /gpfs/projects/durairajanlab/mhall7/topology-programming/data/graphs/gml/surfNet.gml.

@@ -57,13 +57,14 @@ class AlpWolf:
         self.transponders_per_degree = 1
         self.base_graph_file = base_graph_file
         self.base_graph = self.import_graph(base_graph_file)
-        self.logical_graph = Graph()
+        self.logical_graph = self.__init_logical_graph(self.base_graph)
         self.n_nodes = len(self.base_graph.nodes())
         # node-pair (u,v) -> num_circuits (int)
         self.circuits = defaultdict(int)
         self.fallow_transponders = fallow_transponders
         self.fallow_tx_allocation_strategy = fallow_tx_allocation_strategy
         self.fallow_tx_allocation_file = fallow_tx_allocation_file
+        self.txp_count = {}
         self.n_super_nodes = ceil(self.n_nodes * 0.1)
         self.initial_bandwidth_dict = defaultdict(lambda: defaultdict(float))
         self.import_capacity = False
@@ -83,6 +84,12 @@ class AlpWolf:
         self._init_position()
         assert is_strongly_connected(self.logical_graph.to_directed())
 
+    def __init_logical_graph(self, G:Graph):
+        loggical_graph = Graph()
+        [loggical_graph.add_node(n) for n in G]
+        [loggical_graph.add_edge(u,v) for u,v in G.edges]
+        return loggical_graph
+    
     def import_graph(self, path):
         if path.endswith(".gml"):
             return self.import_gml_graph(path)
@@ -302,6 +309,11 @@ class AlpWolf:
                     raise Exception(
                         "Error, insufficient transponders at nodes for circuit."
                     )
+                
+        for n in self.base_graph.nodes:
+            self.txp_count[n] = len(self.base_graph.nodes[n]["transponder"])
+        
+        return
 
     def get_transponders(self, node) -> dict:
         return self.base_graph.nodes[node]["transponder"]
@@ -314,14 +326,25 @@ class AlpWolf:
                 count += 1
         return count
 
-    def get_transponders(self) -> dict:
-        return {
-            node: self.base_graph.nodes[node]["transponder"]
-            for node in self.base_graph.nodes
-        }
+    def get_transponders(self, node=None) -> dict:
+        if node is None:
+            return {
+                node: self.base_graph.nodes[node]["transponder"]
+                for node in self.base_graph.nodes
+            }
+        elif node in self.base_graph:
+            return self.base_graph.nodes[node]["transponder"]
+        else:
+            raise Exception(f"Node {node, type(node)} not found")
 
-    def get_transponders_count(self) -> list:
-        return [self.get_transponders[node] for node in self.base_graph.nodes]
+    def get_txp_count(self, node=None) -> list:
+        if node is None:
+            return self.txp_count
+        elif node in self.base_graph:
+            return self.txp_count[node]
+        else:
+            raise Exception(f"Node {node, type(node)} not found")
+
 
     def _init_position(self):
         """Sets Longitude and Latitude for nodes based on the input graph."""
@@ -449,9 +472,16 @@ class AlpWolf:
 
         # update logical graph
         if (u, v) in self.logical_graph.edges:
+            logger.warning(f"edge {(u,v)} is present in self.logical_graph")
+            pass
+        else:
+            logger.warning(f"edge {(u,v)} was not found in self.logical_graph.edges. Unintended side effects may stem from here.")
+            self.logical_graph.add_edge(u, v)
+
+        if "capacity" in self.logical_graph[u][v]:
             self.logical_graph[u][v]["capacity"] += capacity
         else:
-            self.logical_graph.add_edge(u, v)
+            logger.debug(f"adding attribute, \"capacity\" to self.logical_graph[{u}][{v}]")
             self.logical_graph[u][v]["capacity"] = capacity
 
         logger.debug("Successfully added circuit {} {}.".format(u, v))
