@@ -1,3 +1,4 @@
+import sys
 from numpy import loadtxt, sqrt
 from itertools import combinations
 from collections import Counter
@@ -59,6 +60,7 @@ class Simulation:
         net_dir=False,
         fallow_tx_allocation_strategy="static",
         fallow_tx_allocation_file="",
+        line_code="fixed",
         salt="",
     ):
         """Simulation initializer
@@ -168,6 +170,7 @@ class Simulation:
         self.congestion_threshold_lower_bound = (
             congestion_threshold_lower_bound
         )
+        self.line_code = line_code
         self.exit_early = False
         self.attack_proportion = attack_proportion
         self.shakeroute = shakeroute
@@ -227,7 +230,7 @@ class Simulation:
 
     def _system(self, command: str):
         logger.info("Calling system command: {}".format(command))
-        system(command)
+        return system(command)
 
     def _init_logging(self):
         logger.debug(
@@ -273,7 +276,11 @@ class Simulation:
             ">>",
             f"{self.nonce}_yates.out",
         ]
-
+        gurobi_status = self._system("gurobi_cl")
+        if gurobi_status == 0:
+            logger.info("gurobi_cl is in path.")
+        else:
+                raise(f"Error: gurobi_cl not in path {sys.path}")
         self._system(" ".join(command_args))
         max_congestion = read_result_val(
             path.join(
@@ -462,7 +469,7 @@ class Simulation:
         demand_factor=1,
         dry=False
     ):
-        sim_param_tag = f"circuits-{circuits}_startIter-{start_iter}_endIter-{end_iter}_repeat-{repeat}_unit-{unit}_demandFactor-{demand_factor}"
+        sim_param_tag = f"{circuits}_{start_iter}_{end_iter}_{int(repeat)}_{unit}_{demand_factor:.1f}"
 
         if end_iter == 0:
             end_iter = self.iterations
@@ -967,6 +974,10 @@ class Simulation:
                     else:
                         circuit_tag = ""
                     # updated_topology_file = iteration_topo + circuit_tag
+                    
+                    if self.line_code == "BVT": 
+                        self.wolf.logical_graph.edges[('63', '133')]["capacity"] *= 0.75
+                    
                     updated_topology_file = iteration_topo
                     self.export_logical_topo_to_gml(
                         updated_topology_file + ".gml"
@@ -979,7 +990,7 @@ class Simulation:
 
                     # Draw the link graph for the instanced topology.
                     # self.base_graph._init_link_graph()
-
+                        
                     iter_congestion = self._yates(
                         iteration_topo + ".dot",
                         ITERATION_REL_PATH,
@@ -1263,7 +1274,7 @@ class Simulation:
                     pass
                 else:
                     logger.error(
-                        "Error verifying traffic file Create one now? [y/n]"
+                        f"Error verifying traffic file: {traffic_file}\n  Create one now? [y/n]"
                     )
 
                     create = input()
