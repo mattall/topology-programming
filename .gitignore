@@ -57,3 +57,6 @@ MANIFEST
 .conda*/
 .python-version
 *.csv
+scripts/batch
+.vscode/
+logs
