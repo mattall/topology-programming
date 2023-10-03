@@ -1,0 +1,1 @@
+srun --account=durairajanlab --partition=memory --mem=200G --pty bash

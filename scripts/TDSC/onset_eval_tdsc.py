@@ -1,20 +1,16 @@
-from typing import DefaultDict
-from pprint import pprint
+# Used in Section 6.6, Cost Reduction via Variable Fallow Transponder Allocation
+
 import sys
 import os
-import csv
-# sys.path.append(os.path.abspath('.'))
-# sys.path.append(os.path.abspath('./src'))
-# sys.path.append(os.path.abspath('./src/utilities'))
+
+from time import time
+from sys import argv
+from typing import DefaultDict
+from pprint import pprint
 
 sys.path.insert(0, "./src/")
 sys.path.insert(0, "./scripts/")
-
 from onset.simulator import Simulation
-from onset.utilities.post_process import post_proc_timeseries
-from time import time
-from sys import argv
-
 
 def main(argv):
     if len(argv) == 1:

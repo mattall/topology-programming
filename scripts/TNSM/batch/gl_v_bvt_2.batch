@@ -1,0 +1,14 @@
+#!/bin/bash
+
+#SBATCH --account=durairajanlab        ### change this to your actual account for charging
+#SBATCH --partition=memory               ### queue to submit to
+#SBATCH --job-name=bvt_vs_greylambda_2            ### job name
+#SBATCH --output=bvt_vs_greylambda_2.out             ### file in which to store job stdout
+#SBATCH --error=bvt_vs_greylambda_2.err              ### file in which to store job stderr
+#SBATCH --time=1-00:00:00                ### wall-clock time limit, in minutes
+#SBATCH --mem=200G                       ### memory limit per node, in MB
+#SBATCH --nodes=1                        ### number of nodes to use
+#SBATCH --ntasks-per-node=1              ### number of tasks to launch per node
+#SBATCH --cpus-per-task=30                ### number of cores for each task
+ 
+python scripts/greylambda_vs_bvt.py 2
