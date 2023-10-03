@@ -98,8 +98,12 @@ Physical interface: xdesd5-13/0, Enabled, Physical link is Up
         #print( "\n\nHERE IT IS :: \nInterface : " + matchobj.group('intrfname')  + "\n\nBIA : " + matchobj.group('bia')+ "\n\nIP Address : " +  matchobj.group('ipaddr') + "\n\nMTU : " + matchobj.group('mtu') + "\n\n"+ matchobj.group())
 
 if __name__ == "__main__":
-    input_file = argv[1]
-    # input_file = "/home/m/src/topology-programming/data/NOC/sox.edu.iu.grnoc.routerproxy/CODAC_Atlanta_GA/showint.log"
+    try:
+         input_file = argv[1]
+    except:
+      print(f"\nUSAGE: {argv[0]} FILE\n\tFILE - A path to a file containing output from a `show interface` command executed on a router.")
+      exit()
+    # input_file = "/home/m/src/topology-programming/data/NOC/sox.edu.iu.grnoc.routerproxy/CODAC_Atlanta_GA/showint.out"
     output_file = input_file.split(".")
     output_file = ".".join(output_file[:-1]) + '-update.json'
 
