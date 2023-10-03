@@ -1,1 +1,0 @@
-2023-09-20 18:48:39,084 - onset-proc-1266841 - logger - <module> - INFO - Log file: logs/process_1266841_log.txt.

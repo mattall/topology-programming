@@ -1,5 +1,0 @@
-2023-09-20 16:11:46,529 - onset-proc-1248554 - logger - <module> - INFO - Log file: logs/process_1248554_log.txt.
-2023-09-20 16:11:47,850 - onset-proc-1248554 - simulator - __init__ - INFO - Nonce: ./.temp/d62c0db8111426928691b53f633085976862ba72
-2023-09-20 16:11:47,851 - onset-proc-1248554 - simulator - __init__ - INFO - Initializing simulator: ANS coremelt_onset_file-3x2E11 50
-2023-09-20 16:11:47,851 - onset-proc-1248554 - simulator - _init_logging - INFO - Experiment ID:            ANS_coremelt_onset_file-3x2E11_1__-mcf
-2023-09-20 16:11:47,851 - onset-proc-1248554 - simulator - verify_topo - INFO - topology file check passed with base topology file: /gpfs/projects/durairajanlab/mhall7/topology-programming/data/graphs/gml/ANS.gml.

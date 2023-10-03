@@ -1,7 +1,0 @@
-2023-09-20 12:06:44,507 - onset-proc-1221310 - logger - <module> - INFO - Log file: logs/process_1221310_log.txt.
-2023-09-20 12:06:55,207 - onset-proc-1221310 - simulator - __init__ - INFO - Nonce: ./.temp/44554391908e8ab01211687dbf0c8f6057f890c1
-2023-09-20 12:06:55,207 - onset-proc-1221310 - simulator - __init__ - INFO - Initializing simulator: ANS coremelt_onset_file-3x2E11 50
-2023-09-20 12:06:55,207 - onset-proc-1221310 - simulator - _init_logging - INFO - Experiment ID:            ANS_coremelt_onset_file-3x2E11_1__-mcf
-2023-09-20 12:06:55,208 - onset-proc-1221310 - simulator - verify_topo - INFO - topology file check passed with base topology file: /gpfs/projects/durairajanlab/mhall7/topology-programming/data/graphs/gml/ANS.gml.
-2023-09-20 12:07:22,704 - onset-proc-1221310 - simulator - _system - INFO - Calling system command: yates /gpfs/projects/durairajanlab/mhall7/topology-programming/data/results/ANS_coremelt_onset_file-3x2E11_1__-mcf/ANS_8-50_circuits-1_startIter-8_endIter-8_repeat-False_unit-Gbps_demandFactor-1.dot ./.temp/44554391908e8ab01211687dbf0c8f6057f890c1 ./.temp/44554391908e8ab01211687dbf0c8f6057f890c1 /gpfs/projects/durairajanlab/mhall7/topology-programming/data/hosts/ANS.hosts -mcf -num-tms 1 -out ANS_coremelt_onset_file-3x2E11_1__-mcf/ANS_8-50_circuits-1_startIter-8_endIter-8_repeat-False_unit-Gbps_demandFactor-1 -budget 3 >> ./.temp/44554391908e8ab01211687dbf0c8f6057f890c1_yates.out
-2023-09-20 12:07:24,776 - onset-proc-1221310 - simulator - _yates - INFO - Max congestion: 1.079344

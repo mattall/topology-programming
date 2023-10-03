@@ -1,6 +1,0 @@
-2023-09-20 18:53:43,929 - onset-proc-1268372 - logger - <module> - INFO - Log file: logs/process_1268372_log.txt.
-2023-09-20 18:53:51,558 - onset-proc-1268372 - simulator - __init__ - INFO - Nonce: ./.temp/6c9165f374aca0eab435757b8a87073928df660e
-2023-09-20 18:53:51,558 - onset-proc-1268372 - simulator - __init__ - INFO - Initializing simulator: SurfNet coremelt_onset_coremelt 136
-2023-09-20 18:53:51,558 - onset-proc-1268372 - simulator - _init_logging - INFO - Experiment ID:            SurfNet_coremelt_onset_coremelt_1__-mcf
-2023-09-20 18:53:51,559 - onset-proc-1268372 - simulator - verify_topo - ERROR - Error topology file not found: /gpfs/projects/durairajanlab/mhall7/topology-programming/data/graphs/gml/SurfNet.gml or /gpfs/projects/durairajanlab/mhall7/topology-programming/data/graphs/json/SurfNet.json
-NoneType: None
