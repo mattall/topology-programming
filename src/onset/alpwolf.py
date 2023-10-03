@@ -84,12 +84,12 @@ class AlpWolf:
         self._init_position()
         assert is_strongly_connected(self.logical_graph.to_directed())
 
-    def __init_logical_graph(self, G:Graph):
+    def __init_logical_graph(self, G: Graph):
         loggical_graph = Graph()
         [loggical_graph.add_node(n) for n in G]
-        [loggical_graph.add_edge(u,v) for u,v in G.edges]
+        [loggical_graph.add_edge(u, v) for u, v in G.edges]
         return loggical_graph
-    
+
     def import_graph(self, path):
         if path.endswith(".gml"):
             return self.import_gml_graph(path)
@@ -309,10 +309,10 @@ class AlpWolf:
                     raise Exception(
                         "Error, insufficient transponders at nodes for circuit."
                     )
-                
+
         for n in self.base_graph.nodes:
             self.txp_count[n] = len(self.base_graph.nodes[n]["transponder"])
-        
+
         return
 
     def get_transponders(self, node) -> dict:
@@ -344,7 +344,6 @@ class AlpWolf:
             return self.txp_count[node]
         else:
             raise Exception(f"Node {node, type(node)} not found")
-
 
     def _init_position(self):
         """Sets Longitude and Latitude for nodes based on the input graph."""
@@ -472,16 +471,20 @@ class AlpWolf:
 
         # update logical graph
         if (u, v) in self.logical_graph.edges:
-            logger.warning(f"edge {(u,v)} is present in self.logical_graph")
+            logger.debug(f"edge {(u,v)} is present in self.logical_graph")
             pass
         else:
-            logger.warning(f"edge {(u,v)} was not found in self.logical_graph.edges. Unintended side effects may stem from here.")
+            logger.warning(
+                f"edge {(u,v)} was not found in self.logical_graph.edges. Unintended side effects may stem from here."
+            )
             self.logical_graph.add_edge(u, v)
 
         if "capacity" in self.logical_graph[u][v]:
             self.logical_graph[u][v]["capacity"] += capacity
         else:
-            logger.debug(f"adding attribute, \"capacity\" to self.logical_graph[{u}][{v}]")
+            logger.debug(
+                f'adding attribute, "capacity" to self.logical_graph[{u}][{v}]'
+            )
             self.logical_graph[u][v]["capacity"] = capacity
 
         logger.debug("Successfully added circuit {} {}.".format(u, v))
@@ -748,7 +751,7 @@ class AlpWolf:
         """
         logger.info(self.base_graph.nodes[node_n]["transponder"])
 
-    def restrict_bandwidth(self, fraction: float):
+    def restrict_bandwidth(self, fraction: float, edge: tuple[str, str] = None):
         assert fraction < 1, "restriction should be a fraction of the whole"
         if self.bandwidth_restricted:
             print("Bandwidth is restricted, cannot restrict again")
