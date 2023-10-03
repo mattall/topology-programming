@@ -8,15 +8,30 @@ from copy import deepcopy
 
 DEBUG = False
 
-def experiment(args):    
+def experiment(args):
+    """Run one iteration of a topology programming experiment
+
+    Args:
+        args (tuple[network, t_class, scale, te_method, tp_method]):    
+    Expects to find a traffic matrix at the following path.
+        traffic_file = f"data/traffic/{t_class}_{network}-tm"
+
+    Scales the traffic matrix by `scale`.
+
+    te_method is the traffic engineering scheme used to forward traffic.
+
+    tp_method is the topology programming method used to adapt the topology
+    in light of traffic needs.
+
+    Returns:
+        str or None: Path to location of experiment report.
+    """
     from onset.utilities.logger import logger
     from onset.utilities.post_process import read_result_val
     from onset.simulator import Simulation
 
     pid = os.getpid()
     logger.info(f"Process-{pid} started with data: {args}")
-    
-    # te_method, tp_method, network, t_class, scale = args
     network, t_class, scale, te_method, tp_method = args
     experiment_name = "-".join((te_method, tp_method, network, t_class, scale))
     traffic_file = f"data/traffic/{t_class}_{network}-tm"
@@ -93,29 +108,13 @@ def experiment(args):
     else:
         logger.error("Did not have a result to write. Execution of sim failed.")
 
-def was_completed(experiment_name):
-    top_dir = f"data/results/*{experiment_name}*"
-    # Recursively find all directories matching `experiment_name`
-    experiment_directories = [f for f in glob.glob(os.path.join(f"{top_dir}", '**'), recursive=True) if os.path.isdir(f)]
-    
-    for experiment_dir in experiment_directories:
-        if not os.path.isdir(experiment_dir): continue
-        dat_files = glob.glob(os.path.join(experiment_dir, '**', '*.dat'), recursive=True)
-        if dat_files:
-            return True
-        else:
-            return False
-
-def was_not_completed(experiment_name):
-    return not was_completed(experiment_name)
-
 if __name__ == "__main__":
     network = "Tinet"
     traffic = "background"
     scale = "1.4"
     te = "semimcfraekeft"
     tp = "greylambda"
-    experiment_mapped((network,traffic,scale,te,tp))
+    experiment((network,traffic,scale,te,tp))
 
     # args = ("Comcast","background","0.8","mcf","greylambda")
     # args = ("Comcast","background-plus-flashcrowd","0.3","mcf","greylambda")
