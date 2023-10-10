@@ -308,7 +308,7 @@ def get_reconfig_time(gml_file, circuits):
     if gml_file:
         # circuits = gml_file.split("circuit-")[-1][:-3].split(".")
         for circuit in circuits:
-            new_link = circuit[:]
+            new_link = list(circuit[:])
             if not circuit:
                 continue  # handle empty string case
 

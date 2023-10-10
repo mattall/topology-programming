@@ -1,0 +1,10 @@
+python eval_scripts/command_writer.py bellCanada -ecmp coremelt False False data/traffic/bellCanada_coremelt_every_link_2.00e+11.txt 0 onset file
+python eval_scripts/command_writer.py bellCanada -mcf coremelt False False data/traffic/bellCanada_coremelt_every_link_2.00e+11.txt 0 onset file
+python eval_scripts/command_writer.py surfNet -ecmp coremelt False False data/traffic/surfNet_coremelt_every_link_2.00e+11.txt 0 onset file
+python eval_scripts/command_writer.py surfNet -mcf coremelt False False data/traffic/surfNet_coremelt_every_link_2.00e+11.txt 0 onset file
+python eval_scripts/command_writer.py CRL -ecmp coremelt False False data/traffic/CRL_coremelt_every_link_2.00e+11.txt 0 onset file
+python eval_scripts/command_writer.py CRL -mcf coremelt False False data/traffic/CRL_coremelt_every_link_2.00e+11.txt 0 onset file
+python eval_scripts/command_writer.py sprint -ecmp coremelt False False data/traffic/sprint_coremelt_every_link_2.00e+11.txt 0 onset file
+python eval_scripts/command_writer.py sprint -mcf coremelt False False data/traffic/sprint_coremelt_every_link_2.00e+11.txt 0 onset file
+python eval_scripts/command_writer.py ANS -ecmp coremelt False False data/traffic/ANS_coremelt_every_link_2.00e+11.txt 0 onset file
+python eval_scripts/command_writer.py ANS -mcf coremelt False False data/traffic/ANS_coremelt_every_link_2.00e+11.txt 0 onset file
