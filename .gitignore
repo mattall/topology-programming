@@ -65,3 +65,5 @@ MANIFEST
 scripts/batch
 .vscode/
 logs
+.vscode/settings.json
+scripts/TDSC/notebooks/
