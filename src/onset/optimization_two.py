@@ -1,6 +1,6 @@
 # builtins
 import os
-from itertools import combinations, permutations
+from itertools import combinations, permutations, product
 from collections import defaultdict
 from multiprocessing import Pool
 import json
@@ -12,24 +12,26 @@ import networkx as nx
 import numpy as np
 from tqdm import tqdm
 from time import process_time
+from math import ceil
 
 # customs
 from onset.utilities.plot_reconfig_time import calc_haversine
 from onset.utilities.graph_utils import link_on_path
-from onset.utilities.sysUtils import clock
 from onset.constants import SCRIPT_HOME
+from onset.utilities.logger import logger
+
 
 def write_iss(m):
     m.computeIIS()
-    for c in m.getConstrs():
-        if c.IISConstr:
-            print(f"\t{c.constrname}: {m.getRow(c)} {c.Sense} {c.RHS}")
-        for v in m.getVars():
-            if v.IISLB:
-                print(f"\t{v.varname} ≥ {v.LB}")
-            if v.IISUB:
-                print(f"\t{v.varname} ≤ {v.UB}")
-        m.write("iismodel.ilp")
+    # for c in m.getConstrs():
+    #     if c.IISConstr:
+    #         print(f"\t{c.constrname}: {m.getRow(c)} {c.Sense} {c.RHS}")
+    #     for v in m.getVars():
+    #         if v.IISLB:
+    #             print(f"\t{v.varname} ≥ {v.LB}")
+    #         if v.IISUB:
+    #             print(f"\t{v.varname} ≤ {v.UB}")
+    m.write("iismodel.ilp")
 
 
 class Link_optimization:
@@ -44,6 +46,7 @@ class Link_optimization:
         txp_count=None,
         BUDGET=1,
         compute_paths=False,
+        candidate_set="max"
     ):
         self.G = G
         self.all_node_pairs = list(permutations(self.G.nodes, 2))
@@ -58,7 +61,7 @@ class Link_optimization:
             self.demand_dict = demand_matrix_file
 
         else:
-            print("unknow demand type")
+            print("unknown demand type")
             self.demand_matrix_file = None
             self.demand_matrix = None
             self.demand_dict = None
@@ -71,6 +74,7 @@ class Link_optimization:
             ]
         else:
             self.core_G = self.G.copy(as_view=True)
+            self.txp_count = txp_count
 
         # Only proceed if instance had not set self.txp_count.
         if self.txp_count is None:
@@ -101,6 +105,7 @@ class Link_optimization:
         self.model = None
         self.flow_vars = None
         self.flow_paths = tupledict()
+        self.candidate_set = candidate_set
         self.candidate_links = []
         self.tunnel_list = []
         self.links_to_add = []
@@ -131,7 +136,7 @@ class Link_optimization:
             for c, link_set in enumerate(link_sets):
                 count += 1
                 work.append([count, 1, link_set, self.G, self.network])
-        print("reindexing work.")
+        print("re-indexing work.")
         for w in work:
             w[1] = len(work)
         # work = (["A", 5], ["B", 2], ["C", 1], ["D", 3])
@@ -185,61 +190,140 @@ class Link_optimization:
             (target, source)
         ] = min(prev_path_len, this_path_len)
 
-    def initialize_candidate_links(self):
-        ########################################################
-        #### Create list of candidate links a.k.a. Shortcuts ###
-        ########################################################
+    def initialize_candidate_links(self, p=0.1):
+        """ Create list of candidate links a.k.a. Shortcuts
+
+        Args:
+            candidate_set (str, optional): describes set from which candidate links are chosen. Defaults to "max".
+                max:        Any pair of vertices separated by self.MAX_DISTANCE or less and 2-hops away.
+                    e.g., 
+                        for (u, v) below, 
+
+                        (u_1)--\             /--(v_1)      
+                                \           /       
+                        (u_2)----(u) ---- (v)
+                                /           \ 
+                        (u_3)--/             \--(v_2)
+
+                        The candidate set of links is
+                        (u, v_1),   (u, v_2)
+                        (u_1, v),   (u_2, v),   (u_3, v)                        
+                        (u_1, v_1), (u_2, v_1), (u_3, v_1)
+                        (u_1, v_2), (u_2, v_2), (u_3, v_2)
+
+
+                liberal:    Links from K_{N(u), N(v)} for all (u, v) top `p` percent of links, ranked by edge centrality.
+                    N(u) and N(v) are the neighborhoods of u and v respectively, or all adjacent vertices to u and v
+                    K_{N(u), N(v)} is the complete bi-partite graph connecting the neighborhoods of u and v.
+                    e.g., 
+                        from the neighborhood of (u, v) above, the candidate set of links is
+                        (u_1, v_1), (u_2, v_1), (u_3, v_1)
+                        (u_1, v_2), (u_2, v_2), (u_3, v_2)
+
+                conservative:   Links from K_{N(u), v} and K_{u, v} for all (u, v) top `p` percent of links, ranked by
+                    edge centrality.
+                    Eg., 
+                        from the neighborhood of (u, v) above, the candidate set of links is
+                        (u_1, v), (u_2, v), (u_3, v)
+                        (u, v_1), (u, v_2)
+        """
         core_G = self.core_G
-        candidate_links = self.candidate_links
+        candidate_set = self.candidate_set
         if core_G == None:
             core_G = self.G
 
-        candidate_links = [sorted(l) for l in core_G.edges]
+        if candidate_set == "max":
+            candidate_links = [sorted(l) for l in core_G.edges]
 
-        for source, target in self.all_node_pairs:
-            if (source, target) not in core_G.edges and sorted(
-                (source, target)
-            ) not in candidate_links:
-                shortest_paths = list(nx.all_shortest_paths(core_G, source, target))
-                shortest_path_len = len(shortest_paths[0])
-                shortest_path_hops = shortest_path_len - 1
-                self.update_shortest_path_len(shortest_path_len, source, target)
-                if shortest_path_hops == 2:
-                    hop_dist_ok = True
-                else:
-                    hop_dist_ok = False
+            for source, target in self.all_node_pairs:
+                if (source, target) not in core_G.edges and sorted(
+                    (source, target)
+                ) not in candidate_links:
+                    shortest_paths = list(
+                        nx.all_shortest_paths(core_G, source, target))
+                    shortest_path_len = len(shortest_paths[0])
+                    shortest_path_hops = shortest_path_len - 1
+                    self.update_shortest_path_len(shortest_path_len, source, target)
+                    if shortest_path_hops == 2:
+                        hop_dist_ok = True
+                    else:
+                        hop_dist_ok = False
 
-                geo_dist_ok = False
-                min_geo_dist = float("inf")
-                for p in shortest_paths:
-                    distance = 0
-                    for u, v in zip(p, p[1:]):
-                        if "Latitide" not in core_G.nodes[u]:
-                            distance = 1
+                    geo_dist_ok = False
+                    min_geo_dist = float("inf")
+                    for p in shortest_paths:
+                        distance = 0
+                        for u, v in zip(p, p[1:]):
+                            if "Latitude" not in core_G.nodes[u]:
+                                distance = 1
+                                break
+                            distance += calc_haversine(
+                                core_G.nodes[u]["Latitude"],
+                                core_G.nodes[u]["Longitude"],
+                                core_G.nodes[v]["Latitude"],
+                                core_G.nodes[v]["Longitude"],
+                            )
+
+                        min_geo_dist = min(min_geo_dist, distance)
+
+                        if min_geo_dist <= self.MAX_DISTANCE:
+                            geo_dist_ok = True
                             break
-                        distance += calc_haversine(
-                            core_G.nodes[u]["Latitude"],
-                            core_G.nodes[u]["Longitude"],
-                            core_G.nodes[v]["Latitude"],
-                            core_G.nodes[v]["Longitude"],
-                        )
 
-                    min_geo_dist = min(min_geo_dist, distance)
+                    if not geo_dist_ok:
+                        logger.info(f"Minimum distance, {min_geo_dist} km, "\
+                                    f"too far between {source} and {target}")
+                        
+                    if geo_dist_ok and hop_dist_ok:
+                        candidate_links.append(sorted((source, target)))
 
-                    if min_geo_dist <= self.MAX_DISTANCE:
-                        geo_dist_ok = True
-                        break
+        elif candidate_set == "liberal":
+            btwness = nx.edge_betweenness_centrality(core_G, normalized=False)
+            btwness_sorted_keys = sorted(btwness, key=btwness.get, reverse=True)
+            nun_ranked_links = ceil(p * len(btwness_sorted_keys))
+            logger.info(
+                f"conservative candidate link selection from top %{p * 100} "\
+                    + f"links: {nun_ranked_links} / {len(btwness_sorted_keys)}")
+            ranked_links = btwness_sorted_keys[:nun_ranked_links]
+            candidate_Graph = nx.Graph()
+            for (u, v) in ranked_links:
+                u_neighbors = list(nx.neighbors(core_G, u))
+                v_neighbors = list(nx.neighbors(core_G, v))
+                logger.debug(f"link {u, v}.\t"\
+                            + f"Neighbors of {u}: {len(u_neighbors)}\t"\
+                            + f"Neighbors of {v}: {len(v_neighbors)}")
+                candidate_Graph.add_edges_from([
+                    (n_u, n_v) for n_u, n_v in product(u_neighbors, v_neighbors) 
+                    if n_u != n_v 
+                        and (n_u, n_v) not in core_G.edges])
+            candidate_links = list(candidate_Graph.edges)
+        
+        elif candidate_set == "conservative":
+            btwness = nx.edge_betweenness_centrality(core_G, normalized=False)
+            btwness_sorted_keys = sorted(btwness, key=btwness.get, reverse=True)
+            nun_ranked_links = ceil(p * len(btwness_sorted_keys))
+            logger.info(
+                f"conservative candidate link selection from top %{p * 100} "\
+                    + f"links: {nun_ranked_links} / {len(btwness_sorted_keys)}")
+            ranked_links = btwness_sorted_keys[:nun_ranked_links]
+            candidate_Graph = nx.Graph()
+            for (u, v) in ranked_links:
+                u_neighbors = list(nx.neighbors(core_G, u))
+                v_neighbors = list(nx.neighbors(core_G, v))
+                logger.debug(f"link {u, v}.\t"\
+                            + f"Neighbors of {u}: {len(u_neighbors)}\t"\
+                            + f"Neighbors of {v}: {len(v_neighbors)}")
+                candidate_Graph.add_edges_from([
+                    (n_u, v) for n_u in product(u_neighbors) 
+                    if n_u != v 
+                        and (n_u, v) not in core_G.edges])
+                candidate_Graph.add_edges_from([
+                    (u, n_v) for n_v in product(v_neighbors) 
+                    if u != n_v 
+                        and (u, n_v) not in core_G.edges])
+            candidate_links = list(candidate_Graph.edges)
 
-                if not geo_dist_ok:
-                    print(
-                        "Minimum distance, {} km, too far between {} and {}".format(
-                            min_geo_dist, source, target
-                        )
-                    )
-
-                if geo_dist_ok and hop_dist_ok:
-                    candidate_links.append(sorted((source, target)))
-
+        logger.info(f"Total candidate links: {len(candidate_links)}")
         self.candidate_links = candidate_links
 
     def add_candidate_links_to_super_graph(self):
@@ -967,13 +1051,13 @@ class Link_optimization:
         #     sense=GRB.MINIMIZE,
         # )
         m.update()
-        
+
         # Optimize the model
         start = process_time()
         m.optimize
         end = process_time()
         opt_time = start - end
-        
+
         self.flow_vars = flow_vars
         if m.status == GRB.Status.OPTIMAL:
             print("Optimal solution found.")
@@ -1046,14 +1130,14 @@ class Link_optimization:
                 )
             )
             m.addConstr(txp_count[vertex] >= node_degree_vars[v_idx])
-        
+
         # Edges in the core (base aka original aka physical aka fiber) graph
         # are required to be present.
         for u, v in core_G.edges:
             m.addConstr(
                 edge_vars[u, v] == 1,
-            name = f"core_edge_{u}_{v}"
-        )
+                name=f"core_edge_{u}_{v}"
+            )
         # Helper references
         links_in_flow = tupledict()
         flows_with_link = tupledict()
@@ -1093,10 +1177,11 @@ class Link_optimization:
             )
 
             m.addConstr(
-                path_vars[s, t, i] == min_([edge_vars[u, v] for (u, v) in links_in_flow[s, t, i]]),
+                path_vars[s, t, i] == min_([edge_vars[u, v]
+                                           for (u, v) in links_in_flow[s, t, i]]),
                 name=f"path_eq_min_edge_in_path__{s}_{t}_{i}"
             )
-            
+
         print("\tInitializing link_util")
         link_util = m.addVars(
             prime_edges,
@@ -1125,15 +1210,15 @@ class Link_optimization:
 
         for u, v in prime_edges:
             link_capacity[u, v] = m.addVar(
-                vtype=GRB.CONTINUOUS, 
-                lb=0, 
-                ub=LINK_CAPACITY, 
+                vtype=GRB.CONTINUOUS,
+                lb=0,
+                ub=LINK_CAPACITY,
                 name=f"capacity_{u}_{v}"
             )
             m.addConstr(
-                link_util[u, v] 
+                link_util[u, v]
                 <= quicksum(
-                    flow_vars[s, t, i] 
+                    flow_vars[s, t, i]
                     for (s, t, i) in flows_with_link[u, v]
                 )
             )
@@ -1162,7 +1247,6 @@ class Link_optimization:
             #     norm_link_util[u, v] == link_util[u, v] / link_capacity[u, v],
             #     name=f"norm_link_cap_{u}_{v}"
             #     )
-            
 
         print("Setting Objective.")
         M = m.addVar(vtype=GRB.CONTINUOUS, name="M")
@@ -1973,46 +2057,16 @@ def work_log(identifier, total, candidate_link_list, G, network):
 
 def main():
     if __name__ == "__main__":
-        # G = nx.read_gml("./data/graphs/gml/sprint.gml")
-        # G = nx.read_gml("./data/graphs/gml/linear_3.gml")
-        # GML_File = (
-        #     "/home/mhall/network_stability_sim/data/graphs/gml/sprint_test.gml"
-        # )
 
-        topo_path = "/home/m/src/topology-programming/data/results/ground_truth_uh_circuits_5__-mcf/ground_truth_1-1.gml"
-        network = "campus"
-
-        demand_matrix = "/home/mhall/network_stability_sim/data/traffic/sprint_benign_0Gbps_targets_5_iteration_2_strength_100_mix"
+        topo_path = "data/graphs/gml/surfNet.gml"
+        network = "surfNet"
+        demand_matrix = "data/traffic/surfNet"
 
         G = nx.read_gml(topo_path)
 
-        demand_matrix = "/home/m/src/topology-programming/data/traffic/ground_truth.txt"
-
-        # demand_matrix = "./data/traffic-2022-01-29/sprint_240Gbps.txt"
-        # demand_matrix = "/home/matt/network_stability_sim/data/traffic/sprint_benign_50Gbps_targets_5_iteration_2_strength_200"
-        # demand_matrix = "/home/matt/network_stability_sim/temp/sprint_benign_50Gbps_5x200Gbps_3_oneShot.txt"
-        # demand_matrix = "/home/matt/network_stability_sim/data/traffic/sprint_benign_0Gbps_targets_3_iteration_1_strength_100_atk"
-        # demand_matrix = "/home/matt/network_stability_sim/data/traffic/sprint_benign_0Gbps_targets_3_iteration_1_strength_150_atk"
-
-        # demand_matrix = "/home/mhall/network_stability_sim/data/traffic/linear_3_benign_0Gbps_targets_1_iteration_1_strength_150_atk"
-
-        # demand_matrix = "/home/matt/network_stability_sim/26495ffb2405ed09de0cf24bc1d54c5d0eb56579"
-        # network = "linear_3"
-
         optimizer = Link_optimization(G, demand_matrix, network)
-
-        # optimizer.run_model()
-
-        # optimizer.run_model_minimize_cost()
-        # optimizer.run_model_mixed_objective()
-        result, add, drop = optimizer.run_model_max_diff()
-
-        # optimizer.run_model_v2()
-        # optimizer.run_model_minimize_cost_v1()
-        print(optimizer.get_links_to_add())
-        # for i in range(len(optimizer.candidate_links)):
-        #     print(optimizer.model.getVarByName("b_link[{}]".format(i)))
-
+        Link_optimization(G, demand_matrix, network, candidate_set="liberal")
+        Link_optimization(G, demand_matrix, network, candidate_set="conservative")
         """
         Solution for multi objective problem. 
         demand_matrix = "/home/matt/network_stability_sim/data/traffic/sprint_benign_50Gbps_targets_5_iteration_2_strength_200"
