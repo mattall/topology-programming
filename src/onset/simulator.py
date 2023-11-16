@@ -1,5 +1,5 @@
 import sys
-from numpy import loadtxt, sqrt
+from numpy import loadtxt, sqrt, array_equal
 from itertools import combinations
 from collections import Counter, defaultdict
 from onset.alpwolf import AlpWolf
@@ -470,7 +470,8 @@ class Simulation:
         dry=False
     ):
         sim_param_tag = f"{circuits}_{start_iter}_{end_iter}_{int(repeat)}_{unit}_{demand_factor:.1f}"
-
+        new_circuit = []
+        chaff = []
         if end_iter == 0:
             end_iter = self.iterations
 
@@ -514,7 +515,7 @@ class Simulation:
             []
         )  # Stateful list of active circuits triggered from sig_add_circuits
         if repeat:
-            # j is 1 the first time we see a traffic matrix, and 2 the seond.
+            # j is 1 the first time we see a traffic matrix, and 2 the second.
             # if we are not repeating, then j should never be referenced.
             j = 1
         else:
@@ -525,7 +526,6 @@ class Simulation:
             for i in range(1, iterations + 2):
                 if self.shakeroute:
                     ITERATION_ID = self.topology_programming_method
-
                 elif repeat:
                     if j == 1:
                         ITERATION_ID = f"{name}_{i}-{j}-{iterations}_{sim_param_tag}"
@@ -720,37 +720,54 @@ class Simulation:
                     sig_add_circuits = False
 
                 elif (  # Method from TDSC-23 - Link-flood DDoS Defense
-                    self.topology_programming_method == "onset_v1_1"
+                    self.topology_programming_method == "onset_v2"
                     and sig_add_circuits
                 ):
-                    txp_count_dict = self.wolf.get_txp_count() # Maps node NAMES to their total trandponders.
+                    txp_count_dict = self.wolf.get_txp_count() # Maps node NAMES to their total transponders.
                     optimizer = Link_optimization(
                         G                   = self.wolf.logical_graph,
                         demand_matrix_file  = self.nonce,
                         network             = self.network_name,
                         core_G              = self.wolf.base_graph.copy(as_view=True),
                         txp_count           = txp_count_dict,
-                        compute_paths=True
+                        use_cache           = True,
+                        compute_paths       = True,
+                        candidate_set       = self.candidate_link_choice_method 
                     )
                     
                     if self.te_method == "-ecmp":
                         max_load = 0.5
                     else:
-                        max_load = self.congestion_threshold_upper_bound
+                        # max_load = self.congestion_threshold_upper_bound
+                        max_load = 1.0
 
-                    new_circuit = []
                     result_topo = []
                     add_links = []
                     drop_links = []
-                    optimizer.LINK_CAPACITY *= max_load
+                    # optimizer.LINK_CAPACITY *= max_load
+                    optimizer.LINK_CAPACITY = 2**32
                     opt_time = optimizer.onset_v1_1()
+                    
+                    # opt_time = optimizer.onset_v1_1_no_cap()
                     new_circuit = optimizer.get_links_to_add()
+                    chaff = optimizer.get_links_to_drop()
+                    
                     circuit_tag = ""
+                    if type(chaff) == list and len(new_circuit) > 0:
+                        for dc in chaff:
+                            u, v = dc
+                            if circuit_tag == "" or circuit_tag.startswith("add"):
+                                circuit_tag += f"drop-{u}-{v}"
+                            else:
+                                circuit_tag += f".{u}-{v}"
+                            for _ in range(circuits):
+                                self.wolf.drop_circuit(u, v)
+
                     if type(new_circuit) == list and len(new_circuit) > 0:
                         for nc in new_circuit:
                             u, v = nc
-                            if circuit_tag == "":
-                                circuit_tag += f"circuit-{u}-{v}"
+                            if circuit_tag == "" or circuit_tag.startswith("drop"):
+                                circuit_tag += f"add-{u}-{v}"
                             else:
                                 circuit_tag += f".{u}-{v}"
 
@@ -915,7 +932,7 @@ class Simulation:
                     add_links = []
                     drop_links = []
                     # optimizer.LINK_CAPACITY *= max_load
-                    add_links, drop_links = optimizer.skinwalker()
+                    add_links, drop_links = optimizer.doppler()
                     # result_topo, add_links, drop_links = optimizer.optimize()
                     # result_topo, add_links, drop_links = optimizer.run_model_max_diff_ignore_demand()
 
@@ -979,14 +996,22 @@ class Simulation:
 
                 # Draw the link graph for the instanced topology.
                 # self.base_graph._init_link_graph()
+                if PREV_ITER_ABS_PATH \
+                    and array_equal(tm_i_data, PREV_ITER_TM_DATA) \
+                    and iter_congestion > 0 \
+                    and len(flux_circuits) == 0:
+                    # Prevents us from running the simulation if the topology has not changed
+                    # TODO: We should also ensure that the traffic matrix is unique during this iteration. 
+                    system(f"cp -r {PREV_ITER_ABS_PATH}/* {ITERATION_ABS_PATH}/")
+                else:
+                    iter_congestion = self._yates(
+                            iteration_topo + ".dot",
+                            ITERATION_REL_PATH,
+                            traffic_file=temp_tm_i                        
+                    )    
                     
-                iter_congestion = self._yates(
-                    iteration_topo + ".dot",
-                    ITERATION_REL_PATH,
-                    traffic_file=temp_tm_i,
-                )
                 if len(new_circuit) > 0:
-                    if self.topology_programming_method == "skinwalker":
+                    if self.topology_programming_method == "doppler":
                         reconfig_time = 1
                     else:
                         reconfig_time = get_reconfig_time(
@@ -1001,6 +1026,10 @@ class Simulation:
                         self.te_method, self.topology_programming_method
                     )
                 )
+                return_data["CandidateLinkSet"].append(
+                    self.candidate_link_choice_method
+                )
+
                 return_data["Routing"].append(
                     "{}".format(self.te_method).strip("-").upper()
                 )
@@ -1083,7 +1112,7 @@ class Simulation:
                 # finally:
                 # # Remove the temp file.
                 # self._system("rm %s" % temp_tm_i)
-
+                PREV_ITER_TM_DATA = tm_i_data
                 PREV_ITER_ABS_PATH = ITERATION_ABS_PATH
                 # command_args = ["yates", iteration_topo, temp_tm_i, temp_tm_i, hosts,
                 #                 te_method, "-num-tms", "1", "-out", ITERATION_REL_PATH]

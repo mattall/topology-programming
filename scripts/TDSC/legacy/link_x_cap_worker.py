@@ -2,7 +2,7 @@ import os
 import csv
 
 def experiment(args):
-    net, n_targets, iterations, te_method, traffic_file, proportion = args
+    net, n_targets, iterations, te_method, traffic_file, proportion, candidate_set = args
     from onset.utilities.post_process import post_proc_timeseries
     from onset.simulator import Simulation
     hosts = {
@@ -12,20 +12,19 @@ def experiment(args):
         "bellCanada" : 48, 
         "surfNet" : 50
     }
-
-
     attack_sim = Simulation(
         net,
         hosts[net],
-        f"optimal_{n_targets}_link_attack",
+        f"optimal_{n_targets}_link_attack_{candidate_set}",
         iterations=iterations,
         te_method=te_method,
         traffic_file=traffic_file,
         fallow_transponders=10,
         congestion_threshold_upper_bound=0.8,
         congestion_threshold_lower_bound=0.2,
-        topology_programming_method="onset_v1_1",
+        topology_programming_method="onset_v2",
         attack_proportion=proportion,
+        candidate_link_choice_method=candidate_set
     )
 
     result = attack_sim.perform_sim()

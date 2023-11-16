@@ -3,6 +3,7 @@ import os
 from itertools import combinations, permutations, product
 from collections import defaultdict
 from multiprocessing import Pool
+from copy import deepcopy
 import json
 import pickle
 
@@ -20,21 +21,18 @@ from onset.utilities.graph_utils import link_on_path
 from onset.constants import SCRIPT_HOME
 from onset.utilities.logger import logger
 
-
-def write_iss(m):
-    m.computeIIS()
-    # for c in m.getConstrs():
-    #     if c.IISConstr:
-    #         print(f"\t{c.constrname}: {m.getRow(c)} {c.Sense} {c.RHS}")
-    #     for v in m.getVars():
-    #         if v.IISLB:
-    #             print(f"\t{v.varname} ≥ {v.LB}")
-    #         if v.IISUB:
-    #             print(f"\t{v.varname} ≤ {v.UB}")
-    m.write("iismodel.ilp")
-
-
 class Link_optimization:
+    '''
+    idea/intent: 
+        G is an instance of a logical network represented as an
+        *undirected* graph.
+
+        core_G is an instance of a physical network, represented as an 
+        *undirected* graph. 
+
+        G may change with successive calls to methods of the class, but core_G
+        should never be modified. 
+    '''
     def __init__(
         self,
         G: nx.Graph,
@@ -48,7 +46,8 @@ class Link_optimization:
         compute_paths=False,
         candidate_set="max"
     ):
-        self.G = G
+        self.debug = False
+        self.G = deepcopy(G)
         self.all_node_pairs = list(permutations(self.G.nodes, 2))
         if isinstance(demand_matrix_file, str):
             self.demand_matrix_file = demand_matrix_file
@@ -61,14 +60,14 @@ class Link_optimization:
             self.demand_dict = demand_matrix_file
 
         else:
-            print("unknown demand type")
+            logger.info("unknown demand type")
             self.demand_matrix_file = None
             self.demand_matrix = None
             self.demand_dict = None
 
         self.network = network
         if isinstance(core_G, nx.Graph):
-            self.core_G = core_G
+            self.core_G = core_G.copy(as_view=True)
             self.txp_count = [
                 2 * len(core_G.nodes[x]["transponder"]) for x in core_G.nodes
             ]
@@ -109,9 +108,12 @@ class Link_optimization:
         self.candidate_links = []
         self.tunnel_list = []
         self.links_to_add = []
-        self.tunnel_dict = defaultdict(list)
+        self.links_to_drop = []
+        self.new_G = None
+        self.tunnel_dict = defaultdict(lambda : defaultdict(list)) # map [s][t] -> list of tunnels [[s, u_1, t], [s, u_2, t], ...]
+        self.original_tunnel_dict = defaultdict(lambda : defaultdict(list))
         self.original_tunnel_list = []
-        self.core_shortest_path_len = defaultdict(lambda: np.inf)
+        self.core_shortest_path_len = defaultdict(lambda: defaultdict(lambda: np.inf)) #  map [s][t] -> (int) shortest path len 
         if self.demand_dict == None:
             self.initialize_demand()
         self.initialize_candidate_links()
@@ -119,16 +121,46 @@ class Link_optimization:
         if compute_paths:
             self.get_shortest_paths()
 
+    def populate_changes(self, edge_vars):
+        self.new_G = new_G = nx.Graph()
+        for (u, v) in edge_vars: 
+            if edge_vars[(u, v)].x == 1:
+                new_G.add_edge(u, v)
+            
+        links_to_add = [e for e in new_G.edges if e not in self.G.edges]
+        links_to_drop = [e for e in self.G.edges if e not in new_G.edges]
+        assert nx.is_strongly_connected(new_G.to_directed(as_view=True))
+        self.links_to_add = links_to_add
+        self.links_to_drop = links_to_drop
+
+        return 0
+        
+    def write_iss(self, verbose=False):
+        m = self.model
+        m.computeIIS()
+        if verbose:
+            for c in self.model.getConstrs():
+                if c.IISConstr:
+                    logger.info(f"\t{c.constrname}: {m.getRow(c)} {c.Sense} {c.RHS}")
+                for v in m.getVars():
+                    if v.IISLB:
+                        logger.info(f"\t{v.varname} ≥ {v.LB}")
+                    if v.IISUB:
+                        logger.info(f"\t{v.varname} ≤ {v.UB}")
+        iis_file = f"logs/iismodel/{self.network}_{self.candidate_set}_{os.getpid()}.ilp"
+        m.write(iis_file)
+        logger.error(f"Model is infeasible. Wrote model IIS to {iis_file}.")
+
     def get_shortest_paths_from_k_link_super_graphs(self, k):
         # Run after finding candidate links
         # Given K, find every combination of k candidate links
         # For each combination, in parallel,
         #   1. Create a supergraph on the base topology
-        #   2. Find the shortest paths as short as or shorter than
+        #   2. Find the shortest paths - as short as or shorter than -
         #       the original shortest path for every pair of nodes.
         #       2.1 If the path includes any candidate links, save this path.
         #   3. Return the set of saved paths.
-        print("Getting work ready.")
+        logger.info("Getting work ready.")
         work = []
         count = 0
         for i in range(1, k + 1):
@@ -136,11 +168,11 @@ class Link_optimization:
             for c, link_set in enumerate(link_sets):
                 count += 1
                 work.append([count, 1, link_set, self.G, self.network])
-        print("re-indexing work.")
+        logger.info("re-indexing work.")
         for w in work:
             w[1] = len(work)
         # work = (["A", 5], ["B", 2], ["C", 1], ["D", 3])
-        print("Starting the work.")
+        logger.info("Starting the work.")
         p = Pool(64)
         p.starmap(work_log, work, chunksize=8)
         p.terminate()
@@ -185,10 +217,8 @@ class Link_optimization:
             self.demand_dict[(source, dest)] = float(self.demand_matrix[dim * i + j])
 
     def update_shortest_path_len(self, this_path_len, source, target):
-        prev_path_len = self.core_shortest_path_len[(source, target)]
-        self.core_shortest_path_len[(source, target)] = self.core_shortest_path_len[
-            (target, source)
-        ] = min(prev_path_len, this_path_len)
+        prev_path_len = self.core_shortest_path_len[source][target]
+        self.core_shortest_path_len[source][target] = self.core_shortest_path_len[target][source] = min(prev_path_len, this_path_len)
 
     def initialize_candidate_links(self, p=0.1):
         """ Create list of candidate links a.k.a. Shortcuts
@@ -227,10 +257,10 @@ class Link_optimization:
                         (u_1, v), (u_2, v), (u_3, v)
                         (u, v_1), (u, v_2)
         """
-        core_G = self.core_G
+        core_G = self.core_G.copy(as_view=True)
         candidate_set = self.candidate_set
         if core_G == None:
-            core_G = self.G
+            core_G = deepcopy(self.G)
 
         if candidate_set == "max":
             candidate_links = [sorted(l) for l in core_G.edges]
@@ -314,11 +344,11 @@ class Link_optimization:
                             + f"Neighbors of {u}: {len(u_neighbors)}\t"\
                             + f"Neighbors of {v}: {len(v_neighbors)}")
                 candidate_Graph.add_edges_from([
-                    (n_u, v) for n_u in product(u_neighbors) 
+                    (n_u, v) for n_u in u_neighbors
                     if n_u != v 
                         and (n_u, v) not in core_G.edges])
                 candidate_Graph.add_edges_from([
-                    (u, n_v) for n_v in product(v_neighbors) 
+                    (u, n_v) for n_v in v_neighbors 
                     if u != n_v 
                         and (u, n_v) not in core_G.edges])
             candidate_links = list(candidate_Graph.edges)
@@ -328,6 +358,7 @@ class Link_optimization:
 
     def add_candidate_links_to_super_graph(self):
         self.super_graph.add_edges_from(self.candidate_links)
+        self.super_graph.add_edges_from(self.core_G.edges)
 
     def get_shortest_paths(self):
         ########################################
@@ -336,55 +367,59 @@ class Link_optimization:
         self.get_shortest_original_paths()
         try:
             assert self.use_cache
+            # Loads both tunnel list and tunnel dict.
             self.load_paths()
-            print("Loaded paths from disc.")
+            logger.info("Loaded paths from disc.")
 
             # Don't feel link making keys strings just to save dict to json. Maybe later.
-            self.tunnel_dict = defaultdict(list)
-            for i, tunnel in enumerate(self.tunnel_list):
-                source, target = tunnel[0], tunnel[-1]
-                self.tunnel_dict[(source, target)].append(i)
+            # self.tunnel_dict = defaultdict(list)
+            # for i, tunnel in enumerate(self.tunnel_list):
+            #     source, target = tunnel[0], tunnel[-1]
+            #     self.tunnel_dict[(source, target)].append(i)
 
         except:
             if self.PARALLEL:
                 self.get_shortest_paths_from_k_link_super_graphs(self.k)
             else:
-                self.tunnel_list = []
-                self.tunnel_dict = defaultdict(list)
                 super_graph = self.super_graph
-                for source in tqdm(super_graph.nodes, desc="Pre-computing paths."):
-                    for target in super_graph.nodes:
-                        if (
-                            source != target
-                            and (source, target) not in self.tunnel_dict
+                '''
+                if source not in self.core_shortest_path_len or target not in self.core_shortest_path_len[source]:
+                    shortest_s_t_path_len \
+                        = self.core_shortest_path_len[source][target] \
+                        = self.core_shortest_path_len[target][source] \
+                        = nx.shortest_path_length(G, source, target)
+                    s_t_paths = nx.shortest_simple_paths(G, source, target)
+                    for s_t_path in tqdm(s_t_paths, desc="Path", leave=False):
+                        if len(s_t_path) - 1 > shortest_s_t_path_len:
+                            break
+                        self.original_tunnel_list.append(s_t_path)
+                        self.original_tunnel_dict[source][target].append(s_t_path) 
+                        reversed_path = list(reversed(s_t_path))
+                        self.original_tunnel_list.append(reversed_path)
+                        self.original_tunnel_dict[target][source].append(reversed_path) 
+
+                '''
+                
+                for s, t in tqdm(self.all_node_pairs, desc="Pre-computing paths."):
+                    if s not in self.tunnel_dict or t not in self.tunnel_dict[s]:
+                        s_t_paths = nx.shortest_simple_paths(super_graph, s, t)
+                        shortest_s_t_path_len = self.core_shortest_path_len[s][t]
+                        for s_t_path in tqdm(
+                            s_t_paths,
+                            desc="Calculating ({}, {}) paths shorter than {} hops.".format(
+                                s, t, shortest_s_t_path_len
+                            ),
                         ):
-                            s_t_paths = nx.shortest_simple_paths(
-                                super_graph, source, target
-                            )
-                            shortest_s_t_path_len = self.core_shortest_path_len[
-                                (source, target)
-                            ]
-                            for s_t_path in tqdm(
-                                s_t_paths,
-                                desc="Calculating ({}, {}) paths shorter than {} hops.".format(
-                                    source, target, shortest_s_t_path_len
-                                ),
-                            ):
-                                if len(s_t_path) > shortest_s_t_path_len:
-                                    break
-
-                                reversed_path = list(reversed(s_t_path))
-                                self.tunnel_list.append(s_t_path)
-                                self.tunnel_list.append(reversed_path)
-                                # self.tunnel_dict[(source, target)].append(s_t_path)
-                                # self.tunnel_dict[(target, source)].append(reversed_path)
-
-                for i, tunnel in enumerate(self.tunnel_list):
-                    source, target = tunnel[0], tunnel[-1]
-                    self.tunnel_dict[(source, target)].append(i)
+                            if len(s_t_path) - 1 > shortest_s_t_path_len:
+                                break
+                            reversed_path = list(reversed(s_t_path))
+                            self.tunnel_list.append(s_t_path)
+                            self.tunnel_list.append(reversed_path)
+                            self.tunnel_dict[s][t].append(s_t_path)
+                            self.tunnel_dict[t][s].append(reversed_path)
 
                 self.save_paths()
-            print("Computed paths and saved to disc.")
+            logger.info("Computed paths and saved to disc.")
 
     def get_shortest_original_paths(self):
         ########################################
@@ -393,77 +428,85 @@ class Link_optimization:
         try:
             assert self.use_cache
             self.load_original_paths()
-            print("Loaded original paths from disc.")
-            self.original_tunnel_dict = defaultdict(list)
-            for i, tunnel in enumerate(self.original_tunnel_list):
-                source, target = tunnel[0], tunnel[-1]
-                self.original_tunnel_dict[(source, target)].append(i)
-                self.core_shortest_path_len[(source, target)] = len(tunnel)
+            logger.info("Loaded original paths from disc.")
+            
+            # for i, tunnel in enumerate(self.original_tunnel_list):
+            #     source, target = tunnel[0], tunnel[-1]
+            #     self.original_tunnel_dict[(source, target)].append(i)
+            #     self.core_shortest_path_len[(source, target)] = len(tunnel)
+            for s, t in self.all_node_pairs:
+                self.core_shortest_path_len[s][t]  = len(self.original_tunnel_dict[s][t][0]) - 1
 
         except:
-            self.original_tunnel_list = []
-            self.core_shortest_path_len = {}
-            G = self.G
-            for source in tqdm(G.nodes, desc="Pre-computing paths."):
-                for target in G.nodes:
-                    if (
-                        source != target
-                        and (source, target) not in self.core_shortest_path_len
-                    ):
-                        s_t_paths = nx.shortest_simple_paths(G, source, target)
-                        shortest_s_t_path_len = np.inf
-                        for s_t_path in tqdm(s_t_paths, desc="Path", leave=False):
-                            if shortest_s_t_path_len == np.inf:
-                                shortest_s_t_path_len = len(s_t_path)
-                                self.core_shortest_path_len[
-                                    (source, target)
-                                ] = shortest_s_t_path_len
-                                self.core_shortest_path_len[
-                                    (target, source)
-                                ] = shortest_s_t_path_len
-                            if len(s_t_path) > shortest_s_t_path_len:
-                                break
-                            self.original_tunnel_list.append(s_t_path)
-                            reversed_path = list(reversed(s_t_path))
-                            self.original_tunnel_list.append(reversed_path)
+            G = self.G.copy(as_view=True)
+            for source, target in tqdm(self.all_node_pairs, desc="Pre-computing paths."):
+                if source not in self.core_shortest_path_len or target not in self.core_shortest_path_len[source]:
+                    shortest_s_t_path_len \
+                        = self.core_shortest_path_len[source][target] \
+                        = self.core_shortest_path_len[target][source] \
+                        = nx.shortest_path_length(G, source, target)
+                    s_t_paths = nx.shortest_simple_paths(G, source, target)
+                    for s_t_path in tqdm(s_t_paths, desc="Path", leave=False):
+                        if len(s_t_path) - 1 > shortest_s_t_path_len:
+                            break
+                        self.original_tunnel_list.append(s_t_path)
+                        self.original_tunnel_dict[source][target].append(s_t_path) 
+                        reversed_path = list(reversed(s_t_path))
+                        self.original_tunnel_list.append(reversed_path)
+                        self.original_tunnel_dict[target][source].append(reversed_path) 
 
-            self.save_original_paths()
-            print("Computed original paths and saved to disc.")
+            self.save_original_paths_list()
+            self.save_original_paths_dict()
+            logger.info("Computed original paths and saved to disc.")
 
     def load_paths(self):
-        if self.use_cache:
-            with open(
-                "./data/paths/optimization/{}.json".format(self.network), "r"
-            ) as fob:
-                json_obj = json.load(fob)
-                self.tunnel_list = json_obj["list"]
-            return
-        else:
-            return
+        with open(
+            f"./data/paths/optimization/{self.network}_{self.candidate_set}.json", "r"
+        ) as fob:
+            json_obj = json.load(fob)
+            self.tunnel_list = json_obj["list"]
+            self.tunnel_dict = json_obj["tunnels"]
+        return
 
     def save_paths(self):
-        with open("./data/paths/optimization/{}.json".format(self.network), "w") as fob:
-            return json.dump({"list": self.tunnel_list}, fob, indent=4)
+        with open(
+            f"./data/paths/optimization/{self.network}_{self.candidate_set}.json", "w"
+        ) as fob:
+            return json.dump({"list": self.tunnel_list, 
+                              "tunnels": self.tunnel_dict}, fob)
+        
 
     def load_original_paths(self):
-        if self.use_cache:
-            with open(
-                "./data/paths/optimization/{}_original.json".format(self.network),
-                "r",
-            ) as fob:
-                json_obj = json.load(fob)
-                self.original_tunnel_list = json_obj["list"]
-            return
-        else:
-            return
+        with open(
+            "./data/paths/optimization/{}_original_tunnel_list.json".format(self.network),
+            "r",
+        ) as fob:
+            json_obj = json.load(fob)
+            self.original_tunnel_list = json_obj["list"]
 
-    def save_original_paths(self):
+        with open(
+            "./data/paths/optimization/{}_original_tunnel_dict.json".format(self.network),
+            "r",
+        ) as fob:
+            json_obj = json.load(fob)
+            self.original_tunnel_dict = json_obj["tunnels"]
+        return
+
+    def save_original_paths_list(self):
         os.makedirs("./data/paths/optimization/", exist_ok=True)
         with open(
-            "./data/paths/optimization/{}_original.json".format(self.network),
+            "./data/paths/optimization/{}_original_tunnel_list.json".format(self.network),
             "w",
         ) as fob:
-            return json.dump({"list": self.original_tunnel_list}, fob, indent=4)
+            return json.dump({"list": self.original_tunnel_list}, fob)
+    
+    def save_original_paths_dict(self):
+        os.makedirs("./data/paths/optimization/", exist_ok=True)
+        with open(
+            "./data/paths/optimization/{}_original_tunnel_dict.json".format(self.network),
+            "w",
+        ) as fob:
+            return json.dump({"tunnels": self.original_tunnel_dict}, fob)
 
     def get_flow_allocations(self):
         m = self.model
@@ -472,7 +515,7 @@ class Link_optimization:
         prime_edges = self.prime_edges
         flow_paths = self.flow_paths
         if m.status == GRB.Status.OPTIMAL:
-            print("Optimal solution found.")
+            logger.info("Optimal solution found.")
             for source, target in demand.keys():
                 paths = []
                 for u, v in prime_edges:
@@ -485,18 +528,18 @@ class Link_optimization:
                         )
                 flow_paths[(source, target)] = paths
 
-                print(f"Flow from {source} to {target}:")
+                logger.info(f"Flow from {source} to {target}:")
                 for path in paths:
-                    print(f"Path: {path['path']} - Weight: {path['weight']}")
+                    logger.info(f"Path: {path['path']} - Weight: {path['weight']}")
 
     def doppler(self):
         LINK_CAPACITY = self.LINK_CAPACITY
 
-        m = self.model = Model("Skinwalker")
+        m = self.model = Model("Doppler")
 
         # Convert the graph to a directed graph
 
-        G_0 = self.G.to_directed()
+        G_0 = self.G.copy(as_view=True).to_directed()
         directionless_edges = self.super_graph.edges
         G_prime = self.super_graph.to_directed()
         demand = self.demand_dict
@@ -601,26 +644,21 @@ class Link_optimization:
         )
 
         # Optimize the model
+        start = process_time()
         m.optimize()
+        end = process_time()
+        opt_time = start - end
         self.flow_vars = flow_vars
         if m.status == GRB.Status.OPTIMAL:
-            print("Optimal solution found.")
-            resultant_edges = [
-                (u, v) for (u, v) in edge_vars if edge_vars[(u, v)].x == 1
-            ]
-            add_edges = [e for e in resultant_edges if e not in self.G.edges]
-            drop_edges = [e for e in self.G.edges if e not in resultant_edges]
-            G_new = nx.DiGraph()
-            G_new.add_edges_from(resultant_edges)
-            assert nx.is_strongly_connected(G_new)
-            add_edges = list(set([tuple(sorted((u, v))) for u, v in add_edges]))
-            drop_edges = list(set([tuple(sorted((u, v))) for u, v in drop_edges]))
-            return (add_edges, drop_edges)
+            logger.info("Optimal solution found.")
+            self.populate_changes(edge_vars)
 
         else:
-            print("No optimal solution found.")
+            logger.error("No optimal solution found.")
+            if self.debug: 
+                self.write_iss()
 
-        return -1
+        return opt_time
 
     def onset_v1(self):
         super_graph = self.super_graph
@@ -663,18 +701,18 @@ class Link_optimization:
             # ### Auxillary Variable/Constraint
             # - $M$: Objective function auxillary variable, $M = max_{e \in E} U_e$
 
-            print("Initializing Optimizer variables")
-            print("\tInitializing candidate_link_vars")
+            logger.info("Initializing Optimizer variables")
+            logger.info("\tInitializing candidate_link_vars")
             candid_link_vars = m.addVars(
                 range(len(candidate_links)), vtype=GRB.BINARY, name="b_link"
             )
 
-            print("\tInitializing path_vars")
+            logger.info("\tInitializing path_vars")
             path_vars = m.addVars(
                 range(len(super_paths_list)), vtype=GRB.BINARY, name="b_path"
             )
 
-            print("\tInitializing link_util")
+            logger.info("\tInitializing link_util")
             link_util = m.addVars(
                 range(len(super_graph.edges())),
                 vtype=GRB.CONTINUOUS,
@@ -686,7 +724,7 @@ class Link_optimization:
             # # unbound
             # link_util = m.addVars(range(len(super_graph.edges())),
             #                     vtype=GRB.CONTINUOUS, lb=0, name="link_util")
-            print("\tInitializing norm_link_util")
+            logger.info("\tInitializing norm_link_util")
             norm_link_util = m.addVars(
                 range(len(super_graph.edges())),
                 vtype=GRB.CONTINUOUS,
@@ -703,7 +741,7 @@ class Link_optimization:
                 name="norm_link_util_constr",
             )
 
-            print("\tInitializing flow_p")
+            logger.info("\tInitializing flow_p")
             flow_p = m.addVars(
                 range(len(super_paths_list)),
                 vtype=GRB.CONTINUOUS,
@@ -711,7 +749,7 @@ class Link_optimization:
                 name="flow_p",
             )
 
-            print("Setting Objective.")
+            logger.info("Setting Objective.")
             M = m.addVar(vtype=GRB.CONTINUOUS, name="M")
             m.addConstr(M == max_(norm_link_util), name="aux_objective_constr_M")
 
@@ -726,12 +764,12 @@ class Link_optimization:
 
             m.setObjective(O, sense=GRB.MINIMIZE)
 
-            print("Initializing Constraints")
+            logger.info("Initializing Constraints")
             # ### Budget Constraint
             #
             # $\sum_{\hat{e} \in E} b_\hat{e} \leq B$
-            # print("Adding Model Constraint, Budget: {}".format(self.BUDGET))
-            print("\tInitializing Budget")
+            # logger.info("Adding Model Constraint, Budget: {}".format(self.BUDGET))
+            logger.info("\tInitializing Budget")
             m.addConstr(quicksum(candid_link_vars) <= self.BUDGET, "budget")
 
             # ### Active Paths Constraints
@@ -743,7 +781,7 @@ class Link_optimization:
             ##############################
             # Add Active Path Constraint #
             ##############################
-            print("\tInitializing flow_binary and path_link constraints")
+            logger.info("\tInitializing flow_binary and path_link constraints")
 
             path_candidate_links = [[] for _ in range(len(path_vars))]
             for p_i in tqdm(
@@ -799,7 +837,7 @@ class Link_optimization:
             # #####################################################
             # # Find demand per tunnel considering active tunnels #
             # #####################################################
-            print("\tInitializing Find demand per tunnel considering active tunnels")
+            logger.info("\tInitializing Find demand per tunnel considering active tunnels")
             for source, target in demand_dict:
                 P = self.tunnel_dict[(source, target)]
 
@@ -817,7 +855,7 @@ class Link_optimization:
             ###############################################################
             # Find Demand per link considering demand from active tunnels #
             ###############################################################
-            print(
+            logger.info(
                 "\tInitializing Find Demand per link considering demand from active tunnels"
             )
             link_tunnels_file = os.path.join(
@@ -831,13 +869,13 @@ class Link_optimization:
             # FILE EXISTS
             if os.path.exists(link_tunnels_file):
                 # NOT EMPTY
-                print("Loading Link Tunnels file: {}".format(link_tunnels_file))
+                logger.info("Loading Link Tunnels file: {}".format(link_tunnels_file))
                 if os.path.getsize(link_tunnels_file) > 0:
                     with open(link_tunnels_file, "rb") as pkl:
                         network_tunnels = pickle.load(pkl)
 
             else:
-                print("Generating Link Tunnels: {}".format(link_tunnels_file))
+                logger.info("Generating Link Tunnels: {}".format(link_tunnels_file))
                 network_tunnels = []
                 # for all links.
                 if 0:
@@ -935,7 +973,7 @@ class Link_optimization:
 
         # Convert the graph to a directed graph
 
-        G_0 = self.G.to_directed()
+        G_0 = self.G.copy(as_view=True).to_directed()
         directionless_edges = self.super_graph.edges
         G_prime = self.super_graph.to_directed()
         demand = self.demand_dict
@@ -1054,30 +1092,19 @@ class Link_optimization:
 
         # Optimize the model
         start = process_time()
-        m.optimize
+        m.optimize()
         end = process_time()
         opt_time = start - end
-
         self.flow_vars = flow_vars
         if m.status == GRB.Status.OPTIMAL:
-            print("Optimal solution found.")
-            resultant_edges = [
-                (u, v) for (u, v) in edge_vars if edge_vars[(u, v)].x == 1
-            ]
-            add_edges = [e for e in resultant_edges if e not in self.G.edges]
-            drop_edges = [e for e in self.G.edges if e not in resultant_edges]
-            G_new = nx.DiGraph()
-            G_new.add_edges_from(resultant_edges)
-            assert nx.is_strongly_connected(G_new)
-            add_edges = list(set([tuple(sorted((u, v))) for u, v in add_edges]))
-            drop_edges = list(set([tuple(sorted((u, v))) for u, v in drop_edges]))
-            return ((add_edges, drop_edges), opt_time)
-
+            logger.info("Optimal solution found.")
+            self.populate_changes(edge_vars)
         else:
-            print("No optimal solution found.")
-            write_iss(m)
+            logger.error("No optimal solution found.")
+            if self.debug: 
+                self.write_iss()
 
-        return -1
+        return opt_time
 
     def onset_v1_1(self):
         LINK_CAPACITY = self.LINK_CAPACITY
@@ -1085,8 +1112,8 @@ class Link_optimization:
         tunnel_dict = self.tunnel_dict
         m = self.model = Model("Onset v1.1 Optimization")
         # Convert the graph to a directed graph
-        core_G = self.core_G.to_directed()
-        G_0 = self.G.to_directed()
+        core_G = self.core_G.copy(as_view=True).to_directed()
+        G_0 = self.G.copy(as_view=True).to_directed()
         directionless_edges = self.super_graph.edges
         G_prime = self.super_graph.to_directed()
         demand = self.demand_dict
@@ -1144,11 +1171,11 @@ class Link_optimization:
         for s, t in prime_edges:
             flows_with_link[s, t] = set()
 
-        print("\tInitializing path_vars and flow_vars")
+        logger.info("\tInitializing path_vars and flow_vars")
         path_vars = tupledict()
         flow_vars = tupledict()
-        for s, t in tunnel_dict:
-            for i, path_idx in enumerate(tunnel_dict[s, t]):
+        for s, t in self.all_node_pairs:
+            for i, path_idx in enumerate(tunnel_dict[s][t]):
                 #   initializing vars
                 path_vars[s, t, i] = m.addVar(
                     vtype=GRB.BINARY, name=f"path_{s}_{t}_{i}"
@@ -1159,8 +1186,8 @@ class Link_optimization:
                 #   setting up helper references
                 links_in_flow[s, t, i] = set()
                 path_links = zip(
-                    self.tunnel_list[path_idx],
-                    self.tunnel_list[path_idx][1:]
+                    self.tunnel_list[i],
+                    self.tunnel_list[i][1:]
                 )
                 for u, v in path_links:
                     links_in_flow[s, t, i].add((u, v))
@@ -1182,7 +1209,7 @@ class Link_optimization:
                 name=f"path_eq_min_edge_in_path__{s}_{t}_{i}"
             )
 
-        print("\tInitializing link_util")
+        logger.info("\tInitializing link_util")
         link_util = m.addVars(
             prime_edges,
             vtype=GRB.CONTINUOUS,
@@ -1191,7 +1218,7 @@ class Link_optimization:
             name="link_util",
         )
 
-        # print("\tInitializing norm_link_util")
+        # logger.info("\tInitializing norm_link_util")
         # norm_link_util = m.addVars(
         #     prime_edges,
         #     vtype=GRB.CONTINUOUS,
@@ -1201,7 +1228,7 @@ class Link_optimization:
         # )
 
         link_capacity = tupledict(prime_edges)
-        print("\tInitializing Find demand per tunnel considering active tunnels")
+        logger.info("\tInitializing Find demand per tunnel considering active tunnels")
         for s, t in demand:
             m.addConstr(
                 demand[s, t] <= flow_vars.sum(s, t, '*'),
@@ -1248,7 +1275,7 @@ class Link_optimization:
             #     name=f"norm_link_cap_{u}_{v}"
             #     )
 
-        print("Setting Objective.")
+        logger.info("Setting Objective.")
         M = m.addVar(vtype=GRB.CONTINUOUS, name="M")
         N = m.addVar(vtype=GRB.CONTINUOUS, name="N", lb=1)
         O = m.addVar(vtype=GRB.CONTINUOUS, name="O")
@@ -1262,19 +1289,210 @@ class Link_optimization:
         m.optimize()
         end = process_time()
         opt_time = end - start
-
+        self.flow_vars = flow_vars
         if self.model.status == GRB.Status.OPTIMAL:
-            links_to_add = []
-            for (u, v) in prime_edges:
-                if edge_vars[u, v].x == 1:
-                    links_to_add.append((u, v))
-            self.links_to_add = list(set([tuple(sorted(l)) for l in links_to_add]))
-            return opt_time
-        return float("NaN")
+            self.populate_changes(edge_vars)
+        else:
+            logger.error("No optimal solution found.")
+            if self.debug: 
+                self.write_iss()
+        return opt_time
+    
+    def onset_v1_1_no_cap(self):
+        LINK_CAPACITY = self.LINK_CAPACITY
+        # super_paths_list = self.tunnel_list
+        tunnel_dict = self.tunnel_dict
+        m = self.model = Model("Onset v1.1 Optimization - No capacity constraint")
+        # Convert the graph to a directed graph
+        core_G = self.core_G.copy(as_view=True).to_directed()
+        G_0 = self.G.copy(as_view=True).to_directed()
+        directionless_edges = self.super_graph.edges
+        G_prime = self.super_graph.to_directed()
+        demand = self.demand_dict
+
+        # Graphs should only differ in edges
+        assert set(G_0.nodes) == set(G_prime.nodes)
+
+        # Get transponder count
+        txp_count = self.txp_count
+        assert isinstance(
+            txp_count, dict
+        ), f"txp_count type error. expected <class 'dict'>, got: {type(txp_count)}"
+
+        # Get the list of nodes and edges
+        nodes = self.nodes
+
+        # ensure all nodes are reflected in txp_count.
+        assert set(txp_count.keys()) == set(
+            nodes
+        ), f"txp_count vs. nodes set mismatch error. The following sets should be equal. \n\tnodes: {set(nodes)}\n\ttxp_count.keys(): {set(txp_count.keys())}"
+
+        # list of directional edges that have potential to exist
+        prime_edges = self.prime_edges = list(G_prime.edges)
+
+        # Add integer variables for node degree
+        node_degree_vars = m.addVars(
+            len(nodes), vtype=GRB.INTEGER, name="node_degree", lb=0
+        )
+
+        # Edge vars that can be toggled on or off.
+        edge_vars = m.addVars(prime_edges, vtype=GRB.BINARY, name="edge")
+
+        # Enforce max degree based on transponders at each node
+        for v_idx, vertex in enumerate(nodes):
+            m.addConstr(
+                node_degree_vars[v_idx]
+                == sum(
+                    edge_vars[u, v]
+                    for (u, v) in edge_vars
+                    if u == vertex  # only interested in originating match
+                )
+            )
+            m.addConstr(txp_count[vertex] >= node_degree_vars[v_idx])
+
+        # Edges in the core (base aka original aka physical aka fiber) graph
+        # are required to be present.
+        for u, v in core_G.edges:
+            m.addConstr(
+                edge_vars[u, v] == 1,
+                name=f"core_edge_{u}_{v}"
+            )
+        # Helper references
+        links_in_flow = tupledict()
+        flows_with_link = tupledict()
+        for s, t in prime_edges:
+            flows_with_link[s, t] = set()
+
+        logger.info("\tInitializing path_vars and flow_vars")
+        path_vars = tupledict()
+        flow_vars = tupledict()
+        for s, t in self.all_node_pairs:
+            for i, path_idx in enumerate(tunnel_dict[s][t]):
+                #   initializing vars
+                path_vars[s, t, i] = m.addVar(
+                    vtype=GRB.BINARY, name=f"path_{s}_{t}_{i}"
+                )
+                flow_vars[s, t, i] = m.addVar(
+                    vtype=GRB.CONTINUOUS, name=f"flow_{s}_{t}_{i}"
+                )
+                #   setting up helper references
+                links_in_flow[s, t, i] = set()
+                path_links = zip(
+                    self.tunnel_list[i],
+                    self.tunnel_list[i][1:]
+                )
+                for u, v in path_links:
+                    links_in_flow[s, t, i].add((u, v))
+                    flows_with_link[u, v].add((s, t, i))
+
+        for s, t, i in tqdm(
+            path_vars,
+            desc="Initialling candidate link & path binary vars",
+            total=len(path_vars),
+        ):
+            # m.addConstr(
+            #     flow_vars[s, t, i] <= path_vars[s, t, i] * LINK_CAPACITY,                
+            #     f"flow_lte_path_{s}_{t}_{i}",
+            # )
+            m.addConstr(
+                path_vars[s, t, i] == min_([edge_vars[u, v]
+                                           for (u, v) in links_in_flow[s, t, i]]),
+                name=f"path_eq_min_edge_in_path__{s}_{t}_{i}"
+            )
+
+        logger.info("\tInitializing link_util")
+        link_util = m.addVars(
+            prime_edges,
+            vtype=GRB.CONTINUOUS,
+            lb=0,
+            # ub=LINK_CAPACITY,
+            name="link_util",
+        )
+
+        # logger.info("\tInitializing norm_link_util")
+        # norm_link_util = m.addVars(
+        #     prime_edges,
+        #     vtype=GRB.CONTINUOUS,
+        #     lb=0,
+        #     ub=1,
+        #     name="norm_link_util",
+        # )
+
+        link_capacity = tupledict(prime_edges)
+        logger.info("\tInitializing Find demand per tunnel considering active tunnels")
+        for s, t in demand:
+            m.addConstr(
+                demand[s, t] <= flow_vars.sum(s, t, '*'),
+                f"dem_{s}_{t}_lte_flow".format(s, t),
+            )
+
+        for u, v in prime_edges:
+            # link_capacity[u, v] = m.addVar(
+            #     vtype=GRB.CONTINUOUS,
+            #     lb=0,
+            #     ub=LINK_CAPACITY,
+            #     name=f"capacity_{u}_{v}"
+            # )
+            m.addConstr(
+                link_util[u, v]
+                <= quicksum(
+                    flow_vars[s, t, i]
+                    for (s, t, i) in flows_with_link[u, v]
+                )
+            )
+            # m.addConstr(
+            #     link_capacity[u, v]
+            #     >= quicksum(
+            #         flow_vars[s, t, i]
+            #         for (s, t, i) in flows_with_link[u, v]
+            #     )
+            # )
+        # Enforce symmetrical bi-directional capacity
+        for u, v in directionless_edges:
+            # m.addConstr(link_capacity[u, v] == link_capacity[v, u])
+            m.addConstr(edge_vars[u, v] == edge_vars[v, u])
+        # Add binary constraint on edges
+        # TODO: in mode advanced version, link capacity should be related
+        # to transponder allocation on u, v and the capacity potential for
+        # each of those transponders. For now, we will assume fixed capacity
+        # per transponder and one transponder pair per link.
+        # for u, v in prime_edges:
+        #     m.addConstr(
+        #         link_capacity[u, v] == edge_vars[(u, v)] * LINK_CAPACITY,
+        #         name=f"link_cap_{u}_{v}"
+        #     )
+        #     # m.addConstr(
+        #     #     norm_link_util[u, v] == link_util[u, v] / link_capacity[u, v],
+        #     #     name=f"norm_link_cap_{u}_{v}"
+        #     #     )
+
+        logger.info("Setting Objective.")
+        M = m.addVar(vtype=GRB.CONTINUOUS, name="M")
+        N = m.addVar(vtype=GRB.CONTINUOUS, name="N", lb=1)
+        O = m.addVar(vtype=GRB.CONTINUOUS, name="O")
+        m.addConstr(M == max_(link_util), name="aux_objective_constr_M")
+        m.addConstr(N == quicksum(edge_vars), name="aux_objective_constr_M")
+        m.addConstr(O == M + N, name="aux_objective_constr_O")
+        m.setObjective(O, sense=GRB.MINIMIZE)
+
+        m.update()
+        start = process_time()
+        m.optimize()
+        end = process_time()
+        opt_time = end - start
+        self.flow_vars = flow_vars
+        if self.model.status == GRB.Status.OPTIMAL:
+            self.populate_changes(edge_vars)
+        else:
+            logger.error("No optimal solution found.")
+            if self.debug: 
+                self.write_iss()
+        return opt_time
+
         _, opt_time = clock(m.optimize)
         self.flow_vars = flow_vars
         if m.status == GRB.Status.OPTIMAL:
-            print("Optimal solution found.")
+            logger.info("Optimal solution found.")
             resultant_edges = [
                 (u, v) for (u, v) in edge_vars if edge_vars[(u, v)].x == 1
             ]
@@ -1288,7 +1506,7 @@ class Link_optimization:
             return ((add_edges, drop_edges), opt_time)
 
         else:
-            print("No optimal solution found.")
+            logger.error("No optimal solution found.")
             write_iss(m)
 
         return -1
@@ -1333,18 +1551,18 @@ class Link_optimization:
             # ### Auxillary Variable/Constraint
             # - $M$: Objective function auxillary variable, $M = max_{e \in E} U_e$
 
-            print("Initializing Optimizer variables")
-            print("\tInitializing candidate_link_vars")
+            logger.info("Initializing Optimizer variables")
+            logger.info("\tInitializing candidate_link_vars")
             candid_link_vars = m.addVars(
                 range(len(candidate_links)), vtype=GRB.BINARY, name="b_link"
             )
 
-            print("\tInitializing path_vars")
+            logger.info("\tInitializing path_vars")
             path_vars = m.addVars(
                 range(len(super_paths_list)), vtype=GRB.BINARY, name="b_path"
             )
 
-            print("\tInitializing link_util")
+            logger.info("\tInitializing link_util")
             link_util = m.addVars(
                 range(len(super_graph.edges())),
                 vtype=GRB.CONTINUOUS,
@@ -1356,7 +1574,7 @@ class Link_optimization:
             # # unbound
             # link_util = m.addVars(range(len(super_graph.edges())),
             #                     vtype=GRB.CONTINUOUS, lb=0, name="link_util")
-            print("\tInitializing norm_link_util")
+            logger.info("\tInitializing norm_link_util")
             norm_link_util = m.addVars(
                 range(len(super_graph.edges())),
                 vtype=GRB.CONTINUOUS,
@@ -1373,7 +1591,7 @@ class Link_optimization:
                 name="norm_link_util_constr",
             )
 
-            print("\tInitializing flow_p")
+            logger.info("\tInitializing flow_p")
             flow_p = m.addVars(
                 range(len(super_paths_list)),
                 vtype=GRB.CONTINUOUS,
@@ -1381,7 +1599,7 @@ class Link_optimization:
                 name="flow_p",
             )
 
-            print("Setting Objective.")
+            logger.info("Setting Objective.")
             M = m.addVar(vtype=GRB.CONTINUOUS, name="M")
             m.addConstr(M == max_(norm_link_util), name="aux_objective_constr_M")
 
@@ -1396,12 +1614,12 @@ class Link_optimization:
 
             m.setObjective(O, sense=GRB.MINIMIZE)
 
-            print("Initializing Constraints")
+            logger.info("Initializing Constraints")
             # ### Budget Constraint
             #
             # $\sum_{\hat{e} \in E} b_\hat{e} \leq B$
-            # print("Adding Model Constraint, Budget: {}".format(self.BUDGET))
-            # print("\tInitializing Budget")
+            # logger.info("Adding Model Constraint, Budget: {}".format(self.BUDGET))
+            # logger.info("\tInitializing Budget")
             # m.addConstr(quicksum(candid_link_vars) <= self.BUDGET, "budget")
 
             # ### Active Paths Constraints
@@ -1413,7 +1631,7 @@ class Link_optimization:
             ##############################
             # Add Active Path Constraint #
             ##############################
-            print("\tInitializing flow_binary and path_link constraints")
+            logger.info("\tInitializing flow_binary and path_link constraints")
 
             path_candidate_links = [[] for _ in range(len(path_vars))]
             path_candidate_link_file = os.path.join(
@@ -1484,7 +1702,7 @@ class Link_optimization:
             # #####################################################
             # # Find demand per tunnel considering active tunnels #
             # #####################################################
-            print("\tInitializing Find demand per tunnel considering active tunnels")
+            logger.info("\tInitializing Find demand per tunnel considering active tunnels")
             for source, target in demand_dict:
                 P = self.tunnel_dict[(source, target)]
 
@@ -1502,7 +1720,7 @@ class Link_optimization:
             ###############################################################
             # Find Demand per link considering demand from active tunnels #
             ###############################################################
-            print(
+            logger.info(
                 "\tInitializing Find Demand per link considering demand from active tunnels"
             )
             link_tunnels_file = os.path.join(
@@ -1516,13 +1734,13 @@ class Link_optimization:
             # FILE EXISTS
             if os.path.exists(link_tunnels_file):
                 # NOT EMPTY
-                print("Loading Link Tunnels file: {}".format(link_tunnels_file))
+                logger.info("Loading Link Tunnels file: {}".format(link_tunnels_file))
                 if os.path.getsize(link_tunnels_file) > 0:
                     with open(link_tunnels_file, "rb") as pkl:
                         network_tunnels = pickle.load(pkl)
 
             else:
-                print("Generating Link Tunnels: {}".format(link_tunnels_file))
+                logger.info("Generating Link Tunnels: {}".format(link_tunnels_file))
                 network_tunnels = []
                 # for all links.
                 if 0:
@@ -1614,7 +1832,7 @@ class Link_optimization:
                 self.links_to_add = links_to_add
 
     def run_model_max_diff(self):
-        core_G = self.core_G
+        core_G = self.core_G.copy(as_view=True)
         super_graph = self.super_graph
         candidate_links = self.candidate_links
         super_paths_list = self.tunnel_list
@@ -1629,8 +1847,8 @@ class Link_optimization:
             m.setParam("NodefileStart", 2)
             m.setParam("SoftMemLimit", 5)  # Process dies if uses more than 5 GB
 
-            print("Initializing Optimizer variables")
-            print("\tInitializing candidate_link_vars")
+            logger.info("Initializing Optimizer variables")
+            logger.info("\tInitializing candidate_link_vars")
 
             candid_link_vars = m.addVars(
                 len(super_graph.edges),
@@ -1649,7 +1867,7 @@ class Link_optimization:
                 m.addConstr(link_intersection[i] <= candid_link_vars[i])
                 m.addConstr(link_intersection[i] <= initial_links[i])
 
-            print("\t initializing node degree constraint.")
+            logger.info("\t initializing node degree constraint.")
             # degree of node must be <= to the total available transponders
             txp_count = [len(core_G.nodes[x]["transponder"]) for x in core_G.nodes]
             node_degree_vars = m.addVars(
@@ -1666,12 +1884,12 @@ class Link_optimization:
                 )
                 m.addConstr(node_degree_vars[v_idx] <= txp_count[v_idx])
 
-            print("\tInitializing path_vars")
+            logger.info("\tInitializing path_vars")
             path_vars = m.addVars(
                 range(len(super_paths_list)), vtype=GRB.BINARY, name="b_path"
             )
 
-            print("\tInitializing link_util")
+            logger.info("\tInitializing link_util")
             link_util = m.addVars(
                 range(len(super_graph.edges)),
                 vtype=GRB.CONTINUOUS,
@@ -1680,7 +1898,7 @@ class Link_optimization:
                 name="link_util",
             )
 
-            print("\tInitializing norm_link_util")
+            logger.info("\tInitializing norm_link_util")
             norm_link_util = m.addVars(
                 range(len(super_graph.edges)),
                 vtype=GRB.CONTINUOUS,
@@ -1697,7 +1915,7 @@ class Link_optimization:
                 name="norm_link_util_constr",
             )
 
-            print("\tInitializing flow_p")
+            logger.info("\tInitializing flow_p")
             flow_p = m.addVars(
                 range(len(super_paths_list)),
                 vtype=GRB.CONTINUOUS,
@@ -1705,7 +1923,7 @@ class Link_optimization:
                 name="flow_p",
             )
 
-            print("Setting Objective.")
+            logger.info("Setting Objective.")
             M = m.addVar(vtype=GRB.INTEGER, name="M")
             m.addConstr(
                 M == link_intersection.sum(),
@@ -1714,12 +1932,12 @@ class Link_optimization:
 
             m.setObjective(M, sense=GRB.MINIMIZE)
 
-            print("Initializing Constraints")
+            logger.info("Initializing Constraints")
 
             ##############################
             # Add Active Path Constraint #
             ##############################
-            print("\tInitializing flow_binary and path_link constraints")
+            logger.info("\tInitializing flow_binary and path_link constraints")
 
             path_candidate_links = [[] for _ in range(len(path_vars))]
             path_candidate_link_file = os.path.join(
@@ -1780,7 +1998,7 @@ class Link_optimization:
             #####################################################
             # Find demand per tunnel considering active tunnels #
             #####################################################
-            print("\tInitializing Find demand per tunnel considering active tunnels")
+            logger.info("\tInitializing Find demand per tunnel considering active tunnels")
             for source, target in demand_dict:
                 P = self.tunnel_dict[(source, target)]
 
@@ -1792,7 +2010,7 @@ class Link_optimization:
             ###############################################################
             # Find Demand per link considering demand from active tunnels #
             ###############################################################
-            print(
+            logger.info(
                 "\tInitializing Find Demand per link considering demand from active tunnels"
             )
             link_tunnels_file = os.path.join(
@@ -1803,7 +2021,7 @@ class Link_optimization:
                 self.network + "_tunnels.pkl",
             )
 
-            print("Generating Link Tunnels: {}".format(link_tunnels_file))
+            logger.info("Generating Link Tunnels: {}".format(link_tunnels_file))
             network_tunnels = [[] for _ in range(len(super_graph.edges))]
             link_index = list(super_graph.edges)[:]
             for tunnel_i, tunnel in tqdm(
@@ -1845,39 +2063,21 @@ class Link_optimization:
                 )
 
             m.update()
+            start = process_time()
             m.optimize()
+            end = process_time()
+            opt_time = start - end
             if m.status == GRB.Status.OPTIMAL:
-                # links_to_add = []
-                # for clv in candid_link_vars:
-                #     if candid_link_vars[clv].x == 1:
-                #         links_to_add.append(candidate_links[clv])
-                # self.links_to_add = links_to_add
-                resultant_edges = [
-                    list(super_graph.edges)[i]
-                    for i in range(len(candid_link_vars))
-                    if candid_link_vars[i].x == 1
-                ]
-                add_edges = [e for e in resultant_edges if e not in self.G.edges]
-                drop_edges = [e for e in self.G.edges if e not in resultant_edges]
-                return (resultant_edges, add_edges, drop_edges)
+                logger.info("Optimal solution found.")
+                self.populate_changes(candid_link_vars)
             else:
-                m.computeIIS()
-                # Print out the IIS constraints and variables
-                print("\nThe following constraints and variables are in the IIS:")
-                for c in m.getConstrs():
-                    if c.IISConstr:
-                        print(f"\t{c.constrname}: {m.getRow(c)} {c.Sense} {c.RHS}")
-
-                for v in m.getVars():
-                    if v.IISLB:
-                        print(f"\t{v.varname} ≥ {v.LB}")
-                    if v.IISUB:
-                        print(f"\t{v.varname} ≤ {v.UB}")
-
-                m.write("iismodel.ilp")
-
+                logger.error("No optimal solution found.")
+                if self.debug: 
+                    self.write_iss()
+            return opt_time
+        
     def run_model_max_diff_ignore_demand(self):
-        core_G = self.core_G
+        core_G = self.core_G.copy(as_view=True)
         super_graph = self.super_graph
         candidate_links = self.candidate_links
         super_paths_list = self.tunnel_list
@@ -1972,27 +2172,24 @@ class Link_optimization:
             m.setObjective(M, sense=GRB.MINIMIZE)
 
             m.update()
+            start = process_time()
             m.optimize()
+            end = process_time()
+            opt_time = start - end
             if m.status == GRB.Status.OPTIMAL:
-                # links_to_add = []
-                # for clv in candid_link_vars:
-                #     if candid_link_vars[clv].x == 1:
-                #         links_to_add.append(candidate_links[clv])
-                # self.links_to_add = links_to_add
-                resultant_edges = [
-                    list(super_graph.edges)[i]
-                    for i in range(len(candid_link_vars))
-                    if candid_link_vars[i].x == 1
-                ]
-                add_edges = [e for e in resultant_edges if e not in self.G.edges]
-                drop_edges = [e for e in self.G.edges if e not in resultant_edges]
-                return (resultant_edges, add_edges, drop_edges)
+                logger.info("Optimal solution found.")
+                self.populate_changes(candid_link_vars)
+            else:
+                logger.error("No optimal solution found.")
+                if self.debug: 
+                    self.write_iss()
+            return opt_time
 
     def get_links_to_add(self):
-        if len(self.links_to_add) > 0:
-            return self.links_to_add
-        else:
-            return []
+        return self.links_to_add
+        
+    def get_links_to_drop(self):
+        return self.links_to_drop
 
 
 def work_log(identifier, total, candidate_link_list, G, network):
@@ -2064,9 +2261,11 @@ def main():
 
         G = nx.read_gml(topo_path)
 
-        optimizer = Link_optimization(G, demand_matrix, network)
-        Link_optimization(G, demand_matrix, network, candidate_set="liberal")
-        Link_optimization(G, demand_matrix, network, candidate_set="conservative")
+        # optimizer = Link_optimization(G, demand_matrix, network)
+        # Link_optimization(G, demand_matrix, network, candidate_set="liberal")
+        # Link_optimization(G, demand_matrix, network, candidate_set="conservative")
+
+        Link_optimization(G, demand_matrix, network, candidate_set="conservative", compute_paths=True)
         """
         Solution for multi objective problem. 
         demand_matrix = "/home/matt/network_stability_sim/data/traffic/sprint_benign_50Gbps_targets_5_iteration_2_strength_200"

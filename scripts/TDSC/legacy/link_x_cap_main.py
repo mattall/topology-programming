@@ -8,9 +8,14 @@ from multiprocessing import Pool
 from glob import glob
 from itertools import product
 from TDSC.legacy.link_x_cap_worker import experiment
-# PARALLEL = False
-TEST = False
+
+# TEST = False
+TEST = True
+
 def main(argv):
+    DRY=False
+    finished = 0
+    unfinished = 0
     # Give a path to a dir where the simulation parameters can be loaded from.
     #   Each file in that dir must be formatted .json as follows
     #   # Note: be mindful of quotation marks `"`
@@ -25,6 +30,10 @@ def main(argv):
         EXPERIMENT_DIR = "scripts/TDSC/args/link_x_vol_barcharts/"
     elif len(argv) == 2:
         EXPERIMENT_DIR = argv[1]
+        if EXPERIMENT_DIR == "dry":
+            EXPERIMENT_DIR = "scripts/TDSC/args/link_x_vol_barcharts/"
+            DRY = True
+        print(DRY)
     else:
         print(
             f"""   
@@ -43,23 +52,40 @@ def main(argv):
 
     
     if TEST:
+        # surfNet_optimal_1_link_attack_conservative_10_0Gbps-200Gbps_-ecmp
         PARALLEL = False
+        # NETWORKS = ["ANS"]
         NETWORKS = ["sprint"]
-        VOLUMES = ["200Gbps"]
+        VOLUMES = ["100Gbps"]
         NUM_TARGETED = [5]
         TE_METHODS = ["-mcf"]
+        CANDIDATE_SET = ["conservative"]
+
+        # NETWORKS = ["sprint", "ANS", "CRL", "bellCanada", "surfNet"]
+        # VOLUMES = ["100Gbps", "150Gbps", "200Gbps"]
+        # NUM_TARGETED = [1, 2, 3, 4, 5]
+        # TE_METHODS = ["-ecmp", "-mcf"]
+        # CANDIDATE_SET = ["conservative"]
+
     else:
         PARALLEL = True
         NETWORKS = ["sprint", "ANS", "CRL", "bellCanada", "surfNet"]
         VOLUMES = ["100Gbps", "150Gbps", "200Gbps"]
         NUM_TARGETED = [1, 2, 3, 4, 5]
         TE_METHODS = ["-ecmp", "-mcf"]
+        CANDIDATE_SET = ["conservative"]
+        # NETWORKS = ["ANS"]
+        # NETWORKS = ["surfNet", "bellCanada"]
+        # VOLUMES = ["200Gbps"]
+        # NUM_TARGETED = [5]
+        # TE_METHODS = ["-mcf"]
+        # CANDIDATE_SET = ["conservative", "liberal", "max"]
         pool = Pool()
 
 
     data = {}
     exp_args = []
-    for te_method, exp in product(TE_METHODS, glob(f"{EXPERIMENT_DIR}*.json")):
+    for te_method, exp, candidate_set in product(TE_METHODS, glob(f"{EXPERIMENT_DIR}*.json"), CANDIDATE_SET):
         config = json.load(open(exp, "r"))
         network = config["network_name"]
         gml_file = config["gml_file"]
@@ -73,13 +99,19 @@ def main(argv):
             continue
         if n_targets not in NUM_TARGETED:
             continue
-
+        exp_result = os.path.join(f"data/archive/results/results-10-30-2023/{network}_optimal_{n_targets}_link_attack_{candidate_set}_10_0Gbps-{atk_vol}_{te_method}/{network}_3-3_1_0_0_0_Gbps_1.0/MaxExpCongestionVsIterations.dat")
+        if os.path.exists(exp_result) and not TEST:
+            # print(exp_result)
+            continue
+        print(te_method, exp, candidate_set)
+        print(exp_result)
+        unfinished += 1
         data["Attack"] = f"{n_targets}x{atk_vol.strip('Gbps')}"
-        print(f"{te_method}: {network}")
-        print(f"  gml_file:         {gml_file}")
-        print(f"  malicious_volume: {atk_vol}")
-        print(f"  benign_volume:    {benign_vol}")
-        print(f"  links_targeted:   {n_targets}")
+        # print(f"{te_method}: {network}")
+        # print(f"  gml_file:         {gml_file}")
+        # print(f"  malicious_volume: {atk_vol}")
+        # print(f"  benign_volume:    {benign_vol}")
+        # print(f"  links_targeted:   {n_targets}")
 
         iterations = 3
         n_targets
@@ -89,20 +121,25 @@ def main(argv):
         assert os.path.exists(gml_file), f"gml file: {gml_file} not found"
 
         proportion = "{}-{}".format(benign_vol, atk_vol)
-        print("Traffic File: {}".format(traffic_file))
+        # print("Traffic File: {}".format(traffic_file))
         exp_args.append((network, 
                     n_targets, 
                     iterations, 
                     te_method, 
                     traffic_file, 
-                    proportion))
+                    proportion,
+                    candidate_set))
+    print(unfinished)
+    if DRY: 
+        exit()
     if PARALLEL:
         pool.map_async(experiment, exp_args)
         pool.close()
         pool.join()
 
     else:
-        experiment(exp_args)
+        for ea in exp_args:
+            experiment(ea)
 
 
     # with open("data/results/time.csv", "a") as fob:
