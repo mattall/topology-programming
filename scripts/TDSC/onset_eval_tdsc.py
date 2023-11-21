@@ -79,9 +79,9 @@ def main(argv):
                             salt=str(iter_i)
                             )
     if repeat == "repeat":
-        result = attack_sim.perform_sim(circuits=1, start_iter=iter_i, end_iter=iter_i, repeat = True)
+        result = attack_sim.perform_sim(self.circuits=1, start_iter=iter_i, end_iter=iter_i, repeat = True)
     else:
-        result = attack_sim.perform_sim(circuits=1, start_iter=iter_i, end_iter=iter_i)
+        result = attack_sim.perform_sim(self.circuits=1, start_iter=iter_i, end_iter=iter_i)
 
     for key in result:
         data[key].extend(result[key])

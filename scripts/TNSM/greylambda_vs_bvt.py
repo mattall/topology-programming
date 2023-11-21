@@ -98,7 +98,7 @@ def experiment(args):
     result = {}
     try:
         res_path =  my_sim.perform_sim(
-            repeat=repeat[tp_method], demand_factor=demand_factor, dry=True
+            repeat=repeat[tp_method], self.demand_factor=demand_factor, dry=True
         )
         if os.path.exists(res_path):
             for tv in tracked_vars:
@@ -115,7 +115,7 @@ def experiment(args):
             pass
         else:
             result = my_sim.perform_sim(
-                demand_factor=demand_factor, repeat=repeat[tp_method]
+                self.demand_factor=demand_factor, repeat=repeat[tp_method]
             )
 
     report_path = f"data/reports/{experiment_name}.csv"
@@ -126,7 +126,7 @@ def experiment(args):
         result = deepcopy(result)
         # make sure we have now found the correct result path.
         curr_res_path =  my_sim.perform_sim(
-            repeat=repeat[tp_method], demand_factor=demand_factor, dry=True
+            repeat=repeat[tp_method], self.demand_factor=demand_factor, dry=True
         )
         if curr_res_path == res_path:
             buffer = f"{network},{t_class},{scale},{te_method},{tp_method},{line_code},"

@@ -59,7 +59,7 @@ def experiment(args):
         def get_result_path(sim):
             #helper function 
             result_path = my_sim.perform_sim(
-                repeat=repeat[tp_method], demand_factor=demand_factor, dry=True
+                repeat=repeat[tp_method], self.demand_factor=demand_factor, dry=True
             )
             # result_path = my_sim.perform_sim(repeat=repeat[tp_method], demand_factor=demand_factor)
 
@@ -78,7 +78,7 @@ def experiment(args):
             pass
         else:
             result = my_sim.perform_sim(
-                demand_factor=demand_factor, repeat=repeat[tp_method]
+                self.demand_factor=demand_factor, repeat=repeat[tp_method]
             )
 
 

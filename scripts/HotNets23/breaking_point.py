@@ -87,7 +87,7 @@ try:
     prev_path=""
     while True:
 
-        result = my_sim.perform_sim(unit="Mbps", demand_factor=demand_factor, repeat=True)
+        result = my_sim.perform_sim(unit="Mbps", self.demand_factor=demand_factor, repeat=True)
 
 
         if print_header:

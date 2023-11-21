@@ -20,4 +20,4 @@ class sim_import_json_test(unittest.TestCase):
         self.assertIsNotNone(self.my_sim)
 
     def test_run_sim(self):
-        self.my_sim.perform_sim(demand_factor=100)
+        self.my_sim.perform_sim(self.demand_factor=100)

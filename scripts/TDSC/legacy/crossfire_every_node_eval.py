@@ -40,7 +40,7 @@ def main(argv):
                                 congestion_threshold_lower_bound=float("inf"),
                                 )
 
-        result = attack_sim.perform_sim(circuits=10)
+        result = attack_sim.perform_sim(self.circuits=10)
         for key in result:
             data[key].extend(result[key])
 

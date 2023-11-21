@@ -274,7 +274,7 @@ class Simulation:
             "-budget",
             "3",
             ">>",
-            f"{self.nonce}_yates.out",
+            f"{self.temp_tm_i_file}_yates.out",
         ]
         gurobi_status = self._system("gurobi_cl")
         if gurobi_status == 0:
@@ -469,8 +469,10 @@ class Simulation:
         demand_factor=1,
         dry=False
     ):
-        sim_param_tag = f"{circuits}_{start_iter}_{end_iter}_{int(repeat)}_{unit}_{demand_factor:.1f}"
-        new_circuit = []
+        self.circuits = circuits
+        self.demand_factor = demand_factor
+        sim_param_tag = f"{self.circuits}_{start_iter}_{end_iter}_{int(repeat)}_{unit}_{self.demand_factor:.1f}"
+        self.new_circuit = []
         chaff = []
         if end_iter == 0:
             end_iter = self.iterations
@@ -494,642 +496,346 @@ class Simulation:
             "Demand Factor": [],
         }
         return_data = defaultdict(list)
-        circuits_added = False
+        self.circuits_added = False
 
         if CROSSFIRE == True:
-            sig_add_circuits = True
+            self.sig_add_circuits = True
         else:
-            sig_add_circuits = False
+            self.sig_add_circuits = False
 
-        sig_drop_circuits = False
+        self.sig_drop_circuits = False
         logger.debug("Yates.perform_sim")
         name = self.network_name
-        iterations = self.iterations
-        topo = self.topo_file
+        iterations = self.iterations        
         traffic = self.traffic_file
-        hosts = self.hosts_file
-        te_method = self.te_method
+                
         EXPERIMENT_ID = self.EXPERIMENT_ID
         EXPERIMENT_ABSOLUTE_PATH = self.EXPERIMENT_ABSOLUTE_PATH
-        flux_circuits = (
+        
+        # Stateful list of active circuits triggered from sig_add_circuits
+        self.flux_circuits = (
             []
-        )  # Stateful list of active circuits triggered from sig_add_circuits
-        if repeat:
-            # j is 1 the first time we see a traffic matrix, and 2 the second.
-            # if we are not repeating, then j should never be referenced.
-            j = 1
-        else:
-            j = float("NaN")
+        ) 
+        
         # Open traffic file and pass a new line from the file for every iteration.
-        with open(traffic, "rb") as fob:
-            PREV_ITER_ABS_PATH = ""
-            for i in range(1, iterations + 2):
-                if self.shakeroute:
-                    ITERATION_ID = self.topology_programming_method
-                elif repeat:
-                    if j == 1:
-                        ITERATION_ID = f"{name}_{i}-{j}-{iterations}_{sim_param_tag}"
-                    elif j == 2:
-                        ITERATION_ID = f"{name}_{i - 1}-{j}-{iterations}_{sim_param_tag}"
+        with open(traffic, "rb") as fob:            
+            tm_data = fob.readlines()
+        
+        self.PREV_ITER_ABS_PATH = ""
+        
+        # Make iteration range
+        if repeat: 
+            iter_range = []
+            for i in range(start_iter, end_iter):
+                iter_range.extend([i, i])
+        else:
+            iter_range = [i for i in range(start_iter, end_iter)]
+                        
+        for i, iter_i in enumerate(iter_range):
+            j = i % 2 
+            if self.shakeroute:
+                ITERATION_ID = self.topology_programming_method
+            
+            elif repeat:
+                ITERATION_ID = f"{name}_{iter_i}-{j}-{iterations}_{sim_param_tag}"
+            else:
+                ITERATION_ID = f"{name}_{iter_i}-0-{iterations}_{sim_param_tag}"
 
-                else:
-                    ITERATION_ID = f"{name}_{i}-{iterations}_{sim_param_tag}"
-
-                ITERATION_REL_PATH = path.join(EXPERIMENT_ID, ITERATION_ID)
-                ITERATION_ABS_PATH = path.join(
-                    EXPERIMENT_ABSOLUTE_PATH, ITERATION_ID
-                )
-                if False: #dry:
-                    return_data = ITERATION_ABS_PATH
-                    if i == end_iter: 
-                        if repeat and j == 2:
-                            return return_data
-                        elif repeat and j == 1:
-                            j += 1
-                        elif repeat is False:
-                            pass
-                        else:
-                            logger.error(f"Impossible path. i = {i}, j={j}, repeat = {repeat}, end_iter = {end_iter}, ITERATION_ABS_PATH = {ITERATION_ABS_PATH}")
-                    
-                        if i < start_iter:
-                            continue
-                        if i > end_iter:
-                            if repeat and i == (end_iter + 1) and j == 2:
-                                pass
-                            else:
-                                continue
-                        if repeat:
-                            j += 1
-
-                    
-                    continue                    
-
-                # CONGESTION_PATH = path.join(
-                #     EXPERIMENT_ABSOLUTE_PATH,
-                #     ITERATION_ID,
-                #     "EdgeCongestionVsIterations.dat",
-                # )
-                # MAX_CONGESTION_PATH = path.join(
-                #     EXPERIMENT_ABSOLUTE_PATH,
-                #     ITERATION_ID,
-                #     "MaxCongestionVsIterations.dat",
-                # )
-
-                # Grab line from tm and throw it into a temp file to run yates.
-                if repeat and i == (end_iter + 1) and j == 2:
-                    pass
-                    # don't read a new line if we are on the repetition step
-                else:
-                    tm_i_data_from_file = fob.readline()
-                    tm_i_data = [
-                        str(float(i) * demand_factor)
-                        for i in tm_i_data_from_file.split()
-                    ]
-                    tm_i_data_to_temp_file = " ".join(tm_i_data)
-
-                if i < start_iter:
-                    continue
-                if i > end_iter:
-                    if repeat and i == (end_iter + 1) and j == 2:
+            ITERATION_REL_PATH = path.join(EXPERIMENT_ID, ITERATION_ID)
+            ITERATION_ABS_PATH = path.join(
+                EXPERIMENT_ABSOLUTE_PATH, ITERATION_ID
+            )
+            if False: #dry:
+                return_data = ITERATION_ABS_PATH
+                if i == end_iter: 
+                    if repeat and j == 2:
+                        return return_data
+                    elif repeat and j == 1:
+                        j += 1
+                    elif repeat is False:
                         pass
                     else:
+                        logger.error(f"Impossible path. i = {i}, j={j}, repeat = {repeat}, end_iter = {end_iter}, ITERATION_ABS_PATH = {ITERATION_ABS_PATH}")
+                
+                    if i < start_iter:
                         continue
-                if repeat:
-                    j += 1
-                if dry:
-                    return_data = ITERATION_ABS_PATH
-                    continue
-                temp_tm_i = self.nonce
-                temp_fob = open(self.nonce, "w")
-                temp_fob.write(tm_i_data_to_temp_file)
-                temp_fob.close()
-                reconfig_time = 0
-                new_circuit = []
-                drop_circuits = []
-                makedirs(ITERATION_ABS_PATH, exist_ok=True)
-
-                # if i == 360:
-                #     print("BREAK")
-                # if 300 <= i: #<= 335 :
-                #     pass
-                # else:
-                #     continue
-
-                return_data["Experiment"].append(EXPERIMENT_ID)
-                return_data["Iteration"].append(i)
-                opt_time = float("NaN")
-                max_load = 1
-                # try:
-                # create dot graph and put it into the appropriate file for this run.
-                iteration_topo = ITERATION_ABS_PATH
-
-                if self.topology_programming_method == "cli":
-                    client = self.wolf.cli()
-
-                elif (  # Heuristic method from very early testing.
-                    self.topology_programming_method == "cache"
-                    and sig_add_circuits
-                    and not circuits_added
-                ):
-                    defender = Defender(
-                        self.network_name,
-                        circuits,
-                        self.candidate_link_choice_method,
-                        self.use_heuristic,
-                        PREV_ITER_ABS_PATH,
-                        self.attack_proportion,
-                    )
-                    # TODO: Pass get_strategic_circuit the paths file from the previous iteration.
-                    new_circuit = defender.get_strategic_circuit()
-                    if (
-                        type(new_circuit) == tuple
-                        and len(new_circuit) == 2
-                    ):
-                        logger.debug(
-                            "Adding {} ({}, {}) circuits.".format(
-                                circuits
-                            ),
-                            *new_circuit,
-                        )
-                        for _ in range(circuits):
-                            u, v = new_circuit
-                            self.wolf.add_circuit(u, v)
-
-                        circuits_added = True
-
-                    # elif new_circuit == []:
-                    #     print("Could Not Add New Circuit")
-                    #     self.exit_early = True
-
-                # elif self.strategy == 'onset' and sig_add_circuits and not circuits_added:
-
-                elif (  # Method from TDSC-23 - Link-flood DDoS Defense
-                    self.topology_programming_method == "onset"
-                    and sig_add_circuits
-                ):
-                    optimizer = Link_optimization(
-                        G=self.wolf.logical_graph,
-                        BUDGET=4,
-                        demand_matrix=self.nonce,
-                        network=self.network_name,
-                    )
-                    # optimizer.run_model()
-                    if self.te_method == "-ecmp":
-                        max_load = 0.5
-                        if self.shakeroute:
-                            max_load = 10000.0
-                    else:
-                        max_load = 0.8
-
-                    # optimizer.run_model_minimize_cost_v1(max_load)
-                    # optimizer.run_model_minimize_cost()
-                    new_circuit = []
-                    optimizer.LINK_CAPACITY *= max_load
-                    optimizer.onset_v1()
-                    new_circuit = optimizer.get_links_to_add()
-                    # while len(new_circuit) == 0 and max_load < 5:
-                    #     optimizer.LINK_CAPACITY *= max_load
-                    #     optimizer.run_model_mixed_objective()
-                    #     new_circuit = optimizer.get_links_to_add()
-                    #     max_load += 0.25
-                    if len(new_circuit) == 0:
-                        # optimizer.BUDGET = 20
-                        optimizer.LINK_CAPACITY += optimizer.LINK_CAPACITY
-                        optimizer.run_model_mixed_objective()
-                        new_circuit = optimizer.get_links_to_add()
-
-                    circuit_tag = ""
-                    if type(new_circuit) == list and len(new_circuit) > 0:
-                        for nc in new_circuit:
-                            u, v = nc
-                            if circuit_tag == "":
-                                circuit_tag += f"circuit-{u}-{v}"
-                            else:
-                                circuit_tag += f".{u}-{v}"
-
-                            for _ in range(circuits):
-                                self.wolf.add_circuit(u, v)
-
-                        circuits_added = True
-                        flux_circuits.extend(new_circuit)
-
-                    # elif new_circuit == []:
-                    #     print("Could Not Add New Circuit")
-                    #     self.exit_early = True
-
-                    sig_add_circuits = False
-
-                elif (  # Method from TDSC-23 - Link-flood DDoS Defense
-                    self.topology_programming_method == "onset_v2"
-                    and sig_add_circuits
-                ):
-                    txp_count_dict = self.wolf.get_txp_count() # Maps node NAMES to their total transponders.
-                    optimizer = Link_optimization(
-                        G                   = self.wolf.logical_graph,
-                        demand_matrix_file  = self.nonce,
-                        network             = self.network_name,
-                        core_G              = self.wolf.base_graph.copy(as_view=True),
-                        txp_count           = txp_count_dict,
-                        use_cache           = True,
-                        compute_paths       = True,
-                        candidate_set       = self.candidate_link_choice_method 
-                    )
-                    
-                    if self.te_method == "-ecmp":
-                        max_load = 0.5
-                    else:
-                        # max_load = self.congestion_threshold_upper_bound
-                        max_load = 1.0
-
-                    result_topo = []
-                    add_links = []
-                    drop_links = []
-                    # optimizer.LINK_CAPACITY *= max_load
-                    optimizer.LINK_CAPACITY = 2**32
-                    opt_time = optimizer.onset_v1_1()
-                    
-                    # opt_time = optimizer.onset_v1_1_no_cap()
-                    new_circuit = optimizer.get_links_to_add()
-                    chaff = optimizer.get_links_to_drop()
-                    
-                    circuit_tag = ""
-                    if type(chaff) == list and len(new_circuit) > 0:
-                        for dc in chaff:
-                            u, v = dc
-                            if circuit_tag == "" or circuit_tag.startswith("add"):
-                                circuit_tag += f"drop-{u}-{v}"
-                            else:
-                                circuit_tag += f".{u}-{v}"
-                            for _ in range(circuits):
-                                self.wolf.drop_circuit(u, v)
-
-                    if type(new_circuit) == list and len(new_circuit) > 0:
-                        for nc in new_circuit:
-                            u, v = nc
-                            if circuit_tag == "" or circuit_tag.startswith("drop"):
-                                circuit_tag += f"add-{u}-{v}"
-                            else:
-                                circuit_tag += f".{u}-{v}"
-
-                            for _ in range(circuits):
-                                self.wolf.add_circuit(u, v)
-
-                        circuits_added = True
-                        flux_circuits.extend(new_circuit)
-
-                    # elif new_circuit == []:
-                    #     print("Could Not Add New Circuit")
-                    #     self.exit_early = True
-
-                    sig_add_circuits = False
-
-
-                elif (  # Method from PDP+OTP HotNets-23
-                    self.topology_programming_method == "OTP"
-                    and sig_add_circuits
-                ):
-                    edge_congestion_file = path.join(
-                        PREV_ITER_ABS_PATH,
-                        "EdgeCongestionVsIterations.dat",
-                    )
-                    edge_congestion_d = read_link_congestion_to_dict(
-                        edge_congestion_file
-                    )
-                    congested_edges = [
-                        k
-                        for k in edge_congestion_d
-                        if edge_congestion_d[k] > 0.80
-                    ]
-
-                    def find_shortcut_link(congested_edges):
-                        node_counter = Counter()
-                        message = "Looking for a shortcut link among: "
-                        congested_edges = [
-                            e.strip("()").replace("s", "").split(",")
-                            for e in congested_edges
-                        ]
-                        for e in congested_edges:
-                            u, v = e
-                            node_counter.update((u, v))
-                            message += f"({u}, {v}) "
-                        logger.info(message)
-                        midpoint = max(node_counter, key=node_counter.get)
-                        terminals = []
-                        for c in congested_edges:
-                            this = c[:]
-                            if midpoint in this:
-                                this.remove(midpoint)
-                                terminals.append(this[0])
-                        shortcuts = [
-                            c
-                            for c in combinations(terminals, 2)
-                            if c[0] != c[1]
-                            and c not in self.wolf.logical_graph.edges()
-                        ]
-                        logger.info(
-                            f"Found the following shortcut: {shortcuts}"
-                        )
-                        return shortcuts
-
-                    shortcuts = find_shortcut_link(congested_edges)
-                    for edge in shortcuts:
-                        u, v = edge
-                        for _ in range(circuits):
-                            self.wolf.add_circuit(u, v, 100)
-                            flux_circuits.append((u, v))
-                    # flux_circuits.extend(congested_edges)
-                    sig_add_circuits = False
-
-                elif (  # Method from TNSM-23
-                    self.topology_programming_method == "greylambda"
-                    and sig_add_circuits
-                ):
-                    edge_congestion_file = path.join(
-                        PREV_ITER_ABS_PATH,
-                        "EdgeCongestionVsIterations.dat",
-                    )
-                    edge_congestion_d = read_link_congestion_to_dict(
-                        edge_congestion_file
-                    )
-                    congested_edges = [
-                        k
-                        for k in edge_congestion_d
-                        if edge_congestion_d[k] == 1
-                    ]
-                    for edge in congested_edges:
-                        if isinstance(edge, str):
-                            u, v = edge.strip("()").replace("s", "").split(",")
-                        elif isinstance(edge, tuple) and len(edge) == 2:
-                            u, v = edge
+                    if i > end_iter:
+                        if repeat and i == (end_iter + 1) and j == 2:
+                            pass
                         else:
-                            logger.error(f"Error, unable to unpack edge: {edge} of type: {type(edge)}")
-                            raise
-                        for _ in range(circuits):
-                            added = self.wolf.add_circuit(u, v)
-                            if added == 0:
-                                circuits_added = True
+                            continue
+                    if repeat:
+                        j += 1
 
-                    flux_circuits.extend(congested_edges)
-                    sig_add_circuits = False
+                
+                continue                    
 
-                elif (  # Bandwidth Variable Transceivers - Emulate RADWAN
-                    self.topology_programming_method == "BVT"
-                    and sig_add_circuits
-                ):
-                    edge_congestion_file = path.join(
-                        PREV_ITER_ABS_PATH,
-                        "EdgeCongestionVsIterations.dat",
+            # CONGESTION_PATH = path.join(
+            #     EXPERIMENT_ABSOLUTE_PATH,
+            #     ITERATION_ID,
+            #     "EdgeCongestionVsIterations.dat",
+            # )
+            # MAX_CONGESTION_PATH = path.join(
+            #     EXPERIMENT_ABSOLUTE_PATH,
+            #     ITERATION_ID,
+            #     "MaxCongestionVsIterations.dat",
+            # )
+
+            tm_i_data = [
+                str(float(demand_val) * self.demand_factor)
+                for demand_val in tm_data[iter_i].split()
+            ]
+            tm_i_data_to_temp_file = " ".join(tm_i_data)
+
+            if dry:
+                return_data = ITERATION_ABS_PATH
+                continue
+            
+            self.temp_tm_i_file = self.nonce + "-" + ITERATION_ID
+            with open(self.temp_tm_i_file, "w") as temp_fob:
+                temp_fob.write(tm_i_data_to_temp_file)
+            
+            reconfig_time = 0
+            self.new_circuit = []
+            self.drop_circuits = []
+            makedirs(ITERATION_ABS_PATH, exist_ok=True)
+
+            # if i == 360:
+            #     print("BREAK")
+            # if 300 <= i: #<= 335 :
+            #     pass
+            # else:
+            #     continue
+
+            return_data["Experiment"].append(EXPERIMENT_ID)
+            return_data["Iteration"].append(f"{iter_i}-{j}")
+            self.opt_time = float("NaN")
+            self.max_load = 1
+            # try:
+            # create dot graph and put it into the appropriate file for this run.
+            iteration_topo = ITERATION_ABS_PATH
+
+            if self.topology_programming_method == "cli":
+                client = self.wolf.cli()
+
+            elif (  # Heuristic method from very early testing.
+                self.topology_programming_method == "cache"
+                and self.sig_add_circuits
+                and not self.circuits_added
+            ):
+                self.cache_method()
+                
+            
+            # elif self.strategy == 'onset' and sig_add_circuits and not circuits_added:
+
+            elif (  # Method from TDSC-23 - Link-flood DDoS Defense
+                self.topology_programming_method == "onset"
+                and self.sig_add_circuits
+            ):
+                self.onset_method()
+
+            elif (  # Method from TDSC-23 - Link-flood DDoS Defense
+                self.topology_programming_method == "onset_v2"
+                and self.sig_add_circuits
+            ):
+                self.onset_v2_method()                
+
+            elif (  # Method from PDP+OTP HotNets-23
+                self.topology_programming_method == "OTP"
+                and self.sig_add_circuits
+            ):
+                self.OTP_method()
+
+            elif (  # Method from TNSM-23
+                self.topology_programming_method == "greylambda"
+                and self.sig_add_circuits
+            ):
+                self.greylambda_method()
+
+            elif (  # Bandwidth Variable Transceivers - Emulate RADWAN
+                self.topology_programming_method == "BVT"
+                and self.sig_add_circuits
+            ):
+                self.BVT_method()
+
+            elif (  # Temporary Bandwidth Expansion - i.e., Spiffy
+                self.topology_programming_method == "TBE"
+                # and sig_add_circuits
+            ):
+                self.TBE_method()
+
+            # Net Recon Defense Method
+            elif self.topology_programming_method == "doppler":                
+                self.doppler_method()
+
+            # Template for new TP methods
+            else:
+                # find new circuits
+                # call self.wolf.add_circuit(a,b)
+                # update flux_circuits with circuits added
+                # set sig_add_circuits false.
+                pass
+
+            # self.base_graph.G = Graph.copy(self.wolf.logical_graph)
+
+            # Save this iteration graph to GML and Dot
+            if self.circuits_added:
+                pass  # circuit_tag was updated above.
+            #     circuit_tag = "circuit-{}-{}".format(u,v)
+            #     circuit_tag = "circuit-{}".format(".".joint())
+            else:
+                circuit_tag = ""
+            # updated_topology_file = iteration_topo + circuit_tag
+            
+            if self.line_code == "BVT": 
+                self.wolf.logical_graph.edges[('63', '133')]["capacity"] *= 0.75
+            
+            updated_topology_file = iteration_topo
+            self.export_logical_topo_to_gml(
+                updated_topology_file + ".gml"
+            )
+            Gml_to_dot(
+                self.wolf.logical_graph,
+                iteration_topo + ".dot",
+                unit=unit,
+            )
+
+            # Draw the link graph for the instanced topology.
+            # self.base_graph._init_link_graph()
+            if self.PREV_ITER_ABS_PATH \
+                and array_equal(tm_i_data, PREV_ITER_TM_DATA) \
+                and iter_congestion > 0 \
+                and len(self.flux_circuits) == 0:
+                # Prevents us from running the simulation if the topology has not changed
+                # TODO: We should also ensure that the traffic matrix is unique during this iteration. 
+                system(f"cp -r {self.PREV_ITER_ABS_PATH}/* {ITERATION_ABS_PATH}/")
+            else:
+                iter_congestion = self._yates(
+                        iteration_topo + ".dot",
+                        ITERATION_REL_PATH,
+                        traffic_file=self.temp_tm_i_file                        
+                )    
+                
+            if len(self.new_circuit) > 0:
+                if self.topology_programming_method == "doppler":
+                    reconfig_time = 1
+                else:
+                    reconfig_time = get_reconfig_time(
+                        updated_topology_file + ".gml", self.new_circuit
                     )
-                    edge_congestion_d = read_link_congestion_to_dict(
-                        edge_congestion_file
+            else:
+                reconfig_time = 0
+
+            return_data["ReconfigTime"].append(reconfig_time)
+            return_data["Strategy"].append(
+                "{} {}".format(
+                    self.te_method, self.topology_programming_method
+                )
+            )
+            return_data["CandidateLinkSet"].append(
+                self.candidate_link_choice_method
+            )
+
+            return_data["Routing"].append(
+                "{}".format(self.te_method).strip("-").upper()
+            )
+            return_data["Defense"].append(
+                "{}".format(self.topology_programming_method)
+            )
+
+            return_data["Congestion"].append(
+                read_result_val(
+                    path.join(
+                        ITERATION_ABS_PATH,
+                        "MaxExpCongestionVsIterations.dat",
                     )
-                    congested_edges = [
-                        k
-                        for k in edge_congestion_d
-                        if edge_congestion_d[k] == 1
-                    ]
-
-                    # for edge in congested_edges:
-                    #     u, v = edge.strip("()").replace("s", "").split(",")
-                    #     u = int(u)
-                    #     v = int(v)
-                    #     for _ in range(circuits):
-                    #         self.wolf.add_circuit(u, v)
-                    # flux_circuits.extend(congested_edges)
-                    sig_add_circuits = False
-
-                elif (  # Temporary Bandwidth Expansion - i.e., Spiffy
-                    self.topology_programming_method == "TBE"
-                    # and sig_add_circuits
-                ):
-                    if "flashcrowd" in self.traffic_file \
-                        and demand_factor > 0.9:
-
-                        self.wolf.relax_restricted_bandwidth()
-                    # sig_add_circuits = False
-
-                # Net Recon Defense Method
-                elif self.topology_programming_method == "doppler":
-                    optimizer = Link_optimization(
-                        G=self.wolf.logical_graph,
-                        # BUDGET=0,
-                        demand_matrix_file=self.nonce,
-                        network=self.network_name,
-                        core_G=self.wolf.base_graph.copy(as_view=True),
+                )
+            )
+            return_data["Loss"].append(
+                read_result_val(
+                    path.join(
+                        ITERATION_ABS_PATH,
+                        "CongestionLossVsIterations.dat",
                     )
-                    # optimizer.run_model()
-                    if self.te_method == "-ecmp":
-                        max_load = 0.5
-                        if self.shakeroute:
-                            max_load = 10000.0
-                    else:
-                        max_load = 0.8
+                )
+            )
+            return_data["Throughput"].append(
+                read_result_val(
+                    path.join(
+                        ITERATION_ABS_PATH,
+                        "TotalThroughputVsIterations.dat",
+                    )
+                )
+            )
+            return_data["Total Links Added"].append(len(self.new_circuit))
+            return_data["Links Added"].append(self.new_circuit)
+            return_data["Total Flux Links"].append(len(self.flux_circuits))
+            return_data["Total Links Dropped"].append(
+                len(self.drop_circuits)
+            )
+            return_data["Links Dropped"].append(self.drop_circuits)
+            return_data["Link Bandwidth Coefficient"].append(self.max_load)
+            return_data["Demand Factor"].append(self.demand_factor)
+            return_data["Optimization Time"].append(self.opt_time)
 
-                    # optimizer.run_model_minimize_cost_v1(max_load)
-                    # optimizer.run_model_minimize_cost()
-                    new_circuit = []
-                    result_topo = []
-                    add_links = []
-                    drop_links = []
-                    # optimizer.LINK_CAPACITY *= max_load
-                    add_links, drop_links = optimizer.doppler()
-                    # result_topo, add_links, drop_links = optimizer.optimize()
-                    # result_topo, add_links, drop_links = optimizer.run_model_max_diff_ignore_demand()
+            if iter_congestion == "SIG_EXIT":
+                return
 
-                    circuit_tag = ""
-                    new_circuit = add_links[:]
-                    if drop_links:
-                        for drop_circuit in drop_links:
-                            u, v = drop_circuit
+            if (
+                iter_congestion
+                >= self.congestion_threshold_upper_bound
+            ):
+                self.sig_add_circuits = True
+
+            elif (
+                iter_congestion
+                <= self.congestion_threshold_lower_bound
+            ):
+                if len(self.flux_circuits) > 0:
+                    self.sig_drop_circuits = True
+
+            if CROSSFIRE:
+                self.sig_drop_circuits = True
+
+            if self.sig_drop_circuits:
+                self.drop_circuits = self.flux_circuits[:]
+                if len(self.drop_circuits) > 0:
+                    for dc in self.drop_circuits:
+                        u, v = dc
+                        for _ in range(self.circuits):
                             self.wolf.drop_circuit(u, v)
+                    self.flux_circuits = []
+                    self.circuits_added = False
+                    self.sig_drop_circuits = False
 
-                    if add_links:
-                        for nc in new_circuit:
-                            u, v = nc
-                            if circuit_tag == "":
-                                circuit_tag += f"circuit-{u}-{v}"
-                            else:
-                                circuit_tag += f".{u}-{v}"
+            # except BaseException as e:
+            #     logger.error("Unknown Error", exc_info=True, stack_info=True)
+            #     # self._system("rm %s" % temp_tm_i)
+            #     if self.topology_programming_method == "greylambda":
+            #         return -1
+            #     return return_data
 
-                            self.wolf.add_circuit(u, v)
+            # finally:
+            # # Remove the temp file.
+            # self._system("rm %s" % temp_tm_i)
+            PREV_ITER_TM_DATA = tm_i_data
+            self.PREV_ITER_ABS_PATH = ITERATION_ABS_PATH
+            # command_args = ["yates", iteration_topo, temp_tm_i, temp_tm_i, hosts,
+            #                 te_method, "-num-tms", "1", "-out", ITERATION_REL_PATH]
+            # logger.debug("Executing command: {}".format(" ".join(command_args)))
+            # self._system(" ".join(command_args))
 
-                        circuits_added = True
-                        # flux_circuits.extend(new_circuit)
-
-                    # elif new_circuit == []:
-                    #     print("Could Not Add New Circuit")
-                    #     self.exit_early = True
-
-                    sig_add_circuits = False
-
-                # Template for new TP methods
-                else:
-                    # find new circuits
-                    # call self.wolf.add_circuit(a,b)
-                    # update flux_circuits with circuits added
-                    # set sig_add_circuits false.
-                    pass
-
-                # self.base_graph.G = Graph.copy(self.wolf.logical_graph)
-
-                # Save this iteration graph to GML and Dot
-                if circuits_added:
-                    pass  # circuit_tag was updated above.
-                #     circuit_tag = "circuit-{}-{}".format(u,v)
-                #     circuit_tag = "circuit-{}".format(".".joint())
-                else:
-                    circuit_tag = ""
-                # updated_topology_file = iteration_topo + circuit_tag
-                
-                if self.line_code == "BVT": 
-                    self.wolf.logical_graph.edges[('63', '133')]["capacity"] *= 0.75
-                
-                updated_topology_file = iteration_topo
-                self.export_logical_topo_to_gml(
-                    updated_topology_file + ".gml"
-                )
-                Gml_to_dot(
-                    self.wolf.logical_graph,
-                    iteration_topo + ".dot",
-                    unit=unit,
-                )
-
-                # Draw the link graph for the instanced topology.
-                # self.base_graph._init_link_graph()
-                if PREV_ITER_ABS_PATH \
-                    and array_equal(tm_i_data, PREV_ITER_TM_DATA) \
-                    and iter_congestion > 0 \
-                    and len(flux_circuits) == 0:
-                    # Prevents us from running the simulation if the topology has not changed
-                    # TODO: We should also ensure that the traffic matrix is unique during this iteration. 
-                    system(f"cp -r {PREV_ITER_ABS_PATH}/* {ITERATION_ABS_PATH}/")
-                else:
-                    iter_congestion = self._yates(
-                            iteration_topo + ".dot",
-                            ITERATION_REL_PATH,
-                            traffic_file=temp_tm_i                        
-                    )    
-                    
-                if len(new_circuit) > 0:
-                    if self.topology_programming_method == "doppler":
-                        reconfig_time = 1
-                    else:
-                        reconfig_time = get_reconfig_time(
-                            updated_topology_file + ".gml", new_circuit
-                        )
-                else:
-                    reconfig_time = 0
-
-                return_data["ReconfigTime"].append(reconfig_time)
-                return_data["Strategy"].append(
-                    "{} {}".format(
-                        self.te_method, self.topology_programming_method
-                    )
-                )
-                return_data["CandidateLinkSet"].append(
-                    self.candidate_link_choice_method
-                )
-
-                return_data["Routing"].append(
-                    "{}".format(self.te_method).strip("-").upper()
-                )
-                return_data["Defense"].append(
-                    "{}".format(self.topology_programming_method)
-                )
-
-                return_data["Congestion"].append(
-                    read_result_val(
-                        path.join(
-                            ITERATION_ABS_PATH,
-                            "MaxExpCongestionVsIterations.dat",
-                        )
-                    )
-                )
-                return_data["Loss"].append(
-                    read_result_val(
-                        path.join(
-                            ITERATION_ABS_PATH,
-                            "CongestionLossVsIterations.dat",
-                        )
-                    )
-                )
-                return_data["Throughput"].append(
-                    read_result_val(
-                        path.join(
-                            ITERATION_ABS_PATH,
-                            "TotalThroughputVsIterations.dat",
-                        )
-                    )
-                )
-                return_data["Total Links Added"].append(len(new_circuit))
-                return_data["Links Added"].append(new_circuit)
-                return_data["Total Flux Links"].append(len(flux_circuits))
-                return_data["Total Links Dropped"].append(
-                    len(drop_circuits)
-                )
-                return_data["Links Dropped"].append(drop_circuits)
-                return_data["Link Bandwidth Coefficient"].append(max_load)
-                return_data["Demand Factor"].append(demand_factor)
-                return_data["Optimization Time"].append(opt_time)
-
-                if iter_congestion == "SIG_EXIT":
-                    return
-
-                if (
-                    iter_congestion
-                    >= self.congestion_threshold_upper_bound
-                ):
-                    sig_add_circuits = True
-
-                elif (
-                    iter_congestion
-                    <= self.congestion_threshold_lower_bound
-                ):
-                    if len(flux_circuits) > 0:
-                        sig_drop_circuits = True
-
-                if CROSSFIRE:
-                    sig_drop_circuits = True
-
-                if sig_drop_circuits:
-                    drop_circuits = flux_circuits[:]
-                    if len(drop_circuits) > 0:
-                        for dc in drop_circuits:
-                            u, v = dc
-                            for _ in range(circuits):
-                                self.wolf.drop_circuit(u, v)
-                        flux_circuits = []
-                        circuits_added = False
-                        sig_drop_circuits = False
-
-                # except BaseException as e:
-                #     logger.error("Unknown Error", exc_info=True, stack_info=True)
-                #     # self._system("rm %s" % temp_tm_i)
-                #     if self.topology_programming_method == "greylambda":
-                #         return -1
-                #     return return_data
-
-                # finally:
-                # # Remove the temp file.
-                # self._system("rm %s" % temp_tm_i)
-                PREV_ITER_TM_DATA = tm_i_data
-                PREV_ITER_ABS_PATH = ITERATION_ABS_PATH
-                # command_args = ["yates", iteration_topo, temp_tm_i, temp_tm_i, hosts,
-                #                 te_method, "-num-tms", "1", "-out", ITERATION_REL_PATH]
-                # logger.debug("Executing command: {}".format(" ".join(command_args)))
-                # self._system(" ".join(command_args))
-
-                # self.base_graph.set_weights(CONGESTION_PATH)
-                # self.base_graph.draw_graphs(ITERATION_ABS_PATH)
-                # edge_congestion = get_edge_congestion(CONGESTION_PATH)
-                # PLOT_DIR = path.join(ITERATION_ABS_PATH, "plot_dir")
-                # makedirs(PLOT_DIR, exist_ok=True)
-                # try:
-                #     congestion_heatmap(edge_congestion, path.join(
-                #         PLOT_DIR, "edge_congestion_heatmap"))
-                # except:
-                #     logger.warning("Did not make heatmap for this iteration.")
-                #     pass
+            # self.base_graph.set_weights(CONGESTION_PATH)
+            # self.base_graph.draw_graphs(ITERATION_ABS_PATH)
+            # edge_congestion = get_edge_congestion(CONGESTION_PATH)
+            # PLOT_DIR = path.join(ITERATION_ABS_PATH, "plot_dir")
+            # makedirs(PLOT_DIR, exist_ok=True)
+            # try:
+            #     congestion_heatmap(edge_congestion, path.join(
+            #         PLOT_DIR, "edge_congestion_heatmap"))
+            # except:
+            #     logger.warning("Did not make heatmap for this iteration.")
+            #     pass
         return return_data
 
     def validate_yates_params(self):
@@ -1190,6 +896,7 @@ class Simulation:
             #     self.base_graph.import_dot_graph(base_topo_file)
             # self.num_hosts = len([n for n in self.base_graph.G.nodes if n.startswith('h')])
             # self.num_hosts = len(self.base_graph.G.nodes)
+            return
 
         # Verify hosts file
         def verify_hosts():
@@ -1235,6 +942,7 @@ class Simulation:
                 create_host_file()
             logger.debug("Host file check passed.")
             self.hosts_file = hosts_file
+            return 
 
         # Verify traffic file
         def verify_traffic():
@@ -1321,3 +1029,314 @@ class Simulation:
         verify_topo()
         verify_hosts()
         verify_traffic()
+        return
+
+    def cache_method(self): 
+        defender = Defender(
+            self.network_name,
+            self.circuits,
+            self.candidate_link_choice_method,
+            self.use_heuristic,
+            self.PREV_ITER_ABS_PATH,
+            self.attack_proportion,
+        )
+        # TODO: Pass get_strategic_circuit the paths file from the previous iteration.
+        self.new_circuit = defender.get_strategic_circuit()
+        if (
+            type(self.new_circuit) == tuple
+            and len(self.new_circuit) == 2
+        ):
+            logger.debug(
+                "Adding {} ({}, {}) circuits.".format(
+                    self.circuits
+                ),
+                *self.new_circuit,
+            )
+            for _ in range(self.circuits):
+                u, v = self.new_circuit
+                self.wolf.add_circuit(u, v)
+        return
+
+    def onset_method(self):        
+        optimizer = Link_optimization(
+            G=self.wolf.logical_graph,
+            BUDGET=4,
+            demand_matrix=self.temp_tm_i_file,
+            network=self.network_name,
+        )
+        # optimizer.run_model()
+        if self.te_method == "-ecmp":
+            self.max_load = 0.5
+            if self.shakeroute:
+                self.max_load = 10000.0
+        else:
+            self.max_load = 0.8
+
+        # optimizer.run_model_minimize_cost_v1(max_load)
+        # optimizer.run_model_minimize_cost()
+        self.new_circuit = []
+        optimizer.LINK_CAPACITY *= self.max_load
+        optimizer.onset_v1()
+        self.new_circuit = optimizer.get_links_to_add()
+        # while len(new_circuit) == 0 and max_load < 5:
+        #     optimizer.LINK_CAPACITY *= max_load
+        #     optimizer.run_model_mixed_objective()
+        #     new_circuit = optimizer.get_links_to_add()
+        #     max_load += 0.25
+        if len(self.new_circuit) == 0:
+            # optimizer.BUDGET = 20
+            optimizer.LINK_CAPACITY += optimizer.LINK_CAPACITY
+            optimizer.run_model_mixed_objective()
+            self.new_circuit = optimizer.get_links_to_add()
+
+        circuit_tag = ""
+        if type(self.new_circuit) == list and len(self.new_circuit) > 0:
+            for nc in self.new_circuit:
+                u, v = nc
+                if circuit_tag == "":
+                    circuit_tag += f"circuit-{u}-{v}"
+                else:
+                    circuit_tag += f".{u}-{v}"
+
+                for _ in range(self.circuits):
+                    self.wolf.add_circuit(u, v)
+
+            self.circuits_added = True
+            self.flux_circuits.extend(self.new_circuit)
+
+        # elif new_circuit == []:
+        #     print("Could Not Add New Circuit")
+        #     self.exit_early = True
+
+        self.sig_add_circuits = False
+        return
+
+    def onset_v2_method(self):
+        txp_count_dict = self.wolf.get_txp_count() # Maps node NAMES to their total transponders.
+        optimizer = Link_optimization(
+            G                   = self.wolf.logical_graph,
+            demand_matrix_file  = self.temp_tm_i_file,
+            network             = self.network_name,
+            core_G              = self.wolf.base_graph.copy(as_view=True),
+            txp_count           = txp_count_dict,
+            use_cache           = True,
+            compute_paths       = True,
+            candidate_set       = self.candidate_link_choice_method 
+        )
+        
+        if self.te_method == "-ecmp":
+            self.max_load = 0.5
+        else:
+            # max_load = self.congestion_threshold_upper_bound
+            self.max_load = 1.0
+
+        result_topo = []
+        add_links = []
+        drop_links = []
+        # optimizer.LINK_CAPACITY *= max_load
+        optimizer.LINK_CAPACITY = 2**64
+        self.opt_time = optimizer.onset_v1_1()
+        
+        # opt_time = optimizer.onset_v1_1_no_cap()
+        self.new_circuit = optimizer.get_links_to_add()
+        self.chaff = optimizer.get_links_to_drop()
+        
+        circuit_tag = ""
+        if type(self.chaff) == list and len(self.new_circuit) > 0:
+            for dc in self.chaff:
+                u, v = dc
+                if circuit_tag == "" or circuit_tag.startswith("add"):
+                    circuit_tag += f"drop-{u}-{v}"
+                else:
+                    circuit_tag += f".{u}-{v}"
+                for _ in range(self.circuits):
+                    self.wolf.drop_circuit(u, v)
+
+        if type(self.new_circuit) == list and len(self.new_circuit) > 0:
+            for nc in self.new_circuit:
+                u, v = nc
+                if circuit_tag == "" or circuit_tag.startswith("drop"):
+                    circuit_tag += f"add-{u}-{v}"
+                else:
+                    circuit_tag += f".{u}-{v}"
+
+                for _ in range(self.circuits):
+                    self.wolf.add_circuit(u, v)
+
+            self.circuits_added = True
+            self.flux_circuits.extend(self.new_circuit)
+
+        # elif new_circuit == []:
+        #     print("Could Not Add New Circuit")
+        #     self.exit_early = True
+
+        self.sig_add_circuits = False
+        return
+
+    def OTP_method(self):
+        edge_congestion_file = path.join(
+            self.PREV_ITER_ABS_PATH,
+            "EdgeCongestionVsIterations.dat",
+        )
+        edge_congestion_d = read_link_congestion_to_dict(
+            edge_congestion_file
+        )
+        congested_edges = [
+            k
+            for k in edge_congestion_d
+            if edge_congestion_d[k] > 0.80
+        ]
+
+        def find_shortcut_link(congested_edges):
+            node_counter = Counter()
+            message = "Looking for a shortcut link among: "
+            congested_edges = [
+                e.strip("()").replace("s", "").split(",")
+                for e in congested_edges
+            ]
+            for e in congested_edges:
+                u, v = e
+                node_counter.update((u, v))
+                message += f"({u}, {v}) "
+            logger.info(message)
+            midpoint = max(node_counter, key=node_counter.get)
+            terminals = []
+            for c in congested_edges:
+                this = c[:]
+                if midpoint in this:
+                    this.remove(midpoint)
+                    terminals.append(this[0])
+            shortcuts = [
+                c
+                for c in combinations(terminals, 2)
+                if c[0] != c[1]
+                and c not in self.wolf.logical_graph.edges()
+            ]
+            logger.info(
+                f"Found the following shortcut: {shortcuts}"
+            )
+            return shortcuts
+
+        shortcuts = find_shortcut_link(congested_edges)
+        for edge in shortcuts:
+            u, v = edge
+            for _ in range(self.circuits):
+                self.wolf.add_circuit(u, v, 100)
+                self.flux_circuits.append((u, v))
+        # flux_circuits.extend(congested_edges)
+        self.sig_add_circuits = False        
+        return
+
+    def greylambda_method(self):
+        edge_congestion_file = path.join(
+            self.PREV_ITER_ABS_PATH,
+            "EdgeCongestionVsIterations.dat",
+        )
+        edge_congestion_d = read_link_congestion_to_dict(
+            edge_congestion_file
+        )
+        congested_edges = [
+            k
+            for k in edge_congestion_d
+            if edge_congestion_d[k] == 1
+        ]
+        for edge in congested_edges:
+            if isinstance(edge, str):
+                u, v = edge.strip("()").replace("s", "").split(",")
+            elif isinstance(edge, tuple) and len(edge) == 2:
+                u, v = edge
+            else:
+                logger.error(f"Error, unable to unpack edge: {edge} of type: {type(edge)}")
+                raise
+            for _ in range(self.circuits):
+                added = self.wolf.add_circuit(u, v)
+                if added == 0:
+                    self.circuits_added = True
+
+        self.flux_circuits.extend(congested_edges)
+        self.sig_add_circuits = False        
+        return
+
+    def BVT_method(self):
+        edge_congestion_file = path.join(
+            self.PREV_ITER_ABS_PATH,
+            "EdgeCongestionVsIterations.dat",
+        )
+        edge_congestion_d = read_link_congestion_to_dict(
+            edge_congestion_file
+        )
+        congested_edges = [
+            k
+            for k in edge_congestion_d
+            if edge_congestion_d[k] == 1
+        ]
+
+        # for edge in congested_edges:
+        #     u, v = edge.strip("()").replace("s", "").split(",")
+        #     u = int(u)
+        #     v = int(v)
+        #     for _ in range(circuits):
+        #         self.wolf.add_circuit(u, v)
+        # flux_circuits.extend(congested_edges)
+        self.sig_add_circuits = False
+        return
+    
+    def TBE_method(self):
+        if "flashcrowd" in self.traffic_file \
+            and self.demand_factor > 0.9:
+
+            self.wolf.relax_restricted_bandwidth()
+        # sig_add_circuits = False
+        return
+        
+    def doppler_method(self):
+        optimizer = Link_optimization(
+            G=self.wolf.logical_graph,
+            demand_matrix_file=self.temp_tm_i_file,
+            network=self.network_name,
+            core_G=self.wolf.base_graph.copy(as_view=True),
+        )
+        # optimizer.run_model()
+        if self.te_method == "-ecmp":
+            self.max_load = 0.5
+            if self.shakeroute:
+                self.max_load = 10000.0
+        else:
+            self.max_load = 0.8
+
+        # optimizer.run_model_minimize_cost_v1(max_load)
+        # optimizer.run_model_minimize_cost()
+        self.new_circuit = []
+        result_topo = []
+        add_links = []
+        drop_links = []
+        # optimizer.LINK_CAPACITY *= max_load
+        add_links, drop_links = optimizer.doppler()
+        # result_topo, add_links, drop_links = optimizer.optimize()
+        # result_topo, add_links, drop_links = optimizer.run_model_max_diff_ignore_demand()
+
+        circuit_tag = ""
+        self.new_circuit = add_links[:]
+        if drop_links:
+            for drop_circuit in drop_links:
+                u, v = drop_circuit
+                self.wolf.drop_circuit(u, v)
+
+        if add_links:
+            for nc in self.new_circuit:
+                u, v = nc
+                if circuit_tag == "":
+                    circuit_tag += f"circuit-{u}-{v}"
+                else:
+                    circuit_tag += f".{u}-{v}"
+
+                self.wolf.add_circuit(u, v)
+
+            self.circuits_added = True
+            # flux_circuits.extend(new_circuit)
+
+        # elif new_circuit == []:
+        #     print("Could Not Add New Circuit")
+        #     self.exit_early = True
+
+        self.sig_add_circuits = False        
