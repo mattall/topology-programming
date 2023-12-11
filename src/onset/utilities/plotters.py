@@ -40,7 +40,7 @@ plt.rcParams.update(
 )
 
 def draw_graph(
-    G, name, node_color="white", with_labels=True, edge_color="black"
+    G, name, node_color="blue", with_labels=True, edge_color="black"
 ):
     """Draws graph object, placing nodes according to Longitude and Latitude attributes.
 
@@ -62,7 +62,8 @@ def draw_graph(
         with_labels=with_labels,
         edge_color=edge_color,
     )
-    plt.savefig(name)
+    plt.savefig(name.replace('.',''))
+    print(f"saved image to: {name}")
     plt.close()
 
 

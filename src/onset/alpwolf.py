@@ -514,7 +514,7 @@ class AlpWolf:
             transponder_u (int, optional): transponder index in u that maps to v. Defaults to None.
             transponder_v (int, optional): transponder index in v that maps to u. Defaults to None.
         """
-        logger.debug("Dropping circuit {} {}.".format(u, v))
+        logger.info("Dropping circuit {} {}.".format(u, v))
         if self.circuits[(u, v)] == 0:
             logger.debug("Cannot drop Circuit {} {} - does not exist.".format(u, v))
             return 0

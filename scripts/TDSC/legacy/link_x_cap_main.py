@@ -55,11 +55,14 @@ def main(argv):
         # surfNet_optimal_1_link_attack_conservative_10_0Gbps-200Gbps_-ecmp
         PARALLEL = False
         # NETWORKS = ["ANS"]
-        NETWORKS = ["sprint"]
-        VOLUMES = ["100Gbps"]
-        NUM_TARGETED = [5]
-        TE_METHODS = ["-mcf"]
-        CANDIDATE_SET = ["conservative"]
+        NETWORKS = ["CRL"]
+        # VOLUMES = ["100Gbps"]
+        VOLUMES = ["100Gbps", "150Gbps", "200Gbps"]
+        NUM_TARGETED = [1, 2, 3, 4, 5]
+        # NUM_TARGETED = [5]
+        # TE_METHODS = ["-mcf"]
+        TE_METHODS = ["-ecmp", "-mcf"]
+        CANDIDATE_SET = ["max"]
 
         # NETWORKS = ["sprint", "ANS", "CRL", "bellCanada", "surfNet"]
         # VOLUMES = ["100Gbps", "150Gbps", "200Gbps"]

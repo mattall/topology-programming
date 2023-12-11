@@ -35,6 +35,11 @@ def read_json_graph(input_file, stringify=False, serialize=False):
 
 
 def write_json_graph(G, output_file):
+    """
+    Args:
+        G (nx.Graph): Graph to write
+        output_file (path): name of output file to write; function will include '.json' extension if it is not given in the name already.
+    """    
     if not output_file.endswith(".json"):
         output_file += ".json"
 
@@ -53,8 +58,6 @@ class Gml_to_dot:
     # def __call__(self, inFile, outfile):
 
     def reduce_range(self, nodes, links, link_capacity):
-        return nodes, links, link_capacity
-
         # links and nodes are sets.
 
         nodes = sorted(nodes)
@@ -83,6 +86,15 @@ class Gml_to_dot:
         return mac_list
 
     def write_dot_graph(self, nodes, links, link_capacity, name, unit="Gbps"):
+        """Writes a .dot file compatible with Yates for a graph. Generates IP addresses for nodes and port assignments for edges between nodes.        
+
+        Args:
+            nodes (iterable): should be a reduced range, i.e., 0...n-1 where there are n nodes in the graph
+            links (iterable): pairs of nodes.
+            link_capacity (int): 
+            name (path): path to output file. Method doesn't add '.dot' automatically, so path should include extension if desired.
+            unit (str, optional): Unit of capacity. Defaults to "Gbps".
+        """        
         nodes = list(nodes)
         links = list(links)
         switch_ips = [str(ip_address(a)) for a in range(len(nodes))]
@@ -338,6 +350,12 @@ def parse_edges(path):
     return edge_list
 
 def write_gml(G, name):
+    """takes nx.Graph object and writes it to a gml file.
+
+    Args:
+        G (nx.Graph): An undirected graph
+        name (path): name of output file (include extension .gml)
+    """    
     with open(name, "w") as fob:
         fob.write("graph [\n")
         for node in sorted(G.nodes()):

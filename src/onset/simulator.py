@@ -52,7 +52,7 @@ class Simulation:
         topology_programming_method="",
         fallow_transponders=0,
         use_heuristic="",
-        candidate_link_choice_method="all",
+        candidate_link_choice_method="max",
         congestion_threshold_upper_bound=0.8,
         congestion_threshold_lower_bound=0.3,
         attack_proportion="",
@@ -280,7 +280,7 @@ class Simulation:
         if gurobi_status == 0:
             logger.info("gurobi_cl is in path.")
         else:
-                raise(f"Error: gurobi_cl not in path {sys.path}")
+            raise(f"Error: gurobi_cl not in path {sys.path}")
         self._system(" ".join(command_args))
         max_congestion = read_result_val(
             path.join(
@@ -665,7 +665,7 @@ class Simulation:
                 self.TBE_method()
 
             # Net Recon Defense Method
-            elif self.topology_programming_method == "doppler":                
+            elif self.topology_programming_method == "Doppler":                
                 self.doppler_method()
 
             # Template for new TP methods
@@ -701,6 +701,9 @@ class Simulation:
             )
 
             # Draw the link graph for the instanced topology.
+            draw_graph(self.wolf.logical_graph, 
+                       name=f"data/graphs/img/{ITERATION_ID}")
+
             # self.base_graph._init_link_graph()
             if self.PREV_ITER_ABS_PATH \
                 and array_equal(tm_i_data, PREV_ITER_TM_DATA) \
@@ -1113,7 +1116,7 @@ class Simulation:
 
     def onset_v2_method(self):
         txp_count_dict = self.wolf.get_txp_count() # Maps node NAMES to their total transponders.
-        optimizer = Link_optimization(
+        self.optimizer = optimizer = Link_optimization(
             G                   = self.wolf.logical_graph,
             demand_matrix_file  = self.temp_tm_i_file,
             network             = self.network_name,
@@ -1136,8 +1139,13 @@ class Simulation:
         # optimizer.LINK_CAPACITY *= max_load
         optimizer.LINK_CAPACITY = 2**64
         self.opt_time = optimizer.onset_v1_1()
-        
-        # opt_time = optimizer.onset_v1_1_no_cap()
+        self.adapt_topology()
+
+        self.sig_add_circuits = False
+        return
+
+    def adapt_topology(self): 
+        optimizer = self.optimizer 
         self.new_circuit = optimizer.get_links_to_add()
         self.chaff = optimizer.get_links_to_drop()
         
@@ -1170,8 +1178,7 @@ class Simulation:
         #     print("Could Not Add New Circuit")
         #     self.exit_early = True
 
-        self.sig_add_circuits = False
-        return
+
 
     def OTP_method(self):
         edge_congestion_file = path.join(
@@ -1290,13 +1297,25 @@ class Simulation:
         return
         
     def doppler_method(self):
-        optimizer = Link_optimization(
-            G=self.wolf.logical_graph,
-            demand_matrix_file=self.temp_tm_i_file,
-            network=self.network_name,
-            core_G=self.wolf.base_graph.copy(as_view=True),
-        )
+        # optimizer = Link_optimization(
+        #     G=self.wolf.logical_graph,
+        #     demand_matrix_file=self.temp_tm_i_file,
+        #     network=self.network_name,
+        #     core_G=self.wolf.base_graph.copy(as_view=True),
+        # )
         # optimizer.run_model()
+        txp_count_dict = self.wolf.get_txp_count() # Maps node NAMES to their total transponders.
+        self.optimizer = optimizer = Link_optimization(
+            G                   = self.wolf.logical_graph,
+            demand_matrix_file  = self.temp_tm_i_file,
+            network             = self.network_name,
+            core_G              = self.wolf.base_graph.copy(as_view=True),
+            txp_count           = txp_count_dict,
+            use_cache           = True,
+            compute_paths       = True,
+            candidate_set       = self.candidate_link_choice_method 
+        )
+
         if self.te_method == "-ecmp":
             self.max_load = 0.5
             if self.shakeroute:
@@ -1311,32 +1330,7 @@ class Simulation:
         add_links = []
         drop_links = []
         # optimizer.LINK_CAPACITY *= max_load
-        add_links, drop_links = optimizer.doppler()
-        # result_topo, add_links, drop_links = optimizer.optimize()
-        # result_topo, add_links, drop_links = optimizer.run_model_max_diff_ignore_demand()
-
-        circuit_tag = ""
-        self.new_circuit = add_links[:]
-        if drop_links:
-            for drop_circuit in drop_links:
-                u, v = drop_circuit
-                self.wolf.drop_circuit(u, v)
-
-        if add_links:
-            for nc in self.new_circuit:
-                u, v = nc
-                if circuit_tag == "":
-                    circuit_tag += f"circuit-{u}-{v}"
-                else:
-                    circuit_tag += f".{u}-{v}"
-
-                self.wolf.add_circuit(u, v)
-
-            self.circuits_added = True
-            # flux_circuits.extend(new_circuit)
-
-        # elif new_circuit == []:
-        #     print("Could Not Add New Circuit")
-        #     self.exit_early = True
+        self.opt_time = optimizer.doppler()                 
+        self.adapt_topology()
 
         self.sig_add_circuits = False        

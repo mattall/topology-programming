@@ -94,6 +94,7 @@ class Link_optimization:
 
         self.nodes = self.core_G.nodes
         self.use_cache = use_cache
+        # self.use_cache = False
         self.PARALLEL = parallel_execution
         self.k = 1
         self.MAX_DISTANCE = 5000  # km
@@ -271,10 +272,9 @@ class Link_optimization:
                 ) not in candidate_links:
                     shortest_paths = list(
                         nx.all_shortest_paths(core_G, source, target))
-                    shortest_path_len = len(shortest_paths[0])
-                    shortest_path_hops = shortest_path_len - 1
+                    shortest_path_len = len(shortest_paths[0]) - 1                    
                     self.update_shortest_path_len(shortest_path_len, source, target)
-                    if shortest_path_hops == 2:
+                    if shortest_path_len == 2:
                         hop_dist_ok = True
                     else:
                         hop_dist_ok = False
@@ -401,7 +401,8 @@ class Link_optimization:
                 '''
                 
                 for s, t in tqdm(self.all_node_pairs, desc="Pre-computing paths."):
-                    if s not in self.tunnel_dict or t not in self.tunnel_dict[s]:
+                    # if s not in self.tunnel_dict or t not in self.tunnel_dict[s]:
+                    if self.tunnel_dict[s][t] == []:
                         s_t_paths = nx.shortest_simple_paths(super_graph, s, t)
                         shortest_s_t_path_len = self.core_shortest_path_len[s][t]
                         for s_t_path in tqdm(
@@ -440,11 +441,19 @@ class Link_optimization:
         except:
             G = self.G.copy(as_view=True)
             for source, target in tqdm(self.all_node_pairs, desc="Pre-computing paths."):
-                if source not in self.core_shortest_path_len or target not in self.core_shortest_path_len[source]:
-                    shortest_s_t_path_len \
-                        = self.core_shortest_path_len[source][target] \
-                        = self.core_shortest_path_len[target][source] \
-                        = nx.shortest_path_length(G, source, target)
+                # if source not in self.core_shortest_path_len or target not in self.core_shortest_path_len[source]:
+
+                if self.core_shortest_path_len[source][target] < float('inf'):
+                    shortest_s_t_path_len = self.core_shortest_path_len[source][target]
+                else:
+                    shortest_s_t_path_len = nx.shortest_path_length(G, source, target)
+                    self.update_shortest_path_len(shortest_s_t_path_len, source, target)                    
+                    # shortest_s_t_path_len \
+                    #     = self.core_shortest_path_len[source][target] \
+                    #     = self.core_shortest_path_len[target][source] \
+                    #     = nx.shortest_path_length(G, source, target)
+                
+                if self.original_tunnel_dict[source][target] == []:                
                     s_t_paths = nx.shortest_simple_paths(G, source, target)
                     for s_t_path in tqdm(s_t_paths, desc="Path", leave=False):
                         if len(s_t_path) - 1 > shortest_s_t_path_len:
@@ -469,13 +478,16 @@ class Link_optimization:
         return
 
     def save_paths(self):
+        output_file = f"./data/paths/optimization/{self.network}_{self.candidate_set}.json"
         with open(
-            f"./data/paths/optimization/{self.network}_{self.candidate_set}.json", "w"
+            output_file, "w"
         ) as fob:
-            return json.dump({"list": self.tunnel_list, 
+            json.dump({"list": self.tunnel_list, 
                               "tunnels": self.tunnel_dict}, fob)
-        
-
+            
+        logger.info(f"Computed paths and saved to {output_file}.")
+        return 
+    
     def load_original_paths(self):
         with open(
             "./data/paths/optimization/{}_original_tunnel_list.json".format(self.network),
@@ -536,7 +548,8 @@ class Link_optimization:
         LINK_CAPACITY = self.LINK_CAPACITY
 
         m = self.model = Model("Doppler")
-
+        m.setParam("PoolSearchMode", 2)
+        m.setParam("PoolSolutions", 2)
         # Convert the graph to a directed graph
 
         G_0 = self.G.copy(as_view=True).to_directed()
@@ -644,6 +657,7 @@ class Link_optimization:
         )
 
         # Optimize the model
+        
         start = process_time()
         m.optimize()
         end = process_time()
