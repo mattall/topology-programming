@@ -33,19 +33,37 @@
 topology-programming
 ====================
 
-install package with `pip install .`
+Install
+=======
+
+Install the package with `pip install .`
+You may want to run this within a virtual environment. 
 
 Note: **use pip version 22.3.1**, *do not use 23.1.2*.
 
-with 23.1.2, One dependency, tmgen will not install. 
+If you have a later version, you can use the command bellow.
+`python -m pip install --upgrade pip==22.3.1``
 
-A longer description of your project goes here...
+In later versions one dependency, tmgen will not install.
+
+Run
+=======
+
+The main program is `src/onset/simulator.py`
+
+Examples that load and run the `Simulation` module are in `scrips/`.
+
+The simulator can be run from the command line with `src/onset/net_sim.py`.
+
+The command-line version of the program expects 3 arguments minimum.
+
+1. A network name, this name should have a `.gml` or `.json` file containing the network graph in `data/graphs/{json, gml}/` (the file suffix is *not* expected by the command line interpreter).
+
+2. The number of nodes in the network.
+
+3. A name for the experiment to run. This will inform the program where to save the output and results within `data/results/`.
+
+There are more arguments that you may pass. Changing the set of parameters will also change the output file destination.
+A full list of arguments and their description can be viewed by running `python src/onset/net_sim.py --help`.
 
 
-.. _pyscaffold-notes:
-
-Note
-====
-
-This project has been set up using PyScaffold 4.4.1. For details and usage
-information on PyScaffold see https://pyscaffold.org/.
