@@ -36,13 +36,13 @@ topology-programming
 Install
 =======
 
-Install the package with `pip install .`
+Install the package with ``pip install .``
 You may want to run this within a virtual environment. 
 
 Note: **use pip version 22.3.1**, *do not use 23.1.2*.
 
 If you have a later version, you can use the command bellow.
-`python -m pip install --upgrade pip==22.3.1``
+``python -m pip install --upgrade pip==22.3.1``
 
 In later versions one dependency, tmgen will not install.
 
