@@ -57,7 +57,7 @@ The simulator can be run from the command line with ``src/onset/net_sim.py``.
 
 The command-line version of the program expects 3 arguments minimum.
 
-1. A network name, this name should have a ``.gml`` or ``.json`` file containing the network graph in ``data/graphs/{json, gml}/`` (the file suffix is *not* expected by the command line interpreter).
+1. A network name, this name should have a ``.gml`` or ``.json`` file containing the network graph in ``data/graphs/{gml, json}/`` (the file suffix is *not* expected by the command line interpreter, the file should be one of these two folders/formats. First, the program will check for it in ``data/graphs/gml/``, and if it's not there it will look in ``data/graphs/json/``).
 
 2. The number of nodes in the network.
 
