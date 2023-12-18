@@ -50,8 +50,8 @@ def experiment(args):
         congestion_threshold_upper_bound=0.99999,
         congestion_threshold_lower_bound=0.99999,
     )
-    demand_factor = float(scale) * mcf_loss_factor[network][t_class]
-    tracked_vars = ["Congestion", "Loss", "Throughput"]
+    demand_factor = float(scale) #* mcf_loss_factor[network][t_class]
+    tracked_vars = ["Congestion", "Loss", "Throughput", "n_solutions"],
     file_of_var = { "Congestion": "MaxExpCongestionVsIterations.dat",
                     "Loss":"CongestionLossVsIterations.dat",
                     "Throughput": "TotalThroughputVsIterations.dat",
@@ -121,14 +121,26 @@ if __name__ == "__main__":
     # te = "semimcfraekeft"
     # tp = "greylambda"
 
-    # network = "Campus"
+    network = "Campus"
     # network = "four-node"
-    network = "areon"
+    # network = "areon"
     traffic = "background"
-    scale = "1.0"
+    scale = "0.5"
     te = "mcf"
     tp = "Doppler"
-    experiment((network,traffic,scale,te,tp))
+    PARALLEL = True
+    if PARALLEL: 
+        pool = multiprocessing.Pool()
+        
+        experiment_params = [(network,traffic,scale,te,tp) for scale in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]]
+
+        pool.map_async(
+            experiment, 
+            experiment_params)
+        pool.close()
+        pool.join()
+    else:
+        experiment((network,traffic,scale,te,tp))
 
     # args = ("Comcast","background","0.8","mcf","greylambda")
     # args = ("Comcast","background-plus-flashcrowd","0.3","mcf","greylambda")
