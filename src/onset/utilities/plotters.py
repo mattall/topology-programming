@@ -55,6 +55,7 @@ def draw_graph(
     # pprint(G.nodes())
     # pos = spring_layout(G)
     # pprint(pos)
+    fig, ax = plt.subplots()
     draw(
         G,
         pos,
@@ -62,6 +63,7 @@ def draw_graph(
         with_labels=with_labels,
         edge_color=edge_color,
     )
+    plt.draw()
     plt.savefig(name.replace('.',''))
     print(f"saved image to: {name}")
     plt.close()

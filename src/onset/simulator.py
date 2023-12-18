@@ -261,7 +261,7 @@ class Simulation:
         if self.shakeroute:
             result_path = path.join(self.network_name, result_path)
         command_args = [
-            "yates",
+            "~/.opam/4.06.0/bin/yates",
             topo_file,
             traffic_file,
             traffic_file,
@@ -477,7 +477,7 @@ class Simulation:
         if end_iter == 0:
             end_iter = self.iterations
 
-        return_data = {
+        return_data = self.return_data = {
             "Iteration": [],
             "Experiment": [],
             "Strategy": [],
@@ -494,6 +494,7 @@ class Simulation:
             "Throughput": [],
             "Link Bandwidth Coefficient": [],
             "Demand Factor": [],
+            "n_solutions": [],
         }
         return_data = defaultdict(list)
         self.circuits_added = False
@@ -665,8 +666,11 @@ class Simulation:
                 self.TBE_method()
 
             # Net Recon Defense Method
-            elif self.topology_programming_method == "Doppler":                
+            elif ( self.topology_programming_method == "Doppler"
+                #   and self.sig_add_circuits
+            ):
                 self.doppler_method()
+                
 
             # Template for new TP methods
             else:
@@ -1331,6 +1335,10 @@ class Simulation:
         drop_links = []
         # optimizer.LINK_CAPACITY *= max_load
         self.opt_time = optimizer.doppler()                 
+        self.return_data["n_solutions"].append(
+            len(optimizer.unique_solutions())
+        )
         self.adapt_topology()
+        
 
         self.sig_add_circuits = False        

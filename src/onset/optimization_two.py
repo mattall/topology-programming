@@ -133,8 +133,37 @@ class Link_optimization:
         assert nx.is_strongly_connected(new_G.to_directed(as_view=True))
         self.links_to_add = links_to_add
         self.links_to_drop = links_to_drop
-
+        
         return 0
+
+    def unique_solutions(self):
+        edge_vars = self.edge_vars
+        m = self.model
+        sol_set = set()
+        for i in range(m.SolCount): 
+            m.setParam("SolutionNumber", i)
+            sol_id = "".join([ "0" if edge_vars[e].xn == 0 else "1" for e in edge_vars ])
+            sol_set.add(sol_id)
+            # print(f"Solution Number: {i}\t\tedge_vars[('1','3')].xn: {edge_vars[('1','3')].xn}")
+            diff = self.diff_xn()
+            if max(diff.values()) > 10**-9:
+                break
+        return sol_set
+
+
+        # self.new_G = new_G = nx.Graph()
+        # for (u, v) in edge_vars: 
+        #     if edge_vars[(u, v)].x == 1:
+        #         new_G.add_edge(u, v)
+            
+        # links_to_add = [e for e in new_G.edges if e not in self.G.edges]
+        # links_to_drop = [e for e in self.G.edges if e not in new_G.edges]
+        # assert nx.is_strongly_connected(new_G.to_directed(as_view=True))
+        # self.links_to_add = links_to_add
+        # self.links_to_drop = links_to_drop
+        
+        # return 0
+
         
     def write_iss(self, verbose=False):
         m = self.model
@@ -215,7 +244,7 @@ class Link_optimization:
         for (i, j), (source, dest) in zip(
             permutations(range(len(self.G.nodes)), 2), self.all_node_pairs
         ):
-            self.demand_dict[(source, dest)] = float(self.demand_matrix[dim * i + j])
+            self.demand_dict[(source, dest)] = float(self.demand_matrix[dim * i + j]) // 10**8
 
     def update_shortest_path_len(self, this_path_len, source, target):
         prev_path_len = self.core_shortest_path_len[source][target]
@@ -520,6 +549,7 @@ class Link_optimization:
         ) as fob:
             return json.dump({"tunnels": self.original_tunnel_dict}, fob)
 
+    
     def get_flow_allocations(self):
         m = self.model
         flow_vars = self.flow_vars
@@ -545,17 +575,299 @@ class Link_optimization:
                     logger.info(f"Path: {path['path']} - Weight: {path['weight']}")
 
     def doppler(self):
-        LINK_CAPACITY = self.LINK_CAPACITY
+        LINK_CAPACITY = self.LINK_CAPACITY // 10**8
 
         m = self.model = Model("Doppler")
         m.setParam("PoolSearchMode", 2)
-        m.setParam("PoolSolutions", 2)
+        m.setParam("PoolSolutions", 100)
+        m.setParam("TimeLimit", 60*5)
         # Convert the graph to a directed graph
 
         G_0 = self.G.copy(as_view=True).to_directed()
         directionless_edges = self.super_graph.edges
         G_prime = self.super_graph.to_directed()
+        demand = self.demand_dict 
+
+        # Graphs should only differ in edges
+        assert set(G_0.nodes) == set(G_prime.nodes)
+
+        # Get transponder count
+        txp_count = self.txp_count
+
+        # Get the list of nodes and edges
+        nodes = list(G_0.nodes)
+        initial_edges = list(G_0.edges)
+        prime_edges = self.prime_edges = list(G_prime.edges)
+
+        # Add integer variables for node degree
+        # node_degree_vars = m.addVars(
+        #     len(nodes), vtype=GRB.INTEGER, name="node_degree", lb=0
+        # )
+
+        node_degree_vars = m.addVars(
+            nodes, vtype=GRB.INTEGER, name="node_degree", lb=0
+        ) 
+
+        # Edge vars that can be toggled on or off.
+        
+        edge_vars = m.addVars(prime_edges, 
+            vtype=GRB.BINARY, name="edge")
+
+        # Initial edges, a constant vector accessible the same as edge_vars
+        initial_edge_vars = tupledict(
+            {(u, v): 1 if (u, v) in initial_edges else 0 for (u, v) in prime_edges}
+        )
+
+        # The overlapping set of edges for initial_edge_vars and edge_vars
+        link_intersection = m.addVars(
+            prime_edges,
+            vtype=GRB.BINARY,
+            name="link_intersection",
+        )
+        m.addConstrs(
+            link_intersection[(u, v)] == min_(edge_vars[u, v], initial_edge_vars[u, v])
+            for (u, v) in prime_edges
+        )
+
+        # Enforce max degree based on transponders at each node
+        # for v_idx, vertex in enumerate(nodes):
+        #     m.addConstr(
+        #         node_degree_vars[v_idx]
+        #         == sum(
+        #             edge_vars[u, v]
+        #             for (u, v) in edge_vars
+        #             # if u == vertex or v == vertex
+        #             if u == vertex  # only interested in originating match
+        #         )
+        #     )
+        #     m.addConstr(txp_count[vertex] >= node_degree_vars[v_idx])
+        
+        for vertex in nodes:
+            m.addConstr(node_degree_vars[vertex] == edge_vars.sum(vertex, "*"))            
+            m.addConstr(txp_count[vertex] >= node_degree_vars[vertex])
+
+        # Add flow variables for commodities and edges
+        flow_vars = m.addVars(
+            [(s, t, u, v) for ((s, t), (u, v)) in product(demand.keys(), prime_edges)
+            if s != v and t != u ], vtype=GRB.CONTINUOUS, name="flow"
+        )
+        self.flow_keys = flow_vars.keys()
+
+        # the sum of (flows that traverse n from another node) and (flows that originate from n).        
+        inflow = tupledict(
+            {
+            (source, target, node) : 
+                flow_vars.sum(source, target, "*", node) 
+                for (source, target), node in product(demand.keys(), nodes)
+                if source != node
+            }
+        )
+
+        # convenience var to query throughput (inflow/demand) for sub-optimal solutions
+        inflow_var = m.addVars(inflow, name="inflow")
+        m.addConstrs( (inflow[s, t, n] == inflow_var[s, t, n] for (s, t, n) 
+                       in inflow), name="inflow")
+
+        outflow = tupledict(
+            {
+            (source, target, node) : 
+                flow_vars.sum(source, target, node, "*") 
+                for (source, target), node in product(demand.keys(), nodes)
+                if target != node
+            }
+        )   
+
+        for (source, target), node in  product(demand.keys(), nodes):            
+            inflw = 0 if source == node else inflow[source, target, node]
+            outflw = 0 if target == node else outflow[source, target, node]
+            dmnd = demand[source, target]
+            if node == source: 
+                # m.addConstr( inflw + dmnd == outflw, f"node_flow[{source},{target},{node}]")
+                m.addConstr( inflw - outflw == -dmnd, f"node_flow[{source},{target},{node}]")
+            elif node == target: 
+                # m.addConstr( inflw - dmnd == outflw, f"node_flow[{source},{target},{node}]" )
+                m.addConstr( inflw - outflw == dmnd, f"node_flow[{source},{target},{node}]" )
+            else: 
+                m.addConstr( inflw == outflw, f"node_flow[{source},{target},{node}]" )
+
+        # Add conservation of flow constraints for nodes and commodities
+        # for node in nodes:
+        #     for source, target in demand.keys():
+        #         inflow = quicksum(
+        #             flow_vars[source, target, u, v] for (u, v) in G_prime.in_edges(node)
+        #         )
+        #         outflow = quicksum(
+        #             flow_vars[source, target, u, v]
+        #             for (u, v) in G_prime.out_edges(node)
+        #         )
+        #         if node == source:
+        #             m.addConstr(inflow - outflow == -demand[source, target])
+        #         elif node == target:
+        #             m.addConstr(inflow - outflow == demand[source, target])
+        #         else:
+        #             m.addConstr(inflow - outflow == 0)
+
+        # Add capacity constraints for edges
+        
+        edge_capacity = m.addVars(
+            prime_edges, lb=0, ub=LINK_CAPACITY, name="edge_capacity"
+        )                
+        link_util = m.addVars( prime_edges, name="link_util" )
+
+        # for u, v in prime_edges:                    
+        #     m.addConstr(
+        #         flow_vars.sum("*", "*", u, v) <= edge_capacity[u, v], 
+        #         f"util[{u},{v}]"
+        #     )
+
+        m.addConstrs(
+            flow_vars.sum("*", "*", u, v) >= link_util[u, v]
+            for u, v in prime_edges
+        )
+
+        m.addConstrs(
+            flow_vars[source, target, u, v] <= demand[source, target]
+            for source, target, u, v in flow_vars            
+        )
+
+        m.addConstrs(
+            edge_capacity[u, v] >= flow_vars.sum("*", "*", u, v) 
+            for u, v in prime_edges
+        )
+        # Enforce symetrical bi-directional capacity
+        for u, v in directionless_edges:
+            m.addConstr(edge_capacity[u, v] == edge_capacity[v, u])
+
+        # Add binary constraint on edges
+        for u, v in prime_edges:
+            m.addConstr(edge_capacity[u, v] == edge_vars[(u, v)] * LINK_CAPACITY)
+
+        # Set the objective to minimize the total flow
+        # m.setObjective(quicksum(flow_vars[source, target, u, v] for (source, target) in demand.keys() for (u, v) in prime_edges), sense=GRB.MINIMIZE)
+        # m.setObjective(
+        #     quicksum(link_intersection[u, v] for (u, v) in prime_edges),
+        #     sense=GRB.MINIMIZE,
+        # )
+
+        maxLinkUtil = m.addVar(lb = 0, name="MaxLinkUtil")
+        
+        
+        m.addConstr( maxLinkUtil == max_(link_util) )
+
+        # m.setObjective( maxLinkUtil, sense=GRB.MINIMIZE )
+        m.setObjective(
+            quicksum(link_intersection[u, v] for (u, v) in prime_edges),
+            sense=GRB.MINIMIZE,
+        )        
+
+        # Optimize the model
+        
+        start = process_time()
+        m.optimize()
+        end = process_time()
+        opt_time = start - end
+        self.flow_vars = flow_vars
+        if m.status == GRB.Status.OPTIMAL:
+            logger.info("Optimal solution found.")
+            self.populate_changes(edge_vars)
+
+        else:
+            logger.error("No optimal solution found.")
+            if self.debug: 
+                self.write_iss()
+        self.edge_vars = edge_vars
+        return opt_time
+
+    def _flow_util(self, flow_vars, s, t):
+        # returns dictionary of edges to utilization (float) for edges of a 
+        # flow demand (s, t)
+        
+        return {tuple(fv.VarName[5:-1].split(",")[2:]) : 
+                fv.xn for fv in flow_vars.select(s, t, "*", "*") if fv.xn > 0}
+
+    def flow_util(self, flow_vars, s=None, t=None):
+        # returns flow utilization by edge for each edge by each flow.
+        flow_util = {}
+        if (s, t) == (None, None):
+            for s, t in self.demand_dict:
+                flow_util[s, t] = self._flow_util(flow_vars, s, t)
+        else:
+            flow_util = self._flow_util(flow_vars, s, t)
+        return flow_util
+
+
+    def verify_flows(self, flow_util): 
+        # ensure that all edge flows for a demand are less than or equal to 
+        # the given demand. 
         demand = self.demand_dict
+        for source, target in flow_util: 
+            for edge in flow_util[source, target]: 
+                assert flow_util[source, target][edge] <= demand[source, target]
+
+    def verify_flows_xn(self, flow_vars): 
+        # ensure that all edge flows for a demand are less than or equal to 
+        # the given demand. 
+        # Works on the `xn` solution. 
+        demand = self.demand_dict
+        for source, target, u, v in flow_vars: 
+            try: 
+                assert flow_vars[source, target, u, v].xn - demand[source, target] <= 10**-9
+            except AssertionError: 
+                logger.error(f"Flow inconsistency: Flow {source, target} on {u, v} greater than {demand[source, target]}. Got: {flow_vars[source, target, u, v].xn}")
+
+
+    def inflow_xn(self): 
+        m = self.model
+        demand = self.demand_dict
+        nodes = self.nodes
+        inflow = {}
+        for source, target in demand:
+            in_edges = [ine for ine, _ in self.prime_edges if _ == target]
+            in_flows = [m.getVarByName(f"flow[{source},{target},{ine},{target}]").xn for ine in in_edges]
+            inflow[source, target] = sum(in_flows)
+        
+        return inflow
+
+    def diff_xn(self):
+        # Difference between flow into a node from its originating demand and 
+        # that demand. 
+        inflw = self.inflow_xn() 
+        demand = self.demand_dict
+        return {(s, d): abs(inflw[s,d] - demand[s,d]) for s, d in demand}
+
+    def fulfillment(self, node, inflow): 
+        return inflow.sum( '*', node, node ).getValue()
+
+    def fulfillment_rate(self, inflow, node=None): 
+        rate = {}
+        if node == None: 
+            for n in self.nodes: 
+                rate[n] = self._fulfillment_rate(inflow, n)
+        else: 
+            return self._fulfillment_rate(self, inflow, node)            
+        return rate
+    
+    def _fulfillment_rate(self, inflow, node):        
+        demand = self.demand_dict
+        total_demand = sum( demand[_, v] for (_, v) in demand if v == node)
+        fulfilled = inflow.sum( '*', node, node ).getValue()
+        if total_demand > 0: 
+            return total_demand / fulfilled
+        else: 
+            return f"NaN: {total_demand} / {fulfilled}"
+
+    def doppler_0(self):
+        LINK_CAPACITY = self.LINK_CAPACITY // 10**8
+
+        m = self.model = Model("Doppler")
+        # m.setParam("PoolSearchMode", 2)
+        # m.setParam("PoolSolutions", 101)
+        # Convert the graph to a directed graph
+
+        G_0 = self.G.copy(as_view=True).to_directed()
+        directionless_edges = self.super_graph.edges
+        G_prime = self.super_graph.to_directed()
+        demand = self.demand_dict 
 
         # Graphs should only differ in edges
         assert set(G_0.nodes) == set(G_prime.nodes)
@@ -673,6 +985,7 @@ class Link_optimization:
                 self.write_iss()
 
         return opt_time
+
 
     def onset_v1(self):
         super_graph = self.super_graph
@@ -1120,6 +1433,35 @@ class Link_optimization:
 
         return opt_time
 
+    def edge_util(self, u=None, v=None):
+        if (u, v) == (None, None):
+            m = self.model
+            util = defaultdict(lambda: defaultdict(float))
+            for (u, v) in self.prime_edges:
+                util[u][v] = quicksum(
+                # sum of flow each `s` to `t` flow that travels link (u,v).
+                m.getVarByName( f"flow[{s},{t},{u},{v}]" ).xn 
+                for s, t in self.all_node_pairs 
+            )
+            # print(f"({u}, {v}): {util}")
+            return util
+        
+        elif (u, v) in self.prime_edges:
+            # find the aggregate flow that uses the link (u,v).
+            m = self.model        
+            util = quicksum(
+                # sum of flow each `s` to `t` flow that travels link (u,v).
+                m.getVarByName( f"flow[{s},{t},{u_i},{v_i}]" ).xn 
+                for s, t, u_i, v_i in self.flow_keys if (u, v) == (u_i, v_i)
+            )
+            return util
+
+        else:
+            raise KeyError(f"({u},{v}) not found in possible edge set, self.prime_edges.")
+
+    def max_edge_util(self):
+        return max( self.edge_util(u, v).getValue() for (u, v) in self.prime_edges )
+
     def onset_v1_1(self):
         LINK_CAPACITY = self.LINK_CAPACITY
         # super_paths_list = self.tunnel_list
@@ -1501,6 +1843,7 @@ class Link_optimization:
             logger.error("No optimal solution found.")
             if self.debug: 
                 self.write_iss()
+        self.edge_vars = edge_vars
         return opt_time
 
         _, opt_time = clock(m.optimize)
