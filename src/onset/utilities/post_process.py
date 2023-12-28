@@ -423,6 +423,17 @@ def post_proc_timeseries(
         #                 xlabel="Attack Size (Gbps)", ylabel=ylabel, name=path.join(experiment2, m))
 
 
+def write_result_val(result_file: str, var_name, val, solver="N/A", iter="N/A", stddev="N/A") -> float:
+    if iter == "N/A" or iter == 0: 
+        with open(result_file, "w") as fob:
+            fob.write(f"# solver\titer\r{var_name}\tstddev\n")
+            fob.write(f"{solver}\t{iter}\r{val}\t{stddev}\n")
+    else: 
+        with open(result_file, "a") as fob:            
+            fob.write(f"{solver}\t{iter}\r{val}\t{stddev}\n")
+    return
+
+
 def read_result_val(result_file: str) -> float:
     with open(result_file, "r") as fob:
         fob.readline()  # skip first line.

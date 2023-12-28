@@ -97,8 +97,8 @@ class Link_optimization:
         # self.use_cache = False
         self.PARALLEL = parallel_execution
         self.k = 1
-        self.MAX_DISTANCE = 5000  # km
-        # self.MAX_DISTANCE = float("inf")  # km
+        # self.MAX_DISTANCE = 5000  # km
+        self.MAX_DISTANCE = float("inf")  # km
         self.LINK_CAPACITY = 100 * 10**9  # bps
         self.BUDGET = BUDGET
         self.super_graph = nx.Graph()
@@ -579,7 +579,7 @@ class Link_optimization:
 
         m = self.model = Model("Doppler")
         m.setParam("PoolSearchMode", 2)
-        m.setParam("PoolSolutions", 100)
+        m.setParam("PoolSolutions", 1000)
         m.setParam("TimeLimit", 60*5)
         # Convert the graph to a directed graph
 

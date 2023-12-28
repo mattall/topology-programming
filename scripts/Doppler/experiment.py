@@ -4,11 +4,12 @@ import os
 import errno
 sys.path.insert(0, "src/")
 sys.path.insert(0, "scripts/")
+from itertools import product
 from experiment_params import *
 from copy import deepcopy
+import multiprocessing
 
-DEBUG = False
-RERUN_OK = True
+
 
 def experiment(args):
     """Run one iteration of a topology programming experiment
@@ -32,6 +33,32 @@ def experiment(args):
     from onset.utilities.post_process import read_result_val
     from onset.simulator import Simulation
 
+    def get_result_path(sim):
+        #helper function 
+        result_path = my_sim.perform_sim(
+            repeat=repeat[tp_method], demand_factor=demand_factor, dry=True
+        )
+        # result_path = my_sim.perform_sim(repeat=repeat[tp_method], demand_factor=demand_factor)
+
+        return result_path
+
+
+    def check_complete(my_sim, tracked_vars, result):    
+        '''
+        Checks for a completed experiment. populates result data if complete, or raises FileNotFound error if not. 
+        '''
+        res_path = get_result_path(my_sim)                
+        for tv in tracked_vars:
+            if RERUN_OK: 
+                raise FileNotFoundError(
+                    errno.ENOENT, os.strerror(errno.ENOENT), res_path)
+            result[tv] = [
+                read_result_val( os.path.join(res_path, file_of_var[tv]) )
+                ]
+
+        logger.info(f"Read Congestion, Loss, Throughput values from: {res_path}")
+        return result, res_path
+
     pid = os.getpid()
     logger.info(f"Process-{pid} started with data: {args}")
     network, t_class, scale, te_method, tp_method = args
@@ -51,43 +78,27 @@ def experiment(args):
         congestion_threshold_lower_bound=0.99999,
     )
     demand_factor = float(scale) #* mcf_loss_factor[network][t_class]
-    tracked_vars = ["Congestion", "Loss", "Throughput", "n_solutions"],
+    tracked_vars = ["Congestion", "Loss", "Throughput", "n_solutions"]
     file_of_var = { "Congestion": "MaxExpCongestionVsIterations.dat",
                     "Loss":"CongestionLossVsIterations.dat",
                     "Throughput": "TotalThroughputVsIterations.dat",
+                    "n_solutions": "TotalSolutions.dat"
                    }
     result = {}
-    try:
 
-        def get_result_path(sim):
-            #helper function 
-            result_path = my_sim.perform_sim(
-                repeat=repeat[tp_method], demand_factor=demand_factor, dry=True
-            )
-            # result_path = my_sim.perform_sim(repeat=repeat[tp_method], demand_factor=demand_factor)
-
-            return result_path
-        
-        res_path = get_result_path(my_sim)                
-        for tv in tracked_vars:
-            if RERUN_OK: 
-                raise FileNotFoundError(
-                    errno.ENOENT, os.strerror(errno.ENOENT), res_path)
-            result[tv] = [
-                read_result_val( os.path.join(res_path, file_of_var[tv]) )
-                ]
-        logger.info(f"Read Congestion, Loss, Throughput values from: {res_path}")
-            
-    except FileNotFoundError:
-        logger.error(f"Failed to read Congestion, Loss, Throughput values. Expected them in: {res_path}")
-        if DEBUG:
-            pass
-        else:
-            result = my_sim.perform_sim(
-                demand_factor=demand_factor, repeat=repeat[tp_method]
-            )
-
-
+    try: 
+        assert use_cached_result, "Ignoring cached result. Starting new experiment"
+        result, expected_res_path = check_complete(my_sim, tracked_vars, result)        
+    except FileNotFoundError as e:
+        expected_res_path = e.filename
+        result = my_sim.perform_sim(
+            demand_factor=demand_factor, repeat=repeat[tp_method]
+        )
+    except AssertionError:
+        expected_res_path = get_result_path(my_sim)
+        result = my_sim.perform_sim(
+            demand_factor=demand_factor, repeat=repeat[tp_method]
+        )        
     report_path = f"data/reports/{experiment_name}.csv"
     if DEBUG:
         pass
@@ -96,7 +107,7 @@ def experiment(args):
         result = deepcopy(result)
         # make sure we have now found the correct result path. 
         curr_res_path = get_result_path(my_sim)
-        if curr_res_path == res_path:
+        if curr_res_path == expected_res_path:
             with open(report_path, "w") as report_fob:
                 report_fob.write(f"{network},{t_class},{scale},{te_method},{tp_method},")
                 for tv in tracked_vars:
@@ -110,10 +121,31 @@ def experiment(args):
             logger.info(f"Wrote report to {report_path}")
             return report_path
         else:
-            logger.error(f"After sim, result path does not match. Expected: {res_path} got: {curr_res_path}")
+            logger.error(f"After sim, result path does not match. Expected: {expected_res_path} got: {curr_res_path}")
     else:
         logger.error("Did not have a result to write. Execution of sim failed.")
 
+
+def concat_reports(experiment_signatures):
+    from glob import glob
+    def _concat_reports(reports_glob): 
+        summary_file = reports_glob[:-1] + ".csv"
+        summary_data = ""
+        for f in glob(reports_glob):
+            with open(f, 'r') as fob: 
+                summary_data += "".join(fob.readlines())
+        
+        with open(summary_file, 'w') as fob: 
+            fob.write(summary_data)
+
+    for es in experiment_signatures:
+        _concat_reports("data/reports/"+ '-'.join(es) + '*')
+
+
+DEBUG = False
+RERUN_OK = True
+PARALLEL = True
+# PARALLEL = False
 if __name__ == "__main__":
     # network = "Tinet"
     # traffic = "background"
@@ -121,27 +153,36 @@ if __name__ == "__main__":
     # te = "semimcfraekeft"
     # tp = "greylambda"
 
-    network = "Campus"
+    network = ["Campus"]
     # network = "four-node"
     # network = "areon"
-    traffic = "background"
-    scale = "0.5"
-    te = "mcf"
-    tp = "Doppler"
-    PARALLEL = True
+    traffic = ["background"]
+    # scale = ["0.5"]
+    # scale = ["0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0"]
+    # scale = ["1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8", "1.9", "2.0"]
+    scale = [str(i/10) for i in range(1,31) ]
+    te = ["mcf"]
+    tp = ["Doppler"]
+    use_cached_result = [False]
+    
+    experiment_params = product(network, traffic, scale, te, tp, use_cached_result)
+
     if PARALLEL: 
         pool = multiprocessing.Pool()
-        
-        experiment_params = [(network,traffic,scale,te,tp) for scale in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]]
-
         pool.map_async(
             experiment, 
             experiment_params)
         pool.close()
         pool.join()
     else:
-        experiment((network,traffic,scale,te,tp))
+        for e in experiment_params:
+            experiment(e)
+            break                                       
 
+    concat_reports(product(te, tp, network, traffic))
+    
+    
+    
     # args = ("Comcast","background","0.8","mcf","greylambda")
     # args = ("Comcast","background-plus-flashcrowd","0.3","mcf","greylambda")
     # experiment(*args)

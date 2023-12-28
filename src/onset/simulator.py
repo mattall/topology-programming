@@ -25,6 +25,7 @@ from onset.utilities.plotters import (
 from onset.utilities.post_process import (
     read_link_congestion_to_dict,
     read_result_val,
+    write_result_val
 )
 from onset.utilities.sysUtils import count_lines
 from onset.utilities.tmg import rand_gravity_matrix
@@ -261,7 +262,7 @@ class Simulation:
         if self.shakeroute:
             result_path = path.join(self.network_name, result_path)
         command_args = [
-            "~/.opam/4.06.0/bin/yates",
+            "yates",
             topo_file,
             traffic_file,
             traffic_file,
@@ -496,7 +497,7 @@ class Simulation:
             "Demand Factor": [],
             "n_solutions": [],
         }
-        return_data = defaultdict(list)
+        return_data = self.return_data = defaultdict(list)
         self.circuits_added = False
 
         if CROSSFIRE == True:
@@ -542,8 +543,11 @@ class Simulation:
             else:
                 ITERATION_ID = f"{name}_{iter_i}-0-{iterations}_{sim_param_tag}"
 
-            ITERATION_REL_PATH = path.join(EXPERIMENT_ID, ITERATION_ID)
-            ITERATION_ABS_PATH = path.join(
+            self.ITERATION_ID = ITERATION_ID
+            self.ITERATION_REL_PATH = ITERATION_REL_PATH = path.join(
+                EXPERIMENT_ID, ITERATION_ID
+            )
+            self.ITERATION_ABS_PATH = ITERATION_ABS_PATH = path.join(
                 EXPERIMENT_ABSOLUTE_PATH, ITERATION_ID
             )
             if False: #dry:
@@ -669,7 +673,7 @@ class Simulation:
             elif ( self.topology_programming_method == "Doppler"
                 #   and self.sig_add_circuits
             ):
-                self.doppler_method()
+                self.doppler_method(iter_i)
                 
 
             # Template for new TP methods
@@ -805,15 +809,17 @@ class Simulation:
                 self.sig_drop_circuits = True
 
             if self.sig_drop_circuits:
-                self.drop_circuits = self.flux_circuits[:]
-                if len(self.drop_circuits) > 0:
-                    for dc in self.drop_circuits:
-                        u, v = dc
-                        for _ in range(self.circuits):
-                            self.wolf.drop_circuit(u, v)
-                    self.flux_circuits = []
-                    self.circuits_added = False
-                    self.sig_drop_circuits = False
+                logger.info(f"Max link util, {iter_congestion}, below threshold, {self.congestion_threshold_upper_bound}. Reverting changes.")
+                self.adapt_topology(reverse=True)
+                # self.drop_circuits = self.flux_circuits[:]
+                # if len(self.drop_circuits) > 0:
+                #     for dc in self.drop_circuits:
+                #         u, v = dc
+                #         for _ in range(self.circuits):
+                #             self.wolf.drop_circuit(u, v)
+                #     self.flux_circuits = []
+                #     self.circuits_added = False
+                #     self.sig_drop_circuits = False
 
             # except BaseException as e:
             #     logger.error("Unknown Error", exc_info=True, stack_info=True)
@@ -1148,10 +1154,13 @@ class Simulation:
         self.sig_add_circuits = False
         return
 
-    def adapt_topology(self): 
-        optimizer = self.optimizer 
-        self.new_circuit = optimizer.get_links_to_add()
-        self.chaff = optimizer.get_links_to_drop()
+    def adapt_topology(self, reverse=False): 
+        optimizer = self.optimizer # 
+        if reverse: 
+            self.new_circuit, self.chaff = self.chaff, self.new_circuit
+        else:
+            self.new_circuit = optimizer.get_links_to_add()
+            self.chaff = optimizer.get_links_to_drop()
         
         circuit_tag = ""
         if type(self.chaff) == list and len(self.new_circuit) > 0:
@@ -1300,7 +1309,7 @@ class Simulation:
         # sig_add_circuits = False
         return
         
-    def doppler_method(self):
+    def doppler_method(self, iter="N/A"):
         # optimizer = Link_optimization(
         #     G=self.wolf.logical_graph,
         #     demand_matrix_file=self.temp_tm_i_file,
@@ -1338,6 +1347,8 @@ class Simulation:
         self.return_data["n_solutions"].append(
             len(optimizer.unique_solutions())
         )
+
+        write_result_val("TotalSolutions.dat", "n_solutions", len(optimizer.unique_solutions()), self.te_method, self.ITERATION_ID)
         self.adapt_topology()
         
 
