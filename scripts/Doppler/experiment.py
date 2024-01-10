@@ -9,8 +9,6 @@ from experiment_params import *
 from copy import deepcopy
 import multiprocessing
 
-
-
 def experiment(args):
     """Run one iteration of a topology programming experiment
 
@@ -32,6 +30,8 @@ def experiment(args):
     from onset.utilities.logger import logger
     from onset.utilities.post_process import read_result_val
     from onset.simulator import Simulation
+    SCALE_DOWN_FACTOR = 10**7
+    network, t_class, scale, te_method, tp_method, use_cached_result = args
 
     def get_result_path(sim):
         #helper function 
@@ -61,7 +61,7 @@ def experiment(args):
 
     pid = os.getpid()
     logger.info(f"Process-{pid} started with data: {args}")
-    network, t_class, scale, te_method, tp_method = args
+    
     experiment_name = "-".join((te_method, tp_method, network, t_class, scale))
     traffic_file = f"data/traffic/{t_class}_{network}-tm"
     my_sim = Simulation(
@@ -76,14 +76,20 @@ def experiment(args):
         topology_programming_method=tp_method,
         congestion_threshold_upper_bound=0.99999,
         congestion_threshold_lower_bound=0.99999,
+        scale_down_factor=SCALE_DOWN_FACTOR
     )
     demand_factor = float(scale) #* mcf_loss_factor[network][t_class]
-    tracked_vars = ["Congestion", "Loss", "Throughput", "n_solutions"]
+    
     file_of_var = { "Congestion": "MaxExpCongestionVsIterations.dat",
                     "Loss":"CongestionLossVsIterations.dat",
                     "Throughput": "TotalThroughputVsIterations.dat",
-                    "n_solutions": "TotalSolutions.dat"
+                    "n_solutions": "TotalSolutions.dat",
+                    "doppler_min_mlu": "DopplerMinMLU.dat",
+                    "opt_time": "OptTime.dat",
+                    "Current Topology ID": "CurrTopoID.dat",
+                    "Optimal Topology ID": "OptimalTopoID.dat"
                    }
+    tracked_vars = list(file_of_var.keys())
     result = {}
 
     try: 
@@ -118,6 +124,11 @@ def experiment(args):
                             report_fob.write(f"{result[tv][-1]}\n")
                         else:
                             report_fob.write(f"{result[tv][-1]},")
+                    else:
+                        if tv == tracked_vars[-1]:
+                            report_fob.write(f"NaN\n")
+                        else:
+                            report_fob.write(f"NaN,")
             logger.info(f"Wrote report to {report_path}")
             return report_path
         else:
@@ -130,13 +141,15 @@ def concat_reports(experiment_signatures):
     from glob import glob
     def _concat_reports(reports_glob): 
         summary_file = reports_glob[:-1] + ".csv"
-        summary_data = ""
-        for f in glob(reports_glob):
+        # summary_data = "Network,Traffic,Demand Scale,TE,TP,Max Link Utilization,Loss,Throughput,Total Solutions,Doppler Min MLU,Opt Time\n"
+        summary_data = "Network,Traffic,Demand Scale,TE,TP,Max Link Utilization,Loss,Throughput,Total Solutions,Doppler Min MLU,Optimization Time,Topology ID,Optimal Topology ID\n"
+        for f in sorted(glob(reports_glob)):
             with open(f, 'r') as fob: 
                 summary_data += "".join(fob.readlines())
         
         with open(summary_file, 'w') as fob: 
             fob.write(summary_data)
+        print(f"Summarized report in: {summary_file}")
 
     for es in experiment_signatures:
         _concat_reports("data/reports/"+ '-'.join(es) + '*')
@@ -146,25 +159,29 @@ DEBUG = False
 RERUN_OK = True
 PARALLEL = True
 # PARALLEL = False
-if __name__ == "__main__":
+def main():
     # network = "Tinet"
     # traffic = "background"
     # scale = "1.4"
     # te = "semimcfraekeft"
     # tp = "greylambda"
 
-    network = ["Campus"]
-    # network = "four-node"
+    # network = ["Campus"]
+    network = ["Regional"]
+    # network = ["four-node"]
     # network = "areon"
     traffic = ["background"]
     # scale = ["0.5"]
     # scale = ["0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0"]
     # scale = ["1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8", "1.9", "2.0"]
-    scale = [str(i/10) for i in range(1,31) ]
+    # scale = [str(i/10) for i in range(1,31) ]
+    scale = [str(i/10) for i in range(25,28) ]    
+    scale = ["1"]
     te = ["mcf"]
     tp = ["Doppler"]
-    use_cached_result = [False]
-    
+    use_cached_result = [True]
+    time_limit = [60]
+    sol_limit = [1]
     experiment_params = product(network, traffic, scale, te, tp, use_cached_result)
 
     if PARALLEL: 
@@ -177,12 +194,13 @@ if __name__ == "__main__":
     else:
         for e in experiment_params:
             experiment(e)
-            break                                       
+            # break                                       
 
     concat_reports(product(te, tp, network, traffic))
-    
-    
     
     # args = ("Comcast","background","0.8","mcf","greylambda")
     # args = ("Comcast","background-plus-flashcrowd","0.3","mcf","greylambda")
     # experiment(*args)
+
+if __name__ == "__main__":
+    main()

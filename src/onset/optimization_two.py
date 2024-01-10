@@ -6,6 +6,8 @@ from multiprocessing import Pool
 from copy import deepcopy
 import json
 import pickle
+from base64 import b64encode
+from struct import pack
 
 # third-party
 from gurobipy import Model, GRB, quicksum, min_, max_, Env, tupledict
@@ -44,8 +46,12 @@ class Link_optimization:
         txp_count=None,
         BUDGET=1,
         compute_paths=False,
-        candidate_set="max"
+        candidate_set="max",
+        scale_down_factor = 1,
+        congestion_threshold_upper_bound = 0.8
     ):
+        self.SCALE_DOWN_FACTOR = scale_down_factor # to avoid numerical issues in optimization
+        self.congestion_threshold_upper_bound = congestion_threshold_upper_bound
         self.debug = False
         self.G = deepcopy(G)
         self.all_node_pairs = list(permutations(self.G.nodes, 2))
@@ -122,10 +128,13 @@ class Link_optimization:
         if compute_paths:
             self.get_shortest_paths()
 
-    def populate_changes(self, edge_vars):
+    def populate_changes(self, edge_vars=None):
+        if edge_vars == None: 
+            edge_vars = self.edge_vars
+
         self.new_G = new_G = nx.Graph()
         for (u, v) in edge_vars: 
-            if edge_vars[(u, v)].x == 1:
+            if edge_vars[(u, v)].Xn == 1:
                 new_G.add_edge(u, v)
             
         links_to_add = [e for e in new_G.edges if e not in self.G.edges]
@@ -136,20 +145,55 @@ class Link_optimization:
         
         return 0
 
+    def get_topo_string_optimal(self):
+        ev = self.directionless_edge_vars
+        return "".join([ "0" if ev[e].x == 0 else "1" for e in ev ])
+
+    def get_topo_b64_optimal(self): 
+        return b64encode( pack( 'd', int( self.get_topo_string_optimal(), 2 )))
+            
+    
+    def get_topo_string_xn(self):
+        ev = self.directionless_edge_vars
+        return "".join([ "0" if ev[e].xn == 0 else "1" for e in ev ])
+
+    def get_topo_b64_xn(self): 
+        return  b64encode( pack( 'd', int( self.get_topo_string_xn(), 2 )))
+
     def unique_solutions(self):
         edge_vars = self.edge_vars
         m = self.model
-        sol_set = set()
+        self.sol_set = sol_set = {}
         for i in range(m.SolCount): 
-            m.setParam("SolutionNumber", i)
-            sol_id = "".join([ "0" if edge_vars[e].xn == 0 else "1" for e in edge_vars ])
-            sol_set.add(sol_id)
-            # print(f"Solution Number: {i}\t\tedge_vars[('1','3')].xn: {edge_vars[('1','3')].xn}")
-            diff = self.diff_xn()
-            if max(diff.values()) > 10**-9:
-                break
+            m.setParam("SolutionNumber", i)            
+            loss = self.diff_xn()
+            
+            # check that loss for all flows is ~0.
+            if max( loss.values() ) < 10**-9: 
+                sol_str = self.get_topo_string_xn()
+                
+                # replace previous sol_str if performance under this model is greater.                                                            
+                if sol_str in sol_set.values():
+                    this_mlu = self.maxLinkUtil.xn
+                    incumbent_sol_key = list(sol_set.keys())[list(sol_set.values()).index(sol_str)]
+                    m.setParam("SolutionNumber", incumbent_sol_key)
+                    incumbent_mlu = self.maxLinkUtil.xn
+                
+                    # replace incumbent
+                    if this_mlu < incumbent_mlu:
+                        logger.info(f"replacing incumbent solution (id={incumbent_sol_key}, mlu={incumbent_mlu}) with (id={i}, mlu={this_mlu})")
+                        del sol_set[incumbent_sol_key]
+                        sol_set[i] = sol_str
+                    
+                    # take no action... current solution is better.
+                    else: 
+                        pass                    
+                    # reset solNumber for current loop iter
+                    m.setParam("SolutionNumber", i)
+                
+                else:
+                    sol_set[i] = sol_str                                            
         return sol_set
-
 
         # self.new_G = new_G = nx.Graph()
         # for (u, v) in edge_vars: 
@@ -165,7 +209,7 @@ class Link_optimization:
         # return 0
 
         
-    def write_iss(self, verbose=False):
+    def write_iis(self, verbose=False):
         m = self.model
         m.computeIIS()
         if verbose:
@@ -241,10 +285,14 @@ class Link_optimization:
         """
         self.demand_dict = {}
         dim = int(np.sqrt(len(self.demand_matrix)))
+        COVERED=[]
         for (i, j), (source, dest) in zip(
             permutations(range(len(self.G.nodes)), 2), self.all_node_pairs
         ):
-            self.demand_dict[(source, dest)] = float(self.demand_matrix[dim * i + j]) // 10**8
+            COVERED.append(dim * i + j)
+            self.demand_dict[(source, dest)] = float(self.demand_matrix[dim * i + j]) / self.SCALE_DOWN_FACTOR
+            # self.demand_dict[(source, dest)] = float(self.demand_matrix[dim * i + j]) // self.SCALE_DOWN_FACTOR
+        return
 
     def update_shortest_path_len(self, this_path_len, source, target):
         prev_path_len = self.core_shortest_path_len[source][target]
@@ -575,12 +623,12 @@ class Link_optimization:
                     logger.info(f"Path: {path['path']} - Weight: {path['weight']}")
 
     def doppler(self):
-        LINK_CAPACITY = self.LINK_CAPACITY // 10**8
+        LINK_CAPACITY = self.LINK_CAPACITY // self.SCALE_DOWN_FACTOR
 
-        m = self.model = Model("Doppler")
-        m.setParam("PoolSearchMode", 2)
-        m.setParam("PoolSolutions", 1000)
-        m.setParam("TimeLimit", 60*5)
+        m = self.model = Model( "Doppler" )
+        m.setParam( "PoolSearchMode", 2 )
+        m.setParam( "PoolSolutions", 100 )
+        m.setParam( "TimeLimit", 60*5 ) # 5 minutes time limit
         # Convert the graph to a directed graph
 
         G_0 = self.G.copy(as_view=True).to_directed()
@@ -721,19 +769,25 @@ class Link_optimization:
         #     )
 
         m.addConstrs(
-            flow_vars.sum("*", "*", u, v) >= link_util[u, v]
+            flow_vars.sum("*", "*", u, v) <= link_util[u, v]
             for u, v in prime_edges
+        )
+        
+
+        m.addConstrs(
+            flow_vars.sum(source, target, '*', '*') >= demand[source, target]
+            for source, target in demand
         )
 
         m.addConstrs(
-            flow_vars[source, target, u, v] <= demand[source, target]
-            for source, target, u, v in flow_vars            
-        )
-
-        m.addConstrs(
-            edge_capacity[u, v] >= flow_vars.sum("*", "*", u, v) 
+            edge_capacity[u, v] >= link_util[u, v] 
             for u, v in prime_edges
         )
+
+        # m.addConstrs(
+        #     edge_capacity[u, v] >= flow_vars.sum("*", "*", u, v) 
+        #     for u, v in prime_edges
+        # )
         # Enforce symetrical bi-directional capacity
         for u, v in directionless_edges:
             m.addConstr(edge_capacity[u, v] == edge_capacity[v, u])
@@ -742,6 +796,12 @@ class Link_optimization:
         for u, v in prime_edges:
             m.addConstr(edge_capacity[u, v] == edge_vars[(u, v)] * LINK_CAPACITY)
 
+        directionless_edge_vars = m.addVars( 
+            directionless_edges,
+            name = "directionless_edges"
+        )
+        for u, v in directionless_edge_vars:
+            m.addConstr(directionless_edge_vars[u,v] == edge_vars[u,v])
         # Set the objective to minimize the total flow
         # m.setObjective(quicksum(flow_vars[source, target, u, v] for (source, target) in demand.keys() for (u, v) in prime_edges), sense=GRB.MINIMIZE)
         # m.setObjective(
@@ -749,33 +809,43 @@ class Link_optimization:
         #     sense=GRB.MINIMIZE,
         # )
 
-        maxLinkUtil = m.addVar(lb = 0, name="MaxLinkUtil")
+        absolute_maxLinkUtil = m.addVar( lb=0, name="absolute_maxLinkUtil" )
+        m.addConstr( absolute_maxLinkUtil == max_(link_util) )
+
+        maxLinkUtil = m.addVar( lb=0, ub=1, name="MaxLinkUtil" )
+        m.addConstr( maxLinkUtil == absolute_maxLinkUtil / LINK_CAPACITY )
+
+        m.addConstr( maxLinkUtil <= self.congestion_threshold_upper_bound )
+
+        graphSimilarity = m.addVar(name="graphSimilarity")
+        m.addConstr( graphSimilarity == quicksum( link_intersection[u, v] for (u, v) in prime_edges ))
         
-        
-        m.addConstr( maxLinkUtil == max_(link_util) )
 
         # m.setObjective( maxLinkUtil, sense=GRB.MINIMIZE )
-        m.setObjective(
-            quicksum(link_intersection[u, v] for (u, v) in prime_edges),
-            sense=GRB.MINIMIZE,
-        )        
-
-        # Optimize the model
+        m.setObjective( graphSimilarity + maxLinkUtil, sense=GRB.MINIMIZE )
         
+        m.update()
+        # Optimize the model        
         start = process_time()
         m.optimize()
         end = process_time()
-        opt_time = start - end
+        opt_time = end - start
         self.flow_vars = flow_vars
+        
         if m.status == GRB.Status.OPTIMAL:
-            logger.info("Optimal solution found.")
+            logger.info(f"Optimal solution found in {opt_time}s.")
             self.populate_changes(edge_vars)
-
         else:
-            logger.error("No optimal solution found.")
+            logger.error(f"No optimal solution found. Time spent: {opt_time}s.")
             if self.debug: 
-                self.write_iss()
+                self.write_iis()
+        
+        # Save relevant model variables to class.
+        self.maxLinkUtil = maxLinkUtil
         self.edge_vars = edge_vars
+        self.directionless_edge_vars = directionless_edge_vars
+        self.graphSimilarity = graphSimilarity
+
         return opt_time
 
     def _flow_util(self, flow_vars, s, t):
@@ -795,6 +865,27 @@ class Link_optimization:
             flow_util = self._flow_util(flow_vars, s, t)
         return flow_util
 
+    def get_max_link_util(self):
+        mlu = {}
+        m = self.model
+        maxLinkUtil = self.maxLinkUtil
+        for sol_i in self.sol_set: 
+            m.setParam("SolutionNumber", sol_i)
+            mlu[sol_i] = maxLinkUtil.Xn 
+
+        self.mlu = mlu
+        return mlu
+    
+    def get_lowest_mlu_solution(self):
+        if self.model.solCount < 0:
+            return float("NaN")
+        
+        try: 
+            return min(self.mlu, key=self.mlu.get)
+        except NameError:
+            self.get_max_link_util()
+            return min(self.mlu, key=self.mlu.get)
+
 
     def verify_flows(self, flow_util): 
         # ensure that all edge flows for a demand are less than or equal to 
@@ -811,7 +902,7 @@ class Link_optimization:
         demand = self.demand_dict
         for source, target, u, v in flow_vars: 
             try: 
-                assert flow_vars[source, target, u, v].xn - demand[source, target] <= 10**-9
+                assert abs(flow_vars[source, target, u, v].xn - demand[source, target]) <= 10 ** -9
             except AssertionError: 
                 logger.error(f"Flow inconsistency: Flow {source, target} on {u, v} greater than {demand[source, target]}. Got: {flow_vars[source, target, u, v].xn}")
 
@@ -827,6 +918,9 @@ class Link_optimization:
             inflow[source, target] = sum(in_flows)
         
         return inflow
+    
+    def max_link_util_xn(self):
+        pass
 
     def diff_xn(self):
         # Difference between flow into a node from its originating demand and 
@@ -836,7 +930,7 @@ class Link_optimization:
         return {(s, d): abs(inflw[s,d] - demand[s,d]) for s, d in demand}
 
     def fulfillment(self, node, inflow): 
-        return inflow.sum( '*', node, node ).getValue()
+        return inflow.sum('*', node, node ).getValue()
 
     def fulfillment_rate(self, inflow, node=None): 
         rate = {}
@@ -857,7 +951,7 @@ class Link_optimization:
             return f"NaN: {total_demand} / {fulfilled}"
 
     def doppler_0(self):
-        LINK_CAPACITY = self.LINK_CAPACITY // 10**8
+        LINK_CAPACITY = self.LINK_CAPACITY // self.SCALE_DOWN_FACTOR
 
         m = self.model = Model("Doppler")
         # m.setParam("PoolSearchMode", 2)
@@ -976,13 +1070,13 @@ class Link_optimization:
         opt_time = start - end
         self.flow_vars = flow_vars
         if m.status == GRB.Status.OPTIMAL:
-            logger.info("Optimal solution found.")
+            logger.info(f"Optimal solution found in {opt_time}s.")
             self.populate_changes(edge_vars)
 
         else:
-            logger.error("No optimal solution found.")
+            logger.error(f"No optimal solution found. Time spent: {opt_time}s.")
             if self.debug: 
-                self.write_iss()
+                self.write_iis()
 
         return opt_time
 
@@ -1424,12 +1518,12 @@ class Link_optimization:
         opt_time = start - end
         self.flow_vars = flow_vars
         if m.status == GRB.Status.OPTIMAL:
-            logger.info("Optimal solution found.")
+            logger.info(f"Optimal solution found in {opt_time}s.")
             self.populate_changes(edge_vars)
         else:
-            logger.error("No optimal solution found.")
+            logger.error(f"No optimal solution found. Time spent: {opt_time}s.")
             if self.debug: 
-                self.write_iss()
+                self.write_iis()
 
         return opt_time
 
@@ -1651,7 +1745,7 @@ class Link_optimization:
         else:
             logger.error("No optimal solution found.")
             if self.debug: 
-                self.write_iss()
+                self.write_iis()
         return opt_time
     
     def onset_v1_1_no_cap(self):
@@ -1842,7 +1936,7 @@ class Link_optimization:
         else:
             logger.error("No optimal solution found.")
             if self.debug: 
-                self.write_iss()
+                self.write_iis()
         self.edge_vars = edge_vars
         return opt_time
 
@@ -1864,7 +1958,7 @@ class Link_optimization:
 
         else:
             logger.error("No optimal solution found.")
-            write_iss(m)
+            write_iis(m)
 
         return -1
 
@@ -2430,7 +2524,7 @@ class Link_optimization:
             else:
                 logger.error("No optimal solution found.")
                 if self.debug: 
-                    self.write_iss()
+                    self.write_iis()
             return opt_time
         
     def run_model_max_diff_ignore_demand(self):
@@ -2539,7 +2633,7 @@ class Link_optimization:
             else:
                 logger.error("No optimal solution found.")
                 if self.debug: 
-                    self.write_iss()
+                    self.write_iis()
             return opt_time
 
     def get_links_to_add(self):

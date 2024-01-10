@@ -424,13 +424,25 @@ def post_proc_timeseries(
 
 
 def write_result_val(result_file: str, var_name, val, solver="N/A", iter="N/A", stddev="N/A") -> float:
-    if iter == "N/A" or iter == 0: 
-        with open(result_file, "w") as fob:
-            fob.write(f"# solver\titer\r{var_name}\tstddev\n")
-            fob.write(f"{solver}\t{iter}\r{val}\t{stddev}\n")
-    else: 
+    if os.path.exists(result_file): 
         with open(result_file, "a") as fob:            
-            fob.write(f"{solver}\t{iter}\r{val}\t{stddev}\n")
+            fob.write(f"{solver}\t{iter}\t{val}\t{stddev}\n")
+    else: 
+        with open(result_file, "w") as fob:
+            fob.write(f"# solver\titer\t{var_name}\tstddev\n")
+            fob.write(f"{solver}\t{iter}\t{val}\t{stddev}\n")        
+    return
+
+def write_result_vals(result_file: str, id_name, val_name, val, solver="N/A", iter="N/A", stddev="N/A") -> float:
+    if os.path.exists(result_file):
+        with open(result_file, "a") as fob:            
+            for v in val:
+                fob.write(f"{solver}\t{iter}\t{v}\t{val[v]}\t{stddev}\n")     
+    else:
+        with open(result_file, "w") as fob:
+            fob.write(f"# solver\titer\t{id_name}\t{val_name}\tstddev\n")
+            for v in val:
+                fob.write(f"{solver}\t{iter}\t{v}\t{val[v]}\t{stddev}\n")
     return
 
 

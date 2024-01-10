@@ -1,5 +1,6 @@
 import sys
-from numpy import loadtxt, sqrt, array_equal
+from numpy import loadtxt, sqrt, array_equal, floor
+from pandas import DataFrame
 from itertools import combinations
 from collections import Counter, defaultdict
 from onset.alpwolf import AlpWolf
@@ -21,11 +22,14 @@ from onset.utilities.plotters import (
     cdf_churn,
     draw_graph,
     plot_points,
+    get_box_plot_stats,
+    plt_bxplt
 )
 from onset.utilities.post_process import (
     read_link_congestion_to_dict,
     read_result_val,
-    write_result_val
+    write_result_val,
+    write_result_vals
 )
 from onset.utilities.sysUtils import count_lines
 from onset.utilities.tmg import rand_gravity_matrix
@@ -62,6 +66,7 @@ class Simulation:
         fallow_tx_allocation_strategy="static",
         fallow_tx_allocation_file="",
         line_code="fixed",
+        scale_down_factor = 1,
         salt="",
     ):
         """Simulation initializer
@@ -140,6 +145,7 @@ class Simulation:
                             fallow_tx_allocation_strategy,
                             fallow_tx_allocation_file,
                             attack_proportion,
+                            scale_down_factor,
                             salt,
                         ]
                     ]
@@ -178,6 +184,7 @@ class Simulation:
         self.net_dir = net_dir
         self.fallow_tx_allocation_strategy = fallow_tx_allocation_strategy
         self.fallow_tx_allocation_file = fallow_tx_allocation_file
+        self.scale_down_factor = scale_down_factor
         # Set Experiment ID
         if self.use_heuristic.isdigit():
             self.EXPERIMENT_ID = "_".join(
@@ -534,6 +541,7 @@ class Simulation:
             iter_range = [i for i in range(start_iter, end_iter)]
                         
         for i, iter_i in enumerate(iter_range):
+            
             j = i % 2 
             if self.shakeroute:
                 ITERATION_ID = self.topology_programming_method
@@ -619,6 +627,9 @@ class Simulation:
             # try:
             # create dot graph and put it into the appropriate file for this run.
             iteration_topo = ITERATION_ABS_PATH
+
+            draw_graph(self.wolf.logical_graph, 
+                       name=f"data/graphs/img/0-{ITERATION_ID}")
 
             if self.topology_programming_method == "cli":
                 client = self.wolf.cli()
@@ -710,7 +721,7 @@ class Simulation:
 
             # Draw the link graph for the instanced topology.
             draw_graph(self.wolf.logical_graph, 
-                       name=f"data/graphs/img/{ITERATION_ID}")
+                       name=f"data/graphs/img/1-{ITERATION_ID}")
 
             # self.base_graph._init_link_graph()
             if self.PREV_ITER_ABS_PATH \
@@ -1308,7 +1319,106 @@ class Simulation:
             self.wolf.relax_restricted_bandwidth()
         # sig_add_circuits = False
         return
+
+    def save_doppler_results(self):
+        optimizer = self.optimizer
+        self.return_data["n_solutions"].append(
+            len(optimizer.unique_solutions())
+        )        
+        write_result_val(path.join(self.ITERATION_ABS_PATH, "TotalSolutions.dat"),
+                        "n_solutions", 
+                        len(optimizer.unique_solutions()), 
+                        self.te_method, 
+                        self.ITERATION_ID
+        )        
+        self.return_data["opt_time"].append(
+            self.opt_time        
+        )
+        write_result_val(path.join(self.ITERATION_ABS_PATH, "OptTime.dat"),
+                         "n_solutions",
+                         self.opt_time,
+                         self.te_method,
+                         self.ITERATION_ID
+        )
         
+        if optimizer.model.SolCount < 1: 
+            return 
+
+        mlu_dict = optimizer.get_max_link_util()
+        best_sol = optimizer.get_lowest_mlu_solution()
+        
+        optimizer.model.setParam("SolutionNumber", best_sol)
+        
+        doppler_min_mlu = floor(optimizer.maxLinkUtil.x * 1000) / 1000
+        self.return_data["doppler_min_mlu"].append(
+            doppler_min_mlu
+        )        
+        write_result_val(path.join(self.ITERATION_ABS_PATH, "DopplerMinMLU.dat"),
+                         "doppler_min_mlu",
+                         doppler_min_mlu,
+                         self.te_method,
+                         self.ITERATION_ID
+        )
+        write_result_vals(path.join(self.ITERATION_ABS_PATH, "DopplerMLU.dat"),
+                          "Solution ID",
+                          "Max Link Util",
+                          mlu_dict,
+                          self.te_method,
+                          self.ITERATION_ID
+        )
+        optimal_topo_id = self.optimizer.get_topo_b64_optimal()
+        self.return_data["Optimal Topology ID"].append(
+            optimal_topo_id
+        )
+        write_result_val(path.join(self.ITERATION_ABS_PATH, "OptimalTopoID.dat"),
+                         "Optimal Topology ID",
+                         optimal_topo_id, 
+                         self.te_method,
+                         self.ITERATION_ID
+        )
+        curr_topo_id = self.optimizer.get_topo_b64_xn()
+        self.return_data["Current Topology ID"].append(
+            curr_topo_id
+        )
+        write_result_val(path.join(self.ITERATION_ABS_PATH, "CurrTopoID.dat"),
+                         "Current Topology ID",
+                         curr_topo_id, 
+                         self.te_method,
+                         self.ITERATION_ID
+        )
+        opt_demand_stats = get_box_plot_stats(list(optimizer.demand_dict.values()))        
+        write_result_vals(
+            path.join(
+                self.ITERATION_ABS_PATH, "optimizer_demand_stats.dat"
+            ), "stat", "value", opt_demand_stats
+        )
+        
+        expected_demand_stats = get_box_plot_stats(
+            optimizer.demand_matrix // self.scale_down_factor
+        )
+        write_result_vals(
+            path.join(
+                self.ITERATION_ABS_PATH, "expected_demand_stats.dat"
+            ), "stat", "value", expected_demand_stats 
+        )
+
+        plt_bxplt(
+            path.join(
+                self.ITERATION_ABS_PATH, "expected_v_actual_demand_difference.png"
+            ), [expected_demand_stats, opt_demand_stats])
+        
+        expected_demand_stats['type'] = 'expected'
+        opt_demand_stats['type'] = 'actual'
+        df = DataFrame([expected_demand_stats, opt_demand_stats])
+        df.to_csv(
+            path.join(
+                self.ITERATION_ABS_PATH, "expected_v_actual_demand_difference.png"
+            ), index=False
+        )
+
+
+        
+
     def doppler_method(self, iter="N/A"):
         # optimizer = Link_optimization(
         #     G=self.wolf.logical_graph,
@@ -1326,15 +1436,47 @@ class Simulation:
             txp_count           = txp_count_dict,
             use_cache           = True,
             compute_paths       = True,
-            candidate_set       = self.candidate_link_choice_method 
+            candidate_set       = self.candidate_link_choice_method,
+            scale_down_factor   = self.scale_down_factor,
+            congestion_threshold_upper_bound    = \
+                self.congestion_threshold_upper_bound
         )
+
+        # ####### TEST DEMAND ###########
+        # expected_demand_stats = get_box_plot_stats(
+        #     optimizer.demand_matrix // self.scale_down_factor
+        # )
+        # opt_demand_stats = get_box_plot_stats(list(optimizer.demand_dict.values()))        
+
+        # plt_bxplt(
+        #     path.join(
+        #         self.ITERATION_ABS_PATH, "expected_v_actual_demand_difference.png"
+        #     ), [expected_demand_stats, opt_demand_stats])
+        
+        # difference = {}
+        # for v in expected_demand_stats: 
+        #     difference[v] = abs(expected_demand_stats[v] - opt_demand_stats[v])
+
+        # expected_demand_stats['type'] = 'expected'
+        # opt_demand_stats['type'] = 'actual'
+        # difference['type'] = 'difference'
+        
+        # df = DataFrame([expected_demand_stats, opt_demand_stats, difference])
+        # df.to_csv(
+        #     path.join(
+        #         self.ITERATION_ABS_PATH, "expected_v_actual_demand_difference.csv"
+        #     ), index=False
+        # )
+        # exit()
+        # ####### TEST DEMAND ###########
+
 
         if self.te_method == "-ecmp":
             self.max_load = 0.5
             if self.shakeroute:
                 self.max_load = 10000.0
         else:
-            self.max_load = 0.8
+            self.max_load = self.congestion_threshold_upper_bound
 
         # optimizer.run_model_minimize_cost_v1(max_load)
         # optimizer.run_model_minimize_cost()
@@ -1344,12 +1486,9 @@ class Simulation:
         drop_links = []
         # optimizer.LINK_CAPACITY *= max_load
         self.opt_time = optimizer.doppler()                 
-        self.return_data["n_solutions"].append(
-            len(optimizer.unique_solutions())
-        )
-
-        write_result_val("TotalSolutions.dat", "n_solutions", len(optimizer.unique_solutions()), self.te_method, self.ITERATION_ID)
-        self.adapt_topology()
-        
-
+        self.save_doppler_results()    
+        if optimizer.model.solCount > 0: 
+            self.optimizer.populate_changes()
+            self.adapt_topology()
         self.sig_add_circuits = False        
+

@@ -39,6 +39,28 @@ plt.rcParams.update(
     }
 )
 
+def plt_bxplt(file_name, data):
+    plt.clf()
+    _, ax = plt.subplots()
+    ax.bxp(data, showfliers=False)
+    plt.savefig(file_name)
+    plt.clf()
+
+def get_box_plot_stats(distribution):
+    med = np.median(distribution)
+    q1 = np.percentile(distribution, 25)
+    q3 = np.percentile(distribution, 75)
+    whislo = min(distribution)
+    whishi = max(distribution)
+    return {
+        'med': med, 
+        'q1': q1, 
+        'q3': q3, 
+        'whislo': whislo, 
+        'whishi': whishi
+    }
+
+
 def draw_graph(
     G, name, node_color="blue", with_labels=True, edge_color="black"
 ):
