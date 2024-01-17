@@ -158,6 +158,7 @@ def concat_reports(experiment_signatures):
 
 
 DEBUG = False
+# RERUN_OK = False
 RERUN_OK = True
 # PARALLEL = True
 PARALLEL = False
@@ -168,24 +169,32 @@ def main():
     # te = "semimcfraekeft"
     # tp = "greylambda"
 
-    network = ["Campus"]
+    # network = ["Campus", "Regional"]
     # network = ["linear_3"]
-
     # network = ["Regional"]
     # network = ["four-node"]
     # network = "areon"
-    traffic = ["background"]
+    # traffic = ["background"]
     # scale = ["0.5"]
     # scale = ["0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0"]
     # scale = ["1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8", "1.9", "2.0"]
     # scale = [str(i/10) for i in range(1,31) ]
     # scale = [str(i/10) for i in range(25,28) ]    
+    
+    # network = ["Campus", "Regional"]
+    network = ["Campus"]
+    traffic = ["background"]
     scale = ["1"]
+    # te = ["ecmp", "mcf"]
     te = ["ecmp"]
+
     tp = ["Doppler"]
-    top_k = [90, 80, 70, 60, 50, 40, 30, 20, 10]
-    n_ftx = [1, 2, 3]
+    # top_k = [100, 90, 80, 70, 60, 50, 40, 30, 20, 10]
+    top_k = [100, 50]
+    n_ftx = [1]
+    # n_ftx = [1]
     use_cached_result = [True]
+
     # time_limit = [60]
     # sol_limit = [1]
     experiment_params = product(network, traffic, scale, te, tp, use_cached_result, top_k, n_ftx)
