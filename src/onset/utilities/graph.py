@@ -20,6 +20,93 @@ def write_json_graph(G, output_file):
         json.dump(jobj, fob, indent=4)
     return None
 
+def find_paths_with_flow(source, target, links):
+    graph = {}
+
+    # Build the graph from the given links
+    for link in links:
+        if link[0] not in graph:
+            graph[link[0]] = []
+        graph[link[0]].append((link[1], link[2]))
+
+    # DFS function to find paths
+    def dfs(current, path, total_flow):
+        if current == target:
+            result.append((path, total_flow))
+            return
+        if current not in graph:
+            return
+        for neighbor, flow in graph[current]:
+            dfs(neighbor, path + [(current, neighbor)], min(total_flow, flow))
+
+    result = []
+    dfs(source, [], float('inf'))
+
+    return result
+
+def write_paths(paths, out_file): 
+    source = paths[0][0][0][0] 
+    target = paths[0][0][-1][-1]
+    
+    for path, val in paths: 
+        assert path[ 0][ 0] == source
+        assert path[-1][-1] == target
+
+    with open(out_file, 'a') as fob: 
+        fob.write(f"{source} -> {target} :\n")
+        for path, val in paths: 
+            fob.write(f"{path} @ {val}\n")
+        fob.write('\n')
+
+
+def print_paths(paths):
+    # paths are list of pairs (path, val) 
+    # 
+    # e.g., [([(3, 1), (1, 2), (2, 4)], 32), ([(3, 5), (5, 2), (2, 4)], 8)] 
+    # 
+    # path[0] = ([(3, 1), (1, 2), (2, 4)], 32)
+    # path[0][ 0] = [(3, 1), (1, 2), (2, 4)]
+    # path[0][ 0][ 0] = (3, 1)    
+    # path[0][ 0][ 0][ 0] = 3 
+    # path[0][ 0][-1] = (2, 4)    
+    # path[0][ 0][-1][-1] = 4 
+    #
+    # prints 
+    # 3 -> 4
+    # [(3, 1), (1, 2), (2, 4)] @ 32
+    # [(3, 5), (5, 2), (2, 4)] @ 8
+    source = paths[0][0][0][0] 
+    target = paths[0][0][-1][-1]
+    
+    for path, val in paths: 
+        assert path[ 0][ 0] == source
+        assert path[-1][-1] == target
+    
+    print(f"{source} -> {target} :")
+    for path, val in paths: 
+        print(path, "@", val)
+    print()
+
+
+def find_shortest_paths(source, dest, edges, path_limit):
+    G = nx.Graph()
+
+    for edge in edges:
+        G.add_edge(*edge)
+    
+    paths = []
+    shortest_path_len = float("inf")
+    for p in nx.shortest_simple_paths(G, source=source, target=dest):
+        shortest_path_len = min(shortest_path_len, len(p))
+        if len(p) > shortest_path_len: 
+            break
+        if len(paths) >= path_limit:
+            break
+        
+        paths.append(p)
+    
+    return paths
+
 
 class Gml_to_dot:
     def __init__(self, gml, outFile):

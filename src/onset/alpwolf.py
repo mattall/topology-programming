@@ -41,6 +41,7 @@ class AlpWolf:
         fallow_transponders=0,
         fallow_tx_allocation_strategy="static",
         fallow_tx_allocation_file="",
+        top_k = None
     ) -> None:
         """Base fiber topology used for simulation. Tracks lambda allocations between node pairs with from transponders.
         Args:
@@ -64,7 +65,8 @@ class AlpWolf:
         self.fallow_transponders = fallow_transponders
         self.fallow_tx_allocation_strategy = fallow_tx_allocation_strategy
         self.fallow_tx_allocation_file = fallow_tx_allocation_file
-        self.txp_count = {}
+        self.txp_count = {}        
+        self.top_k = top_k        
         self.n_super_nodes = ceil(self.n_nodes * 0.1)
         self.initial_bandwidth_dict = defaultdict(lambda: defaultdict(float))
         self.import_capacity = False
@@ -229,9 +231,15 @@ class AlpWolf:
                     self.base_graph.nodes[node_n]["transponder"][i] = -1
 
         elif self.fallow_tx_allocation_strategy == "dynamic":
+            top_k = self.top_k
             btwness = betweenness_centrality(self.base_graph)
             sorted_btwness = sorted(btwness, key=btwness.get, reverse=True)
-            super_nodes = sorted_btwness[: self.n_super_nodes]
+            if type(top_k) == int:
+                self.n_super_nodes = max(
+                    ceil(self.n_nodes * ((100 - top_k) / 100)), 
+                    2 # Need at least 2 nodes to have ftx for them to be useful.
+                )
+                super_nodes = sorted_btwness[: self.n_super_nodes]
             for node_n in self.base_graph.nodes:
                 self.base_graph.nodes[node_n]["transponder"] = {}
                 if node_n in super_nodes:
@@ -403,8 +411,9 @@ class AlpWolf:
                 self.base_graph.nodes[v]["transponder"]
             )
 
-        if transponder_u == -1 or transponder_v == -1:
-            logger.debug("Cannot add circuit. Transponder pair unavailable")
+        if transponder_u == -1 or transponder_v == -1:            
+            logger.error("Cannot add circuit. Transponder pair unavailable")
+            raise Exception
             return False
         return True
 
@@ -517,6 +526,7 @@ class AlpWolf:
         logger.info("Dropping circuit {} {}.".format(u, v))
         if self.circuits[(u, v)] == 0:
             logger.debug("Cannot drop Circuit {} {} - does not exist.".format(u, v))
+            raise Exception
             return 0
 
         if transponder_u == None or transponder_v == None:

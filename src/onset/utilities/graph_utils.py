@@ -48,6 +48,24 @@ def write_json_graph(G, output_file):
         json.dump(jobj, fob, indent=4)
     return None
 
+def find_shortest_paths(source, dest, edges, path_limit):
+    G = nx.Graph()
+
+    for edge in edges:
+        G.add_edge(*edge)
+    
+    paths = []
+    shortest_path_len = float("inf")
+    for p in nx.shortest_simple_paths(G, source=source, target=dest):
+        shortest_path_len = min(shortest_path_len, len(p))
+        if len(p) > shortest_path_len: 
+            break
+        if len(paths) >= path_limit:
+            break
+        
+        paths.append(p)
+    
+    return paths
 
 class Gml_to_dot:
     def __init__(self, gml, outFile, unit="Gbps"):

@@ -24,7 +24,8 @@ networks = [
     "three_node",
     "four-node",
     "areon",
-    "Regional"    
+    "Regional",
+    "linear_3"    
 ]
 
 t_classes = [
@@ -57,7 +58,8 @@ hosts = {
     "b4": 54,
     "four-node": 4,
     "areon": 10, 
-    "Regional": 12
+    "Regional": 12,
+    "linear_3": 3
     }
 
 mcf_loss_factor = {
@@ -85,6 +87,9 @@ mcf_loss_factor = {
         # "background-plus-flashcrowd": 1.633346,
         },            
     "Regional": {
+        "background": 1.0
+    },
+    "linear_3": {
         "background": 1.0
     }
     }

@@ -68,6 +68,7 @@ class Simulation:
         line_code="fixed",
         scale_down_factor = 1,
         salt="",
+        top_k=100
     ):
         """Simulation initializer
 
@@ -146,6 +147,7 @@ class Simulation:
                             fallow_tx_allocation_file,
                             attack_proportion,
                             scale_down_factor,
+                            top_k,
                             salt,
                         ]
                     ]
@@ -185,6 +187,7 @@ class Simulation:
         self.fallow_tx_allocation_strategy = fallow_tx_allocation_strategy
         self.fallow_tx_allocation_file = fallow_tx_allocation_file
         self.scale_down_factor = scale_down_factor
+        self.top_k = top_k
         # Set Experiment ID
         if self.use_heuristic.isdigit():
             self.EXPERIMENT_ID = "_".join(
@@ -194,6 +197,7 @@ class Simulation:
                     str(fallow_transponders),
                     self.attack_proportion,
                     self.te_method,
+                    str(self.top_k)
                 ]
             ).replace("heuristic", "heuristic_{}".format(self.use_heuristic))
         else:
@@ -204,6 +208,7 @@ class Simulation:
                     str(fallow_transponders),
                     self.attack_proportion,
                     self.te_method,
+                    str(top_k)
                 ]
             )
 
@@ -477,6 +482,7 @@ class Simulation:
         demand_factor=1,
         dry=False
     ):
+        self.unit = unit
         self.circuits = circuits
         self.demand_factor = demand_factor
         sim_param_tag = f"{self.circuits}_{start_iter}_{end_iter}_{int(repeat)}_{unit}_{self.demand_factor:.1f}"
@@ -681,7 +687,7 @@ class Simulation:
                 self.TBE_method()
 
             # Net Recon Defense Method
-            elif ( self.topology_programming_method == "Doppler"
+            elif ( "Doppler" in self.topology_programming_method 
                 #   and self.sig_add_circuits
             ):
                 self.doppler_method(iter_i)
@@ -1168,13 +1174,19 @@ class Simulation:
     def adapt_topology(self, reverse=False): 
         optimizer = self.optimizer # 
         if reverse: 
-            self.new_circuit, self.chaff = self.chaff, self.new_circuit
-        else:
-            self.new_circuit = optimizer.get_links_to_add()
-            self.chaff = optimizer.get_links_to_drop()
+            optimizer.reverse_changes()
+        
+        self.new_circuit = optimizer.get_links_to_add()
+        self.chaff = optimizer.get_links_to_drop()
+        # if reverse: 
+        #     self.chaff = optimizer.get_links_to_add()
+        #     self.new_circuit = optimizer.get_links_to_drop()            
+        # else:
+        #     self.new_circuit = optimizer.get_links_to_add()
+        #     self.chaff = optimizer.get_links_to_drop()
         
         circuit_tag = ""
-        if type(self.chaff) == list and len(self.new_circuit) > 0:
+        if type(self.chaff) == list and len(self.chaff) > 0:
             for dc in self.chaff:
                 u, v = dc
                 if circuit_tag == "" or circuit_tag.startswith("add"):
@@ -1193,16 +1205,17 @@ class Simulation:
                     circuit_tag += f".{u}-{v}"
 
                 for _ in range(self.circuits):
-                    self.wolf.add_circuit(u, v)
+                    self.wolf.add_circuit(u, v)                
 
-            self.circuits_added = True
-            self.flux_circuits.extend(self.new_circuit)
+            if reverse:
+                self.circuits_added = False                
+            else:
+                self.circuits_added = True            
+                
 
         # elif new_circuit == []:
         #     print("Could Not Add New Circuit")
         #     self.exit_early = True
-
-
 
     def OTP_method(self):
         edge_congestion_file = path.join(
@@ -1347,6 +1360,7 @@ class Simulation:
         mlu_dict = optimizer.get_max_link_util()
         best_sol = optimizer.get_lowest_mlu_solution()
         
+
         optimizer.model.setParam("SolutionNumber", best_sol)
         
         doppler_min_mlu = floor(optimizer.maxLinkUtil.x * 1000) / 1000
@@ -1471,24 +1485,49 @@ class Simulation:
         # ####### TEST DEMAND ###########
 
 
-        if self.te_method == "-ecmp":
-            self.max_load = 0.5
-            if self.shakeroute:
-                self.max_load = 10000.0
-        else:
-            self.max_load = self.congestion_threshold_upper_bound
-
         # optimizer.run_model_minimize_cost_v1(max_load)
         # optimizer.run_model_minimize_cost()
-        self.new_circuit = []
-        result_topo = []
-        add_links = []
-        drop_links = []
+        
         # optimizer.LINK_CAPACITY *= max_load
-        self.opt_time = optimizer.doppler()                 
-        self.save_doppler_results()    
-        if optimizer.model.solCount > 0: 
-            self.optimizer.populate_changes()
-            self.adapt_topology()
+        
+        if "ecmp" in self.te_method:
+            # self.opt_time = optimizer.doppler_ecmp()                         
+            optimizer.ecmp_routing_algorithm()
+        else:            
+            self.opt_time = optimizer.doppler()  
+
+        self.save_doppler_results()
+        solCount = optimizer.model.solCount
+        if solCount > 0: 
+            # if self.run_all: 
+            if True: 
+                tried_solutions = set()
+                for sol in range(solCount):
+                    optimizer.set_solution_number(sol)
+                    self.optimizer.populate_changes()                    
+                    topo_string = optimizer.get_topo_b64_xn()
+                    if topo_string not in tried_solutions and optimizer.get_max_link_util_xn() < 0.9:
+                        sol_topo = self.ITERATION_ABS_PATH + f"sol_{sol}.dot"
+                        sol_path = self.ITERATION_REL_PATH.replace('.','') + f"sol_{sol}"
+                        self.adapt_topology()
+                        makedirs(sol_path, exist_ok=True)
+                        Gml_to_dot(
+                            self.wolf.logical_graph,
+                            sol_topo,
+                            unit=self.unit
+                        )
+                        self._yates(
+                            sol_topo, 
+                            sol_path, 
+                            self.temp_tm_i_file
+                        )
+                        self.adapt_topology(reverse=True)
+                        tried_solutions.add(topo_string)
+                        self.sig_add_circuits = False
+                        self.sig_drop_circuits = False
+
+            else:
+                self.optimizer.populate_changes()
+                self.adapt_topology()
         self.sig_add_circuits = False        
 
