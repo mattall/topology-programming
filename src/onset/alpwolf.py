@@ -239,7 +239,7 @@ class AlpWolf:
                     ceil(self.n_nodes * ((100 - top_k) / 100)), 
                     2 # Need at least 2 nodes to have ftx for them to be useful.
                 )
-                super_nodes = sorted_btwness[: self.n_super_nodes]
+            super_nodes = sorted_btwness[: self.n_super_nodes]
             for node_n in self.base_graph.nodes:
                 self.base_graph.nodes[node_n]["transponder"] = {}
                 if node_n in super_nodes:

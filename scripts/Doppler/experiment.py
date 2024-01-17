@@ -72,12 +72,12 @@ def experiment(args):
         fallow_transponders=n_ftx,
         te_method="-" + te_method,
         traffic_file=traffic_file,
-        fallow_tx_allocation_strategy="static",
+        # fallow_tx_allocation_strategy="static",        
+        fallow_tx_allocation_strategy="dynamic", 
         topology_programming_method=tp_method,
         congestion_threshold_upper_bound=0.99999,
         congestion_threshold_lower_bound=0.99999,
         scale_down_factor=SCALE_DOWN_FACTOR, 
-        fallow_tx_allocation_strategy="dynamic", 
         top_k=top_k
     )
     demand_factor = float(scale) #* mcf_loss_factor[network][t_class]
