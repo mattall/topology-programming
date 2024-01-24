@@ -3,12 +3,30 @@ from os import path
 from sys import exit
 from typing import DefaultDict
 import networkx as nx
-
+import math
 import json
 
 from networkx import read_gml
 from networkx.classes.function import get_edge_attributes
 
+def calc_haversine(lat1, lon1, lat2, lon2):
+    # source: https://www.geeksforgeeks.org/haversine-formula-to-find-distance-between-two-points-on-a-sphere/
+    # distance between latitudes
+    # and longitudes
+    dLat = (lat2 - lat1) * math.pi / 180.0
+    dLon = (lon2 - lon1) * math.pi / 180.0
+
+    # convert to radians
+    lat1 = (lat1) * math.pi / 180.0
+    lat2 = (lat2) * math.pi / 180.0
+
+    # apply formulae
+    a = pow(math.sin(dLat / 2), 2) + pow(math.sin(dLon / 2), 2) * math.cos(
+        lat1
+    ) * math.cos(lat2)
+    rad = 6371
+    c = 2 * math.asin(math.sqrt(a))
+    return rad * c
 
 def read_json_paths(input_file):
     with open(input_file, "r") as fob:
@@ -392,6 +410,12 @@ def write_gml(G, name):
             fob.write("\tedge [\n")
             fob.write("\t\tsource {}\n".format(src))
             fob.write("\t\ttarget {}\n".format(dst))
+            if ("Latitude" in G.nodes[s] and "Longitude" in G.nodes[s] and 
+                "Latitude" in G.nodes[t] and "Longitude" in G.nodes[t]):
+                distance = calc_haversine(G.nodes[s]["Latitude"], G.nodes[s]["Longitude"],
+                                          G.nodes[t]["Latitude"], G.nodes[t]["Longitude"])
+                if "distance" not in G.edges[s, t]:
+                    G.edges[s, t]["distance"] = distance
             for key, value in G.edges[s, t].items():
                 fob.write("\t\t{} {}\n".format(key, value))
             fob.write("\t]\n")

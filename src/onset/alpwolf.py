@@ -67,7 +67,7 @@ class AlpWolf:
         self.fallow_tx_allocation_file = fallow_tx_allocation_file
         self.txp_count = {}        
         self.top_k = top_k        
-        self.n_super_nodes = ceil(self.n_nodes * 0.1)
+        # self.n_super_nodes = ceil(self.n_nodes * 0.1)
         self.initial_bandwidth_dict = defaultdict(lambda: defaultdict(float))
         self.import_capacity = False
         self.bandwidth_restricted = False
@@ -235,10 +235,12 @@ class AlpWolf:
             btwness = betweenness_centrality(self.base_graph)
             sorted_btwness = sorted(btwness, key=btwness.get, reverse=True)
             if type(top_k) == int:
-                self.n_super_nodes = max(
-                    ceil(self.n_nodes * ((100 - top_k) / 100)), 
-                    2 # Need at least 2 nodes to have ftx for them to be useful.
-                )
+                self.n_super_nodes = ceil(self.n_nodes * (top_k / 100))
+            
+            # Need at least 2 to be useful. 
+            if self.n_super_nodes == 1: 
+                self.n_super_nodes = 2
+            
             super_nodes = sorted_btwness[: self.n_super_nodes]
             for node_n in self.base_graph.nodes:
                 self.base_graph.nodes[node_n]["transponder"] = {}
@@ -252,6 +254,33 @@ class AlpWolf:
                     transponder_count = int(
                         self.transponders_per_degree * self.base_graph.degree(node_n)
                         + self.fallow_transponders / 2
+                    )
+                for i in range(transponder_count):
+                    self.base_graph.nodes[node_n]["transponder"][i] = -1
+
+        elif self.fallow_tx_allocation_strategy == "dynamic_doppler":
+            top_k = self.top_k
+            btwness = betweenness_centrality(self.base_graph)
+            sorted_btwness = sorted(btwness, key=btwness.get, reverse=True)
+            if type(top_k) == int:
+                self.n_super_nodes = ceil(self.n_nodes * (top_k / 100))
+            
+            # Need at least 2 to be useful. 
+            if self.n_super_nodes == 1: 
+                self.n_super_nodes = 2
+            
+            super_nodes = sorted_btwness[: self.n_super_nodes]
+            for node_n in self.base_graph.nodes:
+                self.base_graph.nodes[node_n]["transponder"] = {}
+                if node_n in super_nodes:
+                    logger.info("Node {} is a super node.".format(node_n))
+                    transponder_count = int(
+                        self.transponders_per_degree * self.base_graph.degree(node_n)
+                        + self.fallow_transponders
+                    )
+                else:
+                    transponder_count = int(
+                        self.transponders_per_degree * self.base_graph.degree(node_n)
                     )
                 for i in range(transponder_count):
                     self.base_graph.nodes[node_n]["transponder"][i] = -1
@@ -463,8 +492,7 @@ class AlpWolf:
         if transponder_u == -1 or transponder_v == -1:
             logger.error(
                 f"Couldn't add circuit ({u}, {v}). Transponder pair unavailable"
-            )
-            return -1
+            )            
 
         # Make sure transponders are currently unassigned.
         assert self.base_graph.nodes[u]["transponder"][transponder_u] == -1

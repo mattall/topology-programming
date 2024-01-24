@@ -87,6 +87,49 @@ def print_paths(paths):
         print(path, "@", val)
     print()
 
+def extract_paths(flow_vars):
+    paths = {}
+
+    # Create a dictionary to store the flow values for each edge
+    edge_flows = {}
+
+    for var in flow_vars:
+        value = flow_vars[var].Xn
+        if value > 0:
+            # Extract source, destination, and edge (u, v) from the variable indices
+            source, dest, u, v = var
+
+            # Update the edge_flows dictionary
+            edge_flows[(u, v)] = value
+
+    # Create a graph representation using the edge_flows dictionary
+    graph = {}
+    for edge, flow in edge_flows.items():
+        u, v = edge
+        if u not in graph:
+            graph[u] = {}
+        graph[u][v] = flow
+
+    # Traverse the graph to find paths
+    visited = set()
+
+    def dfs(node, path):
+        visited.add(node)
+        for neighbor, flow in graph.get(node, {}).items():
+            if neighbor not in visited and flow > 0:
+                dfs(neighbor, path + [(node, neighbor, flow)])
+
+    # Iterate through source nodes
+    for source in set(source for source, _, _, _ in flow_vars):
+        visited.clear()
+        for dest in set(dest for _, dest, _, _ in flow_vars):
+            if source != dest:
+                dfs(source, [])
+                # Filter paths to the destination
+                paths[(source, dest, 0)] = sum(flow for _, _, flow in visited if flow)
+                visited.clear()
+
+    return paths
 
 def find_shortest_paths(source, dest, edges, path_limit):
     G = nx.Graph()

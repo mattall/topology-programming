@@ -237,6 +237,7 @@ class Simulation:
             self.fallow_transponders,
             fallow_tx_allocation_strategy=self.fallow_tx_allocation_strategy,
             fallow_tx_allocation_file=self.fallow_tx_allocation_file,
+            top_k=self.top_k
         )
         if self.topology_programming_method == "TBE": 
             self.wolf.restrict_bandwidth(0.8)
@@ -289,9 +290,9 @@ class Simulation:
             ">>",
             f"{self.temp_tm_i_file}_yates.out",
         ]
-        gurobi_status = self._system("gurobi_cl")
+        gurobi_status = self._system("gurobi_cl")        
         if gurobi_status == 0:
-            logger.info("gurobi_cl is in path.")
+            logger.debug("gurobi_cl is in path.")
         else:
             raise(f"Error: gurobi_cl not in path {sys.path}")
         self._system(" ".join(command_args))
@@ -560,10 +561,10 @@ class Simulation:
             self.ITERATION_ID = ITERATION_ID
             self.ITERATION_REL_PATH = ITERATION_REL_PATH = path.join(
                 EXPERIMENT_ID, ITERATION_ID
-            )
+            ).replace('.','')
             self.ITERATION_ABS_PATH = ITERATION_ABS_PATH = path.join(
                 EXPERIMENT_ABSOLUTE_PATH, ITERATION_ID
-            )
+            ).replace('.','')
             if False: #dry:
                 return_data = ITERATION_ABS_PATH
                 if i == end_iter: 
@@ -1172,8 +1173,10 @@ class Simulation:
         return
 
     def adapt_topology(self, reverse=False): 
+        logger.info("Adapting topology")
         optimizer = self.optimizer # 
         if reverse: 
+            logger.info("Reversing previous changes")
             optimizer.reverse_changes()
         
         self.new_circuit = optimizer.get_links_to_add()
@@ -1483,16 +1486,15 @@ class Simulation:
         # )
         # exit()
         # ####### TEST DEMAND ###########
-
-
         # optimizer.run_model_minimize_cost_v1(max_load)
         # optimizer.run_model_minimize_cost()
         
         # optimizer.LINK_CAPACITY *= max_load
         
         if "ecmp" in self.te_method:
-            # self.opt_time = optimizer.doppler_ecmp()                         
-            optimizer.ecmp_routing_algorithm()
+            self.opt_time = optimizer.doppler_ecmp()                         
+            # return
+            # optimizer.ecmp_routing_algorithm()
         else:            
             self.opt_time = optimizer.doppler()  
 
@@ -1503,19 +1505,25 @@ class Simulation:
             if True: 
                 tried_solutions = set()
                 for sol in range(solCount):
-                    optimizer.set_solution_number(sol)
+                    logger.info(f"Setting solution number set to : {sol}")
+                    optimizer.set_solution_number(sol)                    
+                    logger.info(f"Reading solution number : {optimizer.model.getParamInfo('SolutionNumber')[2]}")
                     self.optimizer.populate_changes()                    
                     topo_string = optimizer.get_topo_b64_xn()
-                    if topo_string not in tried_solutions and optimizer.get_max_link_util_xn() < 0.9:
+                    
+                    if topo_string not in tried_solutions and optimizer.get_max_link_util_xn() < 0.9999:
+                        logger.info(f"Unique topo string is: {topo_string}")
                         sol_topo = self.ITERATION_ABS_PATH + f"sol_{sol}.dot"
-                        sol_path = self.ITERATION_REL_PATH.replace('.','') + f"sol_{sol}"
+                        sol_path = self.ITERATION_REL_PATH + f"sol_{sol}"
                         self.adapt_topology()
-                        makedirs(sol_path, exist_ok=True)
+                        # makedirs(sol_path, exist_ok=True)
                         Gml_to_dot(
                             self.wolf.logical_graph,
                             sol_topo,
                             unit=self.unit
                         )
+                        write_gml(self.wolf.logical_graph, 
+                                  self.ITERATION_ABS_PATH + f"sol_{sol}.gml")
                         self._yates(
                             sol_topo, 
                             sol_path, 
@@ -1525,6 +1533,8 @@ class Simulation:
                         tried_solutions.add(topo_string)
                         self.sig_add_circuits = False
                         self.sig_drop_circuits = False
+                    else: 
+                        logger.info(f"topo string is not unique: {topo_string}")
 
             else:
                 self.optimizer.populate_changes()
