@@ -1456,7 +1456,8 @@ class Simulation:
             candidate_set       = self.candidate_link_choice_method,
             scale_down_factor   = self.scale_down_factor,
             congestion_threshold_upper_bound    = \
-                self.congestion_threshold_upper_bound
+                self.congestion_threshold_upper_bound,
+            debug = True
         )
 
         # ####### TEST DEMAND ###########

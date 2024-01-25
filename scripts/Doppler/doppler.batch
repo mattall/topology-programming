@@ -6,9 +6,9 @@
 #SBATCH --output=logs/doppler/Regional.out             ### file in which to store job stdout
 #SBATCH --error=logs/doppler/Regional.err              ### file in which to store job stderr
 #SBATCH --time=1-00:00:00                ### wall-clock time limit, in minutes
-#SBATCH --mem=200G                       ### memory limit per node, in MB
+#SBATCH --mem=300G                       ### memory limit per node, in MB
 #SBATCH --nodes=1                        ### number of nodes to use
 #SBATCH --ntasks-per-node=1              ### number of tasks to launch per node
-#SBATCH --cpus-per-task=30                ### number of cores for each task
+#SBATCH --cpus-per-task=60                ### number of cores for each task
  
-python scripts/Doppler/experiment.py
+python scripts/Doppler/exp-v2.py

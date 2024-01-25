@@ -31,7 +31,7 @@ def experiment(args):
     from onset.utilities.post_process import read_result_val
     from onset.simulator import Simulation
     SCALE_DOWN_FACTOR = 10**7
-    network, t_class, scale, te_method, tp_method, use_cached_result, top_k, n_ftx = args
+    network, t_class, scale, te_method, tp_method, use_cached_result, top_k, n_ftx, candidate_link_choice_method = args
 
     def get_result_path(sim):
         #helper function 
@@ -62,7 +62,7 @@ def experiment(args):
     pid = os.getpid()
     logger.info(f"Process-{pid} started with data: {args}")
     
-    experiment_name = "-".join((te_method, tp_method, network, t_class, scale, n_ftx, top_k))
+    experiment_name = "-".join([str(_) for _ in (te_method, tp_method, network, t_class, scale, n_ftx, top_k, candidate_link_choice_method)])
     traffic_file = f"data/traffic/{t_class}_{network}-tm"
     my_sim = Simulation(
         network,
@@ -78,7 +78,8 @@ def experiment(args):
         congestion_threshold_upper_bound=0.99999,
         congestion_threshold_lower_bound=0.99999,
         scale_down_factor=SCALE_DOWN_FACTOR, 
-        top_k=top_k
+        top_k=top_k,
+        candidate_link_choice_method=candidate_link_choice_method
     )
     demand_factor = float(scale) #* mcf_loss_factor[network][t_class]
     
@@ -105,7 +106,7 @@ def experiment(args):
     # make sure we have now found the correct result path. 
 
     with open(report_path, "w") as report_fob:
-        report_fob.write(f"{network},{t_class},{scale},{te_method},{tp_method},{top_k},{n_ftx}")
+        report_fob.write(f"{network},{t_class},{scale},{te_method},{tp_method},{top_k},{n_ftx},{candidate_link_choice_method},")
         for tv in tracked_vars:
             if tv in result \
             and isinstance(result[tv], list) \
@@ -127,7 +128,7 @@ def concat_reports(experiment_signatures):
     def _concat_reports(reports_glob): 
         summary_file = reports_glob[:-1] + ".csv"
         # summary_data = "Network,Traffic,Demand Scale,TE,TP,Max Link Utilization,Loss,Throughput,Total Solutions,Doppler Min MLU,Opt Time\n"
-        summary_data = "Network,Traffic,Demand Scale,TE,TP,Max Link Utilization,Loss,Throughput,Total Solutions,Doppler Min MLU,Optimization Time,Topology ID,Optimal Topology ID\n"
+        summary_data = "Network,Traffic,Demand Scale,TE,TP,Top K,# ftx,Candidate Link Choice Method,Max Link Utilization,Loss,Throughput,Total Solutions,Doppler Min MLU,Optimization Time,Topology ID,Optimal Topology ID\n"
         for f in sorted(glob(reports_glob)):
             with open(f, 'r') as fob: 
                 summary_data += "".join(fob.readlines())
@@ -140,8 +141,8 @@ def concat_reports(experiment_signatures):
         _concat_reports("data/reports/"+ '-'.join(es) + '*')
 
 
-# DEBUG = False
-DEBUG = True
+DEBUG = False
+# DEBUG = True
 # RERUN_OK = False
 RERUN_OK = True
 
@@ -170,16 +171,18 @@ def main():
     if DEBUG: 
         PARALLEL = False
         # TEST
-        network = ["Campus"]
+        network = ["Campus", "Regional"]
         # network = ["Regional"]
         # network = ["square"]
+        # network = ["four-node"]
         traffic = ["background"]
         scale = ["0.1"]
         te = ["ecmp"]    
         tp = ["Doppler"]
-        top_k = [100]            
-        n_ftx = [1]
-        use_cached_result = [True]
+        top_k = [0]            
+        n_ftx = [0]
+        use_cached_result = [True],
+        candidate_link_choice_method = ["conservative"]
 
     else:
         PARALLEL = True
@@ -191,8 +194,7 @@ def main():
         top_k = [10 * i for i in range(11)]
         n_ftx = [1, 2, 3]
         use_cached_result = [True]
-
-
+        candidate_link_choice_method = ["conservative"]
 
     # attack paper  - Demo the attack ! What is cool... insight. 
     #               - Is it possible to do the attack with open data? yes. 
@@ -200,11 +202,9 @@ def main():
     #               - - Show efficacy against the Ricci attack. 
     #               - - - Cycle takes 'k' seconds and the runs DDoS. 
     #               - - - Offload anything to Loqman? 
-
     # time_limit = [60]
     # sol_limit = [1]
-    experiment_params = product(network, traffic, scale, te, tp, use_cached_result, top_k, n_ftx)
-
+    experiment_params = product(network, traffic, scale, te, tp, use_cached_result, top_k, n_ftx, candidate_link_choice_method)
     if PARALLEL: 
         pool = multiprocessing.Pool(10)
         pool.map_async(

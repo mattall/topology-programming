@@ -93,12 +93,13 @@ class Link_optimization:
         candidate_set="max",
         scale_down_factor = 1,
         congestion_threshold_upper_bound = 0.8,
-        time_limit_minutes=0.5
+        time_limit_minutes=10,
+        debug=False
     ):
         self.TIME_LIMIT_MINUTES = time_limit_minutes
         self.SCALE_DOWN_FACTOR = scale_down_factor # to avoid numerical issues in optimization
         self.congestion_threshold_upper_bound = congestion_threshold_upper_bound
-        self.debug = False
+        self.debug = debug
         self.G = deepcopy(G)
         self.all_node_pairs = list(permutations(self.G.nodes, 2))
         if isinstance(demand_matrix_file, str):
@@ -897,14 +898,16 @@ class Link_optimization:
         m.setParam( "PoolSearchMode", 2 )
         m.setParam( "PoolSolutions", 100 )
         m.setParam( "TimeLimit", 60 * self.TIME_LIMIT_MINUTES ) # 5 minutes time limit
+        m.setParam( "NonConvex", 2)
         # Convert the graph to a directed graph
         G_0 = self.G.copy(as_view=True).to_directed()
+
         directionless_edges = self.super_graph.edges
         G_prime = self.super_graph.to_directed()
         demand = self.demand_dict 
-        for s, t in demand:  
-            if (s, t) != ('3', '1'):
-                demand[s, t] = 0
+        # for s, t in demand:  
+        #     if (s, t) != ('3', '1'):
+        #         demand[s, t] = 0
         # Graphs should only differ in edges
         assert set(G_0.nodes) == set(G_prime.nodes)        
         # Get the list of nodes and edges
@@ -1054,32 +1057,116 @@ class Link_optimization:
 
         # m.setObjective( maxLinkUtil, sense=GRB.MINIMIZE )
         
-        my_paths, path_edges = extract_paths(flow_vars, self.tunnel_tuple_dict)
-        path_flows = m.addVars(my_paths, name="path_flow", vtype=GRB.CONTINUOUS)
-        path_vars =  m.addVars(my_paths, name="path_var", vtype=GRB.BINARY)
-        
-        total_paths = m.addVars(demand, name="total_paths")
-        for s, t in total_paths:
-            m.addConstr(
-                total_paths[s,t] == quicksum(path_vars.select(s, t, '*')),
-                name = "total_path_constr" 
+        path_edge_flows, path_edges = extract_paths(flow_vars, self.tunnel_tuple_dict)
+        path_flows = m.addVars(path_edge_flows, name="path_flow", vtype=GRB.CONTINUOUS)
+        path_vars =  m.addVars(path_edge_flows, name="path_var", vtype=GRB.BINARY)        
+        total_paths = m.addVars(demand, name="total_paths", vtype=GRB.INTEGER)        
+        edge_counts = m.addVars(flow_vars, name="edge_count", vtype=GRB.INTEGER)
+        path_edge_vars = m.addVars(((s, t, i, u, v)
+            for s, t in demand
+            for (i, edges) in enumerate(path_edges.select(s, t, '*')) 
+            for (u,v) in edges
+            ), name="path_edge_vars"
         )
+        m.addConstrs((
+            path_edge_vars[s, t, i, u, v] 
+                == min_(path_vars[s, t, i], edge_vars[u,v])
+                for (s, t, i, u, v) in path_edge_vars
+            ), name = "path_edge_vars_constr"
+        )
+
+        demand_edges = tupledict()
+        for s, t in demand: 
+            demand_edges[s, t] = set()
+            for edges in path_edges.select(s, t, '*'):
+                demand_edges[s, t] = demand_edges[s, t].union(edges)
+
+
+        for s, t, u, v in edge_counts: 
+            n_paths = len(path_edge_flows.select(s, t, '*'))            
+            m.addConstr( 
+                edge_counts[s, t, u, v] == 
+                    quicksum( path_edge_vars[s, t, i, u, v]
+                        for i in range(n_paths) 
+                        if (s, t, i, u, v) in path_edge_vars
+                    ), name = f"path_{s}_{t}_edge_count_{u}_{v}"
+            )
+
+            m.addConstr((
+                flow_vars[s, t, u, v] == 
+                edge_counts[s, t, u, v] * quicksum( path_flows.select(s, t, '*') )
+                ), name = f"{s}_{t}_flow_with_edge_count_{u}_{v}" 
+            )
+
+        for s, t in demand:            
+            m.addConstr(
+                total_paths[s,t] <= quicksum(path_vars.select(s, t, '*')),
+                name = "total_path_constr" 
+            )
+            m.addConstr(( 
+                quicksum(path_flows.select(s, t, '*'))
+                == demand[s, t]
+                ), name = "flow_throughput_constr"
+            )
             
-        for (s, t, i) in my_paths:
-            m.addConstr(path_flows[s, t, i] == min_( my_paths[s, t, i] ) )
+            # Each edge's flow needs to be summed across paths for the flow to account for the presence of an edge on multiple paths.             
+            
+
+            this_demand_edges = set()
+            
+                        
+                            
+            
+            # path_edge_vars = {edge: edge_vars[edge] for edges in path_edges.select(s, t, '*') }
+
+            # m.addConstr(
+            #     ( 
+            #         (
+            #             edge_counts[s, t, u, v] == sum( edge_vars[u, v] )
+            #                 for i in range(n_paths)
+            #                 for u, v in path_edges[s, t, i]
+            #             )
+            #     ), name = "edge_count"
+            # )
+            # m.addConstr((
+            #     flow_vars[s, t, u, v] == edge_counts[s, t, u, v] * path_flows[s, t, i]
+            #         for i in range(n_paths)
+            #         for u, v in path_edges[s, t, i]
+            #     ), name = "edge_flow_vs_path_edge_count" 
+            # )
+            
+            
+
+        for (s, t, i) in path_edge_flows:            
             m.addConstr(
                 path_vars[s, t, i] == min_(
                     edge_vars[u, v] for u, v in path_edges[s, t, i]
-                )
+                ), name="path_var_constr"
             )
-        
-        for s, t in demand:
-            
+            m.addConstr(path_flows[s, t, i] == min_( path_edge_flows[s, t, i] ) )
+            # m.addConstr(( 
+            #     total_paths[s,t] * path_flows[s, t, i]
+            #     == demand[s, t]
+            #     ), name="flow_balance_constr"
+            # )    
             m.addConstr(( 
-                total_paths[s,t] * quicksum(path_flows.select(s, t, '*'))
-                == demand[s, t]
-                ), name="flow_balance"
+                total_paths[s,t] * path_flows[s, t, i]
+                == demand[s, t] * path_vars[s, t, i]
+                ), name="flow_balance_constr"
             )
+            
+            
+
+            # m.addConstr(( 
+            #     total_paths[s,t] * path_flows[s, t, i]
+            #     == demand[s, t] * 1.01 
+            #     ), name="flow_balance_ub"
+            # )
+            # m.addConstr(( 
+            #     demand[s, t] * 0.99 
+            #     <= total_paths[s,t] * path_flows[s, t, i]
+            #     ), name="flow_balance_lb"
+            # )
             # m.addConstr(( 
             #     total_paths[s,t] * quicksum(path_flows.select(s, t, '*'))
             #     == demand[s, t] * 1.01 
@@ -1108,7 +1195,7 @@ class Link_optimization:
         opt_time = m.Runtime
         self.flow_vars = flow_vars
         self.path_flows = path_flows
-        self.my_paths = my_paths
+        self.my_paths = path_edge_flows
         self.total_paths = total_paths
         self.node_degree_vars = node_degree_vars
         self.waste = waste
@@ -1687,7 +1774,8 @@ class Link_optimization:
         
         try: 
             return min(self.mlu, key=self.mlu.get)
-        except NameError:
+        except Exception as e:
+            logger.error(e)
             self.get_max_link_util()
             return min(self.mlu, key=self.mlu.get)
 
