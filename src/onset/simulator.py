@@ -21,6 +21,7 @@ from onset.utilities.plotters import (
     cdf_average_congestion,
     cdf_churn,
     draw_graph,
+    draw_graph_circular,
     plot_points,
     get_box_plot_stats,
     plt_bxplt
@@ -68,7 +69,8 @@ class Simulation:
         line_code="fixed",
         scale_down_factor = 1,
         salt="",
-        top_k=100
+        top_k=100,
+        optimizer_time_limit_minutes=1
     ):
         """Simulation initializer
 
@@ -148,6 +150,7 @@ class Simulation:
                             attack_proportion,
                             scale_down_factor,
                             top_k,
+                            optimizer_time_limit_minutes,
                             salt,
                         ]
                     ]
@@ -157,8 +160,7 @@ class Simulation:
         logger.info(f"Nonce: {self.nonce}")
         logger.info(
             f"Initializing simulator: {network_name} {test_name} {iterations}"
-        )
-        
+        )        
         self.network_name = network_name
         self.num_hosts = int(num_hosts)
         self.test_name = test_name
@@ -188,6 +190,7 @@ class Simulation:
         self.fallow_tx_allocation_file = fallow_tx_allocation_file
         self.scale_down_factor = scale_down_factor
         self.top_k = top_k
+        self.optimizer_time_limit_minutes = optimizer_time_limit_minutes
         # Set Experiment ID
         if self.use_heuristic.isdigit():
             self.EXPERIMENT_ID = "_".join(
@@ -205,10 +208,14 @@ class Simulation:
                 [
                     network_name,
                     test_name,
+                    fallow_tx_allocation_strategy,
                     str(fallow_transponders),
+                    topology_programming_method,
+                    candidate_link_choice_method,
+                    str(optimizer_time_limit_minutes),
                     self.attack_proportion,
                     self.te_method,
-                    str(top_k)
+                    str(top_k),                
                 ]
             )
 
@@ -551,14 +558,14 @@ class Simulation:
             
             j = i % 2 
             if self.shakeroute:
-                ITERATION_ID = self.topology_programming_method
+                ITERATION_ID = self.topology_programming_method.replace('.','')
             
             elif repeat:
-                ITERATION_ID = f"{name}_{iter_i}-{j}-{iterations}_{sim_param_tag}"
+                ITERATION_ID = f"{name}_{iter_i}-{j}-{iterations}_{sim_param_tag}".replace('.','')
             else:
-                ITERATION_ID = f"{name}_{iter_i}-0-{iterations}_{sim_param_tag}"
+                ITERATION_ID = f"{name}_{iter_i}-0-{iterations}_{sim_param_tag}".replace('.','')
 
-            self.ITERATION_ID = ITERATION_ID
+            self.ITERATION_ID = ITERATION_ID.replace('.','')
             self.ITERATION_REL_PATH = ITERATION_REL_PATH = path.join(
                 EXPERIMENT_ID, ITERATION_ID
             ).replace('.','')
@@ -1455,9 +1462,11 @@ class Simulation:
             compute_paths       = True,
             candidate_set       = self.candidate_link_choice_method,
             scale_down_factor   = self.scale_down_factor,
+            debug               = True,
+            time_limit_minutes  = self.optimizer_time_limit_minutes,
             congestion_threshold_upper_bound    = \
                 self.congestion_threshold_upper_bound,
-            debug = True
+            
         )
 
         # ####### TEST DEMAND ###########
@@ -1493,7 +1502,8 @@ class Simulation:
         # optimizer.LINK_CAPACITY *= max_load
         
         if "ecmp" in self.te_method:
-            self.opt_time = optimizer.doppler_ecmp()                         
+            # self.opt_time = optimizer.doppler_ecmp()
+            self.opt_time = optimizer.doppler_ecmp_alt()
             # return
             # optimizer.ecmp_routing_algorithm()
         else:            
@@ -1501,6 +1511,7 @@ class Simulation:
 
         self.save_doppler_results()
         solCount = optimizer.model.solCount
+
         if solCount > 0: 
             # if self.run_all: 
             if True: 
@@ -1513,10 +1524,27 @@ class Simulation:
                     topo_string = optimizer.get_topo_b64_xn()
                     
                     if topo_string not in tried_solutions and optimizer.get_max_link_util_xn() < 0.9999:
+                        # Draw the original graph
+                        # pre_sol_topo_img=f"data/graphs/img/{self.ITERATION_ID}-sol_{sol}-0.jpg"                        
+                        # pre_sol_topo_img_circ=f"data/graphs/img/{self.ITERATION_ID}-circ-sol_{sol}-0.jpg"
+                        # draw_graph(self.wolf.logical_graph, name=pre_sol_topo_img)
+                        # logger.info(f"Generated pre-solution topology image: {pre_sol_topo_img}")                        
+                        # draw_graph_circular(self.wolf.logical_graph, name=pre_sol_topo_img_circ)
+                        # logger.info(f"Generated pre-solution topology circular image: {pre_sol_topo_img_circ}")                        
+
+                        logger.info(f"Generated pre-solution topology image: {topo_string}")                        
                         logger.info(f"Unique topo string is: {topo_string}")
                         sol_topo = self.ITERATION_ABS_PATH + f"sol_{sol}.dot"
                         sol_path = self.ITERATION_REL_PATH + f"sol_{sol}"
                         self.adapt_topology()
+                        
+                        # Draw the updated graph
+                        post_sol_topo_img=f"data/graphs/img/{self.EXPERIMENT_ID}-{self.ITERATION_ID}-sol_{sol}-1.jpg"
+                        post_sol_topo_img_circ=f"data/graphs/img/{self.EXPERIMENT_ID}-{self.ITERATION_ID}-sol_{sol}-1-circ.jpg"                    
+                        draw_graph(self.wolf.logical_graph, name=post_sol_topo_img)
+                        logger.info(f"Generated post-solution topology image: {post_sol_topo_img}")                                                
+                        draw_graph_circular(self.wolf.logical_graph, name=post_sol_topo_img_circ)
+                        logger.info(f"Generated post-solution topology circular image: {post_sol_topo_img_circ}")                        
                         # makedirs(sol_path, exist_ok=True)
                         Gml_to_dot(
                             self.wolf.logical_graph,

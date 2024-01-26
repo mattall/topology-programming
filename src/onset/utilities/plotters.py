@@ -12,7 +12,7 @@ from matplotlib.ticker import (
     NullFormatter,
 )
 from matplotlib.font_manager import FontProperties
-from networkx import draw
+from networkx import draw, draw_circular
 import pandas as pd
 import seaborn as sns
 from onset.constants import PLOT_DIR
@@ -70,6 +70,7 @@ def draw_graph(
         G (Graph): [description]
         node_color (str, optional): [description]. Defaults to 'blue'.
     """
+    plt.clf()
     pos = {}
     for node in G.nodes():
         pos[node] = (G.nodes()[node]["Longitude"], G.nodes()[node]["Latitude"])
@@ -86,8 +87,35 @@ def draw_graph(
         edge_color=edge_color,
     )
     plt.draw()
-    plt.savefig(name.replace('.',''))
-    print(f"saved image to: {name}")
+    plt.savefig(name)    
+    plt.close()
+
+def draw_graph_circular(
+    G, name, node_color="blue", with_labels=True, edge_color="black"
+):
+    """Draws graph object, placing nodes according to Longitude and Latitude attributes.
+
+    Args:
+        G (Graph): [description]
+        node_color (str, optional): [description]. Defaults to 'blue'.
+    """
+    pos = {}
+    for node in G.nodes():
+        pos[node] = (G.nodes()[node]["Longitude"], G.nodes()[node]["Latitude"])
+
+    # pprint(G.nodes())
+    # pos = spring_layout(G)
+    # pprint(pos)
+    plt.clf()
+    fig, ax = plt.subplots()
+    draw_circular(
+        G,        
+        node_color=node_color,
+        with_labels=with_labels,
+        edge_color=edge_color,
+    )
+    plt.draw()
+    plt.savefig(name)    
     plt.close()
 
 
