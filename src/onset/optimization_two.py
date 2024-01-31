@@ -467,7 +467,10 @@ class Link_optimization:
         done = set([pair for pair in is_done if is_done[pair].value == True])
         to_do = ordered_node_pairs.difference(done)
         start = time.time()
-        p = Pool(120)
+        if self.PARALLEL: 
+            p = Pool(32)
+        else:
+            p = Pool(1)
         # p.starmap_async(shortest_path_worker, work)
         result = p.starmap(astar_path_worker, work)        
         cycle = 1
@@ -481,7 +484,7 @@ class Link_optimization:
                 to_do = ordered_node_pairs.difference(done)
                 # update whats been done                                                
                 if len(to_do) < 30: 
-                    logger.info(f"Waiting for {len(to_do)} to finish.")
+                    logger.debug(f"Waiting for {len(to_do)} to finish.")
                     for (u, v) in to_do:                
                         logger.debug(f"\tWaiting for:\t{(u, v)}")
                 else:
@@ -737,7 +740,7 @@ class Link_optimization:
             else:
                 logger.info(f"finding shortest paths in candidate graphs of {self.network} - Sequential")
                 super_graph = self.super_graph                
-                for s, t in tqdm(self.all_node_pairs, desc="Pre-computing paths ."):
+                for s, t in tqdm(self.ordered_node_pairs, desc="Pre-computing paths ."):
                     # if s not in self.tunnel_dict or t not in self.tunnel_dict[s]:
                     if self.tunnel_dict[s,t] == []:
                         self.tunnel_tuple_dict[s, t] = []
@@ -777,27 +780,19 @@ class Link_optimization:
 
         except:
             G = self.G.copy(as_view=True)            
-            for source, target in tqdm(self.all_node_pairs, desc="Pre-computing paths."):                                
-                # if self.core_shortest_path_len[source][target] < float('inf'):
-                #     shortest_s_t_path_len = self.core_shortest_path_len[source][target]
-                # else:
-                #     shortest_s_t_path_len = nx.shortest_path_length(G, source, target)
-                #     cutoff = 4 if shortest_s_t_path_len < 4 else shortest_s_t_path_len
-                #     self.update_shortest_path_len(shortest_s_t_path_len, source, target)                    
-
-                if len(self.original_tunnel_dict[source, target]) == 0:   
-                    s_t_paths = nx.shortest_simple_paths(G, source, target)
-                    for i, s_t_path in tqdm(enumerate(s_t_paths), desc="Path", leave=False):                        
-                        # want at last 6 paths. This should also guarantee some multi-hop paths.
-                        if i > 6:
-                            break
-                        
-                        self.original_tunnel_list.append(s_t_path)
-                        self.original_tunnel_dict[source, target].append(s_t_path) 
-                        
-                        reversed_path = list(reversed(s_t_path))
-                        self.original_tunnel_list.append(reversed_path)
-                        self.original_tunnel_dict[target, source].append(reversed_path) 
+            for source, target in tqdm(self.ordered_node_pairs, desc="Pre-computing paths."):
+                s_t_paths = nx.shortest_simple_paths(G, source, target)
+                for i, s_t_path in tqdm(enumerate(s_t_paths), desc="Path", leave=False):                        
+                    # want at last 6 paths. This should also guarantee some multi-hop paths.
+                    if i > 6:
+                        break
+                    
+                    self.original_tunnel_list.append(s_t_path)
+                    self.original_tunnel_dict[source, target].append(s_t_path) 
+                    
+                    reversed_path = list(reversed(s_t_path))
+                    self.original_tunnel_list.append(reversed_path)
+                    self.original_tunnel_dict[target, source].append(reversed_path) 
 
             self.save_original_paths_list()
             self.save_original_paths_dict()
@@ -810,7 +805,7 @@ class Link_optimization:
             json_obj = json.load(fob)
             self.tunnel_list = json_obj["list"]
             tunnel_dict = json_obj["tunnels"]
-            for s, t in tunnel_dict: 
+            for s, t in self.all_node_pairs: 
                 self.tunnel_dict[s, t] = tunnel_dict[s][t]
         return
 
@@ -819,7 +814,7 @@ class Link_optimization:
         with open(
             output_file, "w"
         ) as fob:
-            json.dump({"compute_time": compute_time, "list": list(self.tunnel_list), "tunnels": { s : {t : self.tunnel_dict[s, t] } for s, t in self.tunnel_dict }}, fob)            
+            json.dump({"compute_time": compute_time, "list": list(self.tunnel_list), "tunnels": { s : {t : self.original_tunnel_dict[s, t] for t in self.nodes if t!=s} for s in self.nodes }}, fob)            
         logger.info(f"Computed paths and saved to {output_file}.")
         return 
     
@@ -837,7 +832,7 @@ class Link_optimization:
         ) as fob:
             json_obj = json.load(fob)
             original_tunnel_dict = json_obj["tunnels"]
-            for s, t in original_tunnel_dict: 
+            for s, t in self.all_node_pairs: 
                 self.original_tunnel_dict[s, t] = original_tunnel_dict[s][t]
         return
 
@@ -855,7 +850,7 @@ class Link_optimization:
             "./data/paths/optimization/{}_original_tunnel_dict.json".format(self.network),
             "w",
         ) as fob:
-            return json.dump({"tunnels": { s : {t : self.original_tunnel_dict[s, t] } for s, t in self.original_tunnel_dict }}, fob)
+            return json.dump({"tunnels": { s : {t : self.original_tunnel_dict[s, t] for t in self.nodes if t!=s} for s in self.nodes }}, fob)
 
     
     def get_flow_allocations(self):
@@ -3281,6 +3276,7 @@ class Link_optimization:
     def onset_v3(self, te_method=False):
         LINK_CAPACITY = self.LINK_CAPACITY // self.SCALE_DOWN_FACTOR
         m = self.model = Model( "Doppler" )
+        m.setParam( "MemLimit", 50 ) # GB
         if "ecmp" in te_method: # find multiple solutions, keep the best w.r.t. ecmp routing
             m.setParam( "PoolSearchMode", 2 )
             m.setParam( "PoolSolutions", 100 )
