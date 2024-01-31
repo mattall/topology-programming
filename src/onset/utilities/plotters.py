@@ -15,9 +15,7 @@ from matplotlib.font_manager import FontProperties
 from networkx import draw, draw_circular
 import pandas as pd
 import seaborn as sns
-from onset.constants import PLOT_DIR
-
-from onset.constants import PLT_BASE, PLT_HIGHT
+from onset.constants import PLT_BASE, PLT_HIGHT, PLOT_DIR
 from onset.utilities.sysUtils import save_raw_data
 
 plt.rcParams.update(
@@ -59,7 +57,6 @@ def get_box_plot_stats(distribution):
         'whislo': whislo, 
         'whishi': whishi
     }
-
 
 def draw_graph(
     G, name, node_color="blue", with_labels=True, edge_color="black"

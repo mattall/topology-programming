@@ -476,6 +476,7 @@ class AlpWolf:
             0 on success.
             -1 of failure.
         """
+        logger.debug("Adding circuit {} {}.".format(u, v))
         if capacity is None:
             capacity = self.circuit_bandwidth
 
@@ -509,10 +510,10 @@ class AlpWolf:
         # update logical graph
         if (u, v) in self.logical_graph.edges:
             logger.debug(f"edge {(u,v)} is present in self.logical_graph")
-            pass
+            
         else:
-            logger.warning(
-                f"edge {(u,v)} was not found in self.logical_graph.edges. Unintended side effects may stem from here."
+            logger.debug(
+                f"edge {(u,v)} was not found in self.logical_graph.edges."
             )
             self.logical_graph.add_edge(u, v)
 

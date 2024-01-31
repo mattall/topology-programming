@@ -465,3 +465,97 @@ def is_subpath(a, b, input_path, distance=1):
         if first + distance == second:
             return True
     return False
+
+def calc_haversine(lat1, lon1, lat2, lon2):
+    from math import pi, sin, cos, asin, sqrt
+    # source: https://www.geeksforgeeks.org/haversine-formula-to-find-distance-between-two-points-on-a-sphere/
+    # distance between latitudes
+    # and longitudes
+    dLat = (lat2 - lat1) * pi / 180.0
+    dLon = (lon2 - lon1) * pi / 180.0
+
+    # convert to radians
+    lat1 = (lat1) * pi / 180.0
+    lat2 = (lat2) * pi / 180.0
+
+    # apply formulae
+    a = pow(sin(dLat / 2), 2) + pow(sin(dLon / 2), 2) * cos(
+        lat1
+    ) * cos(lat2)
+    rad = 6371
+    c = 2 * asin(sqrt(a))
+    return rad * c
+
+def dist(u, v): 
+    u_lat = u["Latitude"]
+    u_long = u["Longitude"]
+    v_lat = v["Latitude"]
+    v_long = v["Longitude"]
+    return calc_haversine(u_lat, u_long, v_lat, v_long)
+
+def astar_path_generator(G, source, target, heuristic=None, weight="weight"):
+    from networkx.algorithms.simple_paths import _bidirectional_dijkstra, _bidirectional_shortest_path, PathBuffer
+    from networkx.algorithms.shortest_paths.weighted import _weight_function
+
+    if source not in G:
+        raise nx.NodeNotFound(f"source node {source} not in graph")
+
+    if target not in G:
+        raise nx.NodeNotFound(f"target node {target} not in graph")
+
+    if heuristic is None: 
+        heuristic = lambda a, b: 0
+
+    if weight is None:
+        length_func = len
+        shortest_path_func = _bidirectional_shortest_path
+    else:
+        wt = _weight_function(G, weight)
+
+        def length_func(path):
+            return sum(
+                wt(u, v, G.get_edge_data(u, v)) for (u, v) in zip(path, path[1:])
+            )
+
+        shortest_path_func = _bidirectional_dijkstra
+
+    listA = []
+    listB = PathBuffer()
+    prev_path = None
+    while True:
+        if not prev_path:
+            length, path = shortest_path_func(G, source, target, weight=weight)
+            length += heuristic(source, target)
+            listB.push(length, path)
+        else:
+            ignore_nodes = set()
+            ignore_edges = set()
+            for i in range(1, len(prev_path)):
+                root = prev_path[:i]
+                root_length = length_func(root)
+                for path in listA:
+                    if path[:i] == root:
+                        ignore_edges.add((path[i - 1], path[i]))
+                try:
+                    length, spur = shortest_path_func(
+                        G,
+                        root[-1],
+                        target,
+                        ignore_nodes=ignore_nodes,
+                        ignore_edges=ignore_edges,
+                        weight=weight,
+                    )
+                    length += heuristic(root[-1], target)
+                    path = root[:-1] + spur
+                    listB.push(root_length + length, path)
+                except nx.NetworkXNoPath:
+                    pass
+                ignore_nodes.add(root[-1])
+
+        if listB:
+            path = listB.pop()
+            yield path
+            listA.append(path)
+            prev_path = path
+        else:
+            break

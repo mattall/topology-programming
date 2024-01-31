@@ -55,20 +55,22 @@ def main(argv):
         # surfNet_optimal_1_link_attack_conservative_10_0Gbps-200Gbps_-ecmp
         PARALLEL = False
         # NETWORKS = ["ANS"]
-        NETWORKS = ["CRL"]
+        NETWORKS = ["CRL", "ANS", "sprint", "bellCanada", "surfNet"]
+        # NETWORKS = ["sprint"]
+        # NETWORKS = ["surfNet"]
         # VOLUMES = ["100Gbps"]
-        VOLUMES = ["100Gbps", "150Gbps", "200Gbps"]
-        NUM_TARGETED = [1, 2, 3, 4, 5]
+        VOLUMES = ["100Gbps"]
+        NUM_TARGETED = [1]
         # NUM_TARGETED = [5]
-        # TE_METHODS = ["-mcf"]
-        TE_METHODS = ["-ecmp", "-mcf"]
-        CANDIDATE_SET = ["max"]
+        TE_METHODS = ["-ecmp"]
+        # TE_METHODS = ["-ecmp", "-mcf"]
+        # CANDIDATE_SET = ["max"]
 
-        # NETWORKS = ["sprint", "ANS", "CRL", "bellCanada", "surfNet"]
+        # NETWORKS = ["bellCanada", "surfNet"]
         # VOLUMES = ["100Gbps", "150Gbps", "200Gbps"]
         # NUM_TARGETED = [1, 2, 3, 4, 5]
         # TE_METHODS = ["-ecmp", "-mcf"]
-        # CANDIDATE_SET = ["conservative"]
+        CANDIDATE_SET = ["max"]
 
     else:
         PARALLEL = True
@@ -116,8 +118,7 @@ def main(argv):
         # print(f"  benign_volume:    {benign_vol}")
         # print(f"  links_targeted:   {n_targets}")
 
-        iterations = 3
-        n_targets
+        iterations = 2
         tag = "oneShot"
         traffic_file = f"data/archive/traffic/traffic-05-16-2022/{network}_benign_{benign_vol}_{n_targets}x{atk_vol}_{iterations}_{tag}.txt"
         assert os.path.exists(traffic_file), f"traffic file: {traffic_file} not found"
@@ -136,6 +137,7 @@ def main(argv):
     if DRY: 
         exit()
     if PARALLEL:
+        pool = Pool()
         pool.map_async(experiment, exp_args)
         pool.close()
         pool.join()
@@ -143,7 +145,6 @@ def main(argv):
     else:
         for ea in exp_args:
             experiment(ea)
-
 
     # with open("data/results/time.csv", "a") as fob:
     #     fob.write(",".join([exp,

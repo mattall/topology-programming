@@ -9,6 +9,26 @@ import re
 
 from onset.constants import PLOT_DIR
 
+def file_writer(filepath, queue):
+    # open the file
+    with open(filepath, 'w') as file:
+        # run until the event is set
+        while True:
+            # get a line of text from the queue
+            line = queue.get()
+            # check if we are done
+            if line is None:
+                # exit the loop
+                break
+            # write it to file
+            file.write(line)
+            # flush the buffer
+            file.flush()
+            # mark the unit of work complete
+            queue.task_done()
+    # mark the exit signal as processed, after the file was closed
+    queue.task_done()
+
 def clock(f, *args, **kwargs):
     # clocks the time to run a function
     # return (result, time) tuple 

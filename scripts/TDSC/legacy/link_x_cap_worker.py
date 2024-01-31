@@ -3,6 +3,7 @@ import csv
 
 def experiment(args):
     net, n_targets, iterations, te_method, traffic_file, proportion, candidate_set = args
+    exp_id = "_".join(str(a) for a in (net, n_targets, iterations, te_method, proportion, candidate_set))
     from onset.utilities.post_process import post_proc_timeseries
     from onset.simulator import Simulation
     hosts = {
@@ -19,16 +20,16 @@ def experiment(args):
         iterations=iterations,
         te_method=te_method,
         traffic_file=traffic_file,
-        fallow_transponders=10,
+        fallow_transponders=2,
         congestion_threshold_upper_bound=0.8,
         congestion_threshold_lower_bound=0.2,
-        topology_programming_method="onset_v2",
+        topology_programming_method="onset_v3",
         attack_proportion=proportion,
         candidate_link_choice_method=candidate_set
     )
 
     result = attack_sim.perform_sim()
-    result_file = f"data/reports/{net}_multi-attack{te_method}-{os.getpid()}.csv"
+    result_file = f"data/reports/" + exp_id  + ".csv"
     with open(result_file, "w") as outfile:
         # pass the csv file to csv.writer function.
         # writer = csv.DictWriter(outfile, fieldnames=result.keys())

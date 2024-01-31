@@ -1,4 +1,6 @@
 import sys
+import os
+from numbers import Number
 from numpy import loadtxt, sqrt, array_equal, floor
 from pandas import DataFrame
 from itertools import combinations
@@ -40,7 +42,7 @@ import traceback
 from copy import deepcopy
 from hashlib import sha1
 from logging import FileHandler
-from os import makedirs, path, system
+from os import makedirs, system
 from os.path import dirname, isfile
 
 
@@ -221,7 +223,7 @@ class Simulation:
 
         # Set Experiment absolute path
         if self.net_dir:
-            self.EXPERIMENT_ABSOLUTE_PATH = path.join(
+            self.EXPERIMENT_ABSOLUTE_PATH = os.path.join(
                 SCRIPT_HOME,
                 "data",
                 "results",
@@ -230,7 +232,7 @@ class Simulation:
             )
 
         else:
-            self.EXPERIMENT_ABSOLUTE_PATH = path.join(
+            self.EXPERIMENT_ABSOLUTE_PATH = os.path.join(
                 SCRIPT_HOME, "data", "results", self.EXPERIMENT_ID
             )
         # The following three commands must be ordered as follows.
@@ -261,7 +263,7 @@ class Simulation:
         )
         logger.info("Experiment ID:            {}".format(self.EXPERIMENT_ID))
         # makedirs(self.EXPERIMENT_ABSOLUTE_PATH, exist_ok=True)
-        # log_file = path.join(
+        # log_file = os.path.join(
         #     self.EXPERIMENT_ABSOLUTE_PATH, "{}.log".format(self.EXPERIMENT_ID)
         # )
         # if self.start_clean:
@@ -280,7 +282,7 @@ class Simulation:
         if traffic_file == "":
             traffic_file = self.traffic_file
         if self.shakeroute:
-            result_path = path.join(self.network_name, result_path)
+            result_path = os.path.join(self.network_name, result_path)
         command_args = [
             "yates",
             topo_file,
@@ -301,10 +303,10 @@ class Simulation:
         if gurobi_status == 0:
             logger.debug("gurobi_cl is in path.")
         else:
-            raise(f"Error: gurobi_cl not in path {sys.path}")
+            raise(f"Error: gurobi_cl not in path {sys.path}") # type: ignore
         self._system(" ".join(command_args))
         max_congestion = read_result_val(
-            path.join(
+            os.path.join(
                 SCRIPT_HOME,
                 "data",
                 "results",
@@ -326,15 +328,15 @@ class Simulation:
         congestion_change = []
 
         # prep directory
-        GRAPHS_PATH = path.join(self.EXPERIMENT_ABSOLUTE_PATH, "graphs")
+        GRAPHS_PATH = os.path.join(self.EXPERIMENT_ABSOLUTE_PATH, "graphs")
         makedirs(GRAPHS_PATH, exist_ok=True)
 
         # prep initial file
         initial_graph = self.wolf.logical_graph
-        INITIAL_GRAPH_PATH = path.join(
+        INITIAL_GRAPH_PATH = os.path.join(
             GRAPHS_PATH, self.network_name + "_0.dot"
         )
-        INITIAL_RESULTS_REL_PATH = path.join(self.EXPERIMENT_ID, "__0")
+        INITIAL_RESULTS_REL_PATH = os.path.join(self.EXPERIMENT_ID, "__0")
 
         # Write Graphs to files
         self.export_logical_topo_to_gml(
@@ -348,22 +350,22 @@ class Simulation:
         ):
             return
 
-        PATH_DIFF_FOLDER = path.join(
+        PATH_DIFF_FOLDER = os.path.join(
             self.EXPERIMENT_ABSOLUTE_PATH, "path_diff"
         )
-        CONGESTION_DIFF_FOLDER = path.join(
+        CONGESTION_DIFF_FOLDER = os.path.join(
             self.EXPERIMENT_ABSOLUTE_PATH, "congestion_diff"
         )
         makedirs(PATH_DIFF_FOLDER, exist_ok=True)
         makedirs(CONGESTION_DIFF_FOLDER, exist_ok=True)
 
-        INITIAL_PATHS = path.join(
+        INITIAL_PATHS = os.path.join(
             self.EXPERIMENT_ABSOLUTE_PATH,
             "__0",
             "paths",
             self.te_method.strip("-") + "_0",
         )
-        INITIAL_CONGESTION = path.join(
+        INITIAL_CONGESTION = os.path.join(
             self.EXPERIMENT_ABSOLUTE_PATH,
             "__0",
             "MaxExpCongestionVsIterations.dat",
@@ -381,14 +383,14 @@ class Simulation:
             )
 
         for u, v in candidate_circuits:
-            TEST_RESULTS_REL_PATH = path.join(
+            TEST_RESULTS_REL_PATH = os.path.join(
                 self.EXPERIMENT_ID, "{}_{}".format(u, v)
             )
             test_alpwolf = deepcopy(self.wolf)
             for _ in range(circuits_to_add):
                 test_alpwolf.add_circuit(u, v)
 
-            TEST_GRAPH_PATH = path.join(
+            TEST_GRAPH_PATH = os.path.join(
                 GRAPHS_PATH, self.network_name + "_{}_{}.dot".format(u, v)
             )
 
@@ -405,24 +407,24 @@ class Simulation:
             ):
                 return
 
-            TEST_PATHS = path.join(
+            TEST_PATHS = os.path.join(
                 self.EXPERIMENT_ABSOLUTE_PATH,
                 "{}_{}".format(u, v),
                 "paths",
                 self.te_method.strip("-") + "_0",
             )
-            TEST_CONGESTION = path.join(
+            TEST_CONGESTION = os.path.join(
                 self.EXPERIMENT_ABSOLUTE_PATH,
                 "{}_{}".format(u, v),
                 "MaxExpCongestionVsIterations.dat",
             )
 
-            PATH_DIFF = path.join(
+            PATH_DIFF = os.path.join(
                 self.EXPERIMENT_ABSOLUTE_PATH,
                 "path_diff",
                 "{}_{}.txt".format(u, v),
             )
-            CONGESTION_DIFF = path.join(
+            CONGESTION_DIFF = os.path.join(
                 self.EXPERIMENT_ABSOLUTE_PATH,
                 "congestion_diff",
                 "{}_{}.txt".format(u, v),
@@ -441,13 +443,13 @@ class Simulation:
 
             draw_graph(
                 test_alpwolf.logical_graph,
-                path.join(
+                os.path.join(
                     GRAPHS_PATH, self.network_name + "_{}_{}".format(u, v)
                 ),
             )
 
-        PLOT_DIR = path.join(self.EXPERIMENT_ABSOLUTE_PATH, "plot_dir")
-        CONGESTION_VS_PATHCHURN = path.join(
+        PLOT_DIR = os.path.join(self.EXPERIMENT_ABSOLUTE_PATH, "plot_dir")
+        CONGESTION_VS_PATHCHURN = os.path.join(
             PLOT_DIR, "congestion_vs_pathChurn"
         )
         makedirs(PLOT_DIR, exist_ok=True)
@@ -458,8 +460,8 @@ class Simulation:
             "Congestion Change",
             CONGESTION_VS_PATHCHURN,
         )
-        CONGESTION_CDF = path.join(PLOT_DIR, "congestion_cdf")
-        PATHCHURN_CDF = path.join(PLOT_DIR, "pathChurn_cdf")
+        CONGESTION_CDF = os.path.join(PLOT_DIR, "congestion_cdf")
+        PATHCHURN_CDF = os.path.join(PLOT_DIR, "pathChurn_cdf")
         cdf_average_congestion(congestion_change, CONGESTION_CDF)
         cdf_churn(path_churn, PATHCHURN_CDF)
 
@@ -474,8 +476,8 @@ class Simulation:
             yates_to_ripple_map = {
                 node: ("sw" + str(int(node) - 1)) for (node) in G
             }
-        if 1:
-            yates_to_ripple_map = {node: ("s{}".format(node)) for (node) in G}
+
+        yates_to_ripple_map = {node: ("s{}".format(node)) for (node) in G}
         gml_view = relabel_nodes(G, yates_to_ripple_map, copy=True)
         write_gml(gml_view, name)
         del gml_view
@@ -495,7 +497,7 @@ class Simulation:
         self.demand_factor = demand_factor
         sim_param_tag = f"{self.circuits}_{start_iter}_{end_iter}_{int(repeat)}_{unit}_{self.demand_factor:.1f}"
         self.new_circuit = []
-        chaff = []
+        self.chaff = []
         if end_iter == 0:
             end_iter = self.iterations
 
@@ -516,7 +518,11 @@ class Simulation:
             "Throughput": [],
             "Link Bandwidth Coefficient": [],
             "Demand Factor": [],
-            "n_solutions": [],
+            "Total Solutions": [],
+            "Doppler Min MLU": [],
+            "Optimal Topology ID": [],
+            "Current Topology ID": [],
+            "Doppler Optimization Time": [],            
         }
         return_data = self.return_data = defaultdict(list)
         self.circuits_added = False
@@ -534,12 +540,7 @@ class Simulation:
                 
         EXPERIMENT_ID = self.EXPERIMENT_ID
         EXPERIMENT_ABSOLUTE_PATH = self.EXPERIMENT_ABSOLUTE_PATH
-        
-        # Stateful list of active circuits triggered from sig_add_circuits
-        self.flux_circuits = (
-            []
-        ) 
-        
+                
         # Open traffic file and pass a new line from the file for every iteration.
         with open(traffic, "rb") as fob:            
             tm_data = fob.readlines()
@@ -566,10 +567,10 @@ class Simulation:
                 ITERATION_ID = f"{name}_{iter_i}-0-{iterations}_{sim_param_tag}".replace('.','')
 
             self.ITERATION_ID = ITERATION_ID.replace('.','')
-            self.ITERATION_REL_PATH = ITERATION_REL_PATH = path.join(
+            self.ITERATION_REL_PATH = ITERATION_REL_PATH = os.path.join(
                 EXPERIMENT_ID, ITERATION_ID
             ).replace('.','')
-            self.ITERATION_ABS_PATH = ITERATION_ABS_PATH = path.join(
+            self.ITERATION_ABS_PATH = ITERATION_ABS_PATH = os.path.join(
                 EXPERIMENT_ABSOLUTE_PATH, ITERATION_ID
             ).replace('.','')
             if False: #dry:
@@ -597,12 +598,12 @@ class Simulation:
                 
                 continue                    
 
-            # CONGESTION_PATH = path.join(
+            # CONGESTION_PATH = os.path.join(
             #     EXPERIMENT_ABSOLUTE_PATH,
             #     ITERATION_ID,
             #     "EdgeCongestionVsIterations.dat",
             # )
-            # MAX_CONGESTION_PATH = path.join(
+            # MAX_CONGESTION_PATH = os.path.join(
             #     EXPERIMENT_ABSOLUTE_PATH,
             #     ITERATION_ID,
             #     "MaxCongestionVsIterations.dat",
@@ -624,7 +625,7 @@ class Simulation:
             
             reconfig_time = 0
             self.new_circuit = []
-            self.drop_circuits = []
+            self.chaff = []
             makedirs(ITERATION_ABS_PATH, exist_ok=True)
 
             # if i == 360:
@@ -663,6 +664,12 @@ class Simulation:
                 and self.sig_add_circuits
             ):
                 self.onset_method()
+
+            elif (  # Method from TDSC-23 - Link-flood DDoS Defense - Post Major Revision
+                self.topology_programming_method == "onset_v3"
+                and self.sig_add_circuits
+            ):
+                self.onset_v3_method()           
 
             elif (  # Method from TDSC-23 - Link-flood DDoS Defense
                 self.topology_programming_method == "onset_v2"
@@ -738,10 +745,8 @@ class Simulation:
                        name=f"data/graphs/img/1-{ITERATION_ID}")
 
             # self.base_graph._init_link_graph()
-            if self.PREV_ITER_ABS_PATH \
-                and array_equal(tm_i_data, PREV_ITER_TM_DATA) \
-                and iter_congestion > 0 \
-                and len(self.flux_circuits) == 0:
+            if self.PREV_ITER_ABS_PATH\
+                and array_equal(tm_i_data, PREV_ITER_TM_DATA) and ( iter_congestion > 0 ) and ( len(self.new_circuit) == 0 ) and ( len(self.chaff) == 0 ):
                 # Prevents us from running the simulation if the topology has not changed
                 # TODO: We should also ensure that the traffic matrix is unique during this iteration. 
                 system(f"cp -r {self.PREV_ITER_ABS_PATH}/* {ITERATION_ABS_PATH}/")
@@ -781,7 +786,7 @@ class Simulation:
 
             return_data["Congestion"].append(
                 read_result_val(
-                    path.join(
+                    os.path.join(
                         ITERATION_ABS_PATH,
                         "MaxExpCongestionVsIterations.dat",
                     )
@@ -789,7 +794,7 @@ class Simulation:
             )
             return_data["Loss"].append(
                 read_result_val(
-                    path.join(
+                    os.path.join(
                         ITERATION_ABS_PATH,
                         "CongestionLossVsIterations.dat",
                     )
@@ -797,7 +802,7 @@ class Simulation:
             )
             return_data["Throughput"].append(
                 read_result_val(
-                    path.join(
+                    os.path.join(
                         ITERATION_ABS_PATH,
                         "TotalThroughputVsIterations.dat",
                     )
@@ -805,11 +810,11 @@ class Simulation:
             )
             return_data["Total Links Added"].append(len(self.new_circuit))
             return_data["Links Added"].append(self.new_circuit)
-            return_data["Total Flux Links"].append(len(self.flux_circuits))
+            # return_data["Total Flux Links"].append(len(self.flux_circuits))
             return_data["Total Links Dropped"].append(
-                len(self.drop_circuits)
+                len(self.chaff)
             )
-            return_data["Links Dropped"].append(self.drop_circuits)
+            return_data["Links Dropped"].append(self.chaff)
             return_data["Link Bandwidth Coefficient"].append(self.max_load)
             return_data["Demand Factor"].append(self.demand_factor)
             return_data["Optimization Time"].append(self.opt_time)
@@ -827,7 +832,7 @@ class Simulation:
                 iter_congestion
                 <= self.congestion_threshold_lower_bound
             ):
-                if len(self.flux_circuits) > 0:
+                if len(self.chaff) > 0:
                     self.sig_drop_circuits = True
 
             if CROSSFIRE:
@@ -866,10 +871,10 @@ class Simulation:
             # self.base_graph.set_weights(CONGESTION_PATH)
             # self.base_graph.draw_graphs(ITERATION_ABS_PATH)
             # edge_congestion = get_edge_congestion(CONGESTION_PATH)
-            # PLOT_DIR = path.join(ITERATION_ABS_PATH, "plot_dir")
+            # PLOT_DIR = os.path.join(ITERATION_ABS_PATH, "plot_dir")
             # makedirs(PLOT_DIR, exist_ok=True)
             # try:
-            #     congestion_heatmap(edge_congestion, path.join(
+            #     congestion_heatmap(edge_congestion, os.path.join(
             #         PLOT_DIR, "edge_congestion_heatmap"))
             # except:
             #     logger.warning("Did not make heatmap for this iteration.")
@@ -889,17 +894,17 @@ class Simulation:
 
         def verify_topo():
             logger.debug("verifying topology file.")
-            gml_handle = path.join(
+            gml_handle = os.path.join(
                 SCRIPT_HOME, "data", "graphs", "gml", name + ".gml"
             )
-            json_handle = path.join(
+            json_handle = os.path.join(
                 SCRIPT_HOME, "data", "graphs", "json", name + ".json"
             )
             if (
                 self.shakeroute
                 and self.topology_programming_method != "baseline"
             ):
-                base_topo_file = path.join(
+                base_topo_file = os.path.join(
                     SCRIPT_HOME,
                     "data",
                     "graphs",
@@ -930,7 +935,7 @@ class Simulation:
             # try:
             #     self.base_graph.import_dot_graph(base_topo_file)
             # except KeyError:
-            #     topo_file = path.join(SCRIPT_HOME, "data", "graphs", "dot", name+"-location.dot")
+            #     topo_file = os.path.join(SCRIPT_HOME, "data", "graphs", "dot", name+"-location.dot")
             #     self.base_graph.import_dot_graph(base_topo_file)
             # self.num_hosts = len([n for n in self.base_graph.G.nodes if n.startswith('h')])
             # self.num_hosts = len(self.base_graph.G.nodes)
@@ -940,14 +945,14 @@ class Simulation:
         def verify_hosts():
             logger.debug("verifying hosts file.")
             if self.shakeroute:
-                hosts_file = path.join(
+                hosts_file = os.path.join(
                     SCRIPT_HOME, "data", "hosts", self.shakeroute + ".hosts"
                 )
             else:
-                hosts_file = path.join(
+                hosts_file = os.path.join(
                     SCRIPT_HOME, "data", "hosts", name + ".hosts"
                 )
-            hosts_folder = path.join(SCRIPT_HOME, "data", "hosts")
+            hosts_folder = os.path.join(SCRIPT_HOME, "data", "hosts")
             try:  # sets self.num_hosts and checks file exists.
                 assert isfile(
                     hosts_file
@@ -989,7 +994,7 @@ class Simulation:
                 logger.debug(
                     "no file stated. Generating common traffic file string"
                 )
-                traffic_file = path.join(
+                traffic_file = os.path.join(
                     SCRIPT_HOME, "data", "traffic", name + ".txt"
                 )
             else:
@@ -1149,6 +1154,103 @@ class Simulation:
         self.sig_add_circuits = False
         return
 
+    def onset_v3_method(self):
+        logger.info("TP Method: onset_v3")
+        txp_count_dict = self.wolf.get_txp_count() # Maps node NAMES to their total transponders.
+        self.optimizer = optimizer = Link_optimization(
+            G                   = self.wolf.logical_graph,
+            demand_matrix_file  = self.temp_tm_i_file,
+            network             = self.network_name,
+            core_G              = self.wolf.base_graph.copy(as_view=True),
+            txp_count           = txp_count_dict,
+            use_cache           = True,
+            compute_paths       = True,
+            dynamic_scale_down  = True,
+            parallel_execution  = True,
+            candidate_set       = self.candidate_link_choice_method,
+            time_limit_minutes  = self.optimizer_time_limit_minutes,            
+        )
+
+        self.max_load = 0.9
+        result_topo = []
+        add_links = []
+        drop_links = []        
+
+        self.opt_time = optimizer.onset_v3(self.te_method)
+        if "ecmp" not in self.te_method:
+            # Changes already populated. Just adapt.             
+            self.adapt_topology()
+            self.sig_add_circuits = False
+            return
+        solCount = optimizer.model.solCount
+        mlu = {}
+        if solCount > 0: 
+            tried_solutions = set()
+            for sol in range(solCount):
+                logger.info(f"Setting solution number set to : {sol}")
+                optimizer.set_solution_number(sol)                    
+                logger.info(f"Reading solution number : {optimizer.model.getParamInfo('SolutionNumber')[2]}")
+                self.optimizer.populate_changes()                    
+                topo_string = optimizer.get_topo_b64_xn()                
+                if topo_string not in tried_solutions:
+                    # Draw the original graph
+                    # pre_sol_topo_img=f"data/graphs/img/{self.ITERATION_ID}-sol_{sol}-0.jpg"                        
+                    # pre_sol_topo_img_circ=f"data/graphs/img/{self.ITERATION_ID}-circ-sol_{sol}-0.jpg"
+                    # draw_graph(self.wolf.logical_graph, name=pre_sol_topo_img)
+                    # logger.info(f"Generated pre-solution topology image: {pre_sol_topo_img}")                        
+                    # draw_graph_circular(self.wolf.logical_graph, name=pre_sol_topo_img_circ)
+                    # logger.info(f"Generated pre-solution topology circular image: {pre_sol_topo_img_circ}")                        
+
+                    logger.info(f"Generated pre-solution topology image: {topo_string}")                        
+                    logger.info(f"Unique topo string is: {topo_string}")
+                    sol_topo = self.ITERATION_ABS_PATH + f"sol_{sol}.dot"
+                    sol_path = self.ITERATION_REL_PATH + f"sol_{sol}"
+                    self.adapt_topology()
+                    
+                    # Draw the updated graph
+                    post_sol_topo_img=f"data/graphs/img/{self.EXPERIMENT_ID}-{self.ITERATION_ID}-sol_{sol}-1.jpg"
+                    post_sol_topo_img_circ=f"data/graphs/img/{self.EXPERIMENT_ID}-{self.ITERATION_ID}-sol_{sol}-1-circ.jpg"                    
+                    draw_graph(self.wolf.logical_graph, name=post_sol_topo_img)
+                    logger.info(f"Generated post-solution topology image: {post_sol_topo_img}")                                                
+                    draw_graph_circular(self.wolf.logical_graph, name=post_sol_topo_img_circ)
+                    logger.info(f"Generated post-solution topology circular image: {post_sol_topo_img_circ}")                        
+                    # makedirs(sol_path, exist_ok=True)
+                    Gml_to_dot(
+                        self.wolf.logical_graph,
+                        sol_topo,
+                        unit=self.unit
+                    )
+                    write_gml(self.wolf.logical_graph, 
+                                self.ITERATION_ABS_PATH + f"sol_{sol}.gml")
+                    this_mlu = self._yates(
+                        sol_topo, 
+                        sol_path, 
+                        self.temp_tm_i_file
+                    )                  
+                    if isinstance(this_mlu, Number):
+                        logger.info(f"Solution has MLU: {this_mlu}")
+                        mlu[sol] = this_mlu                        
+                    self.adapt_topology(reverse=True)
+                    tried_solutions.add(topo_string)                    
+                    self.sig_add_circuits = False
+                    self.sig_drop_circuits = False
+                    if this_mlu < 0.8:
+                        break
+                else: 
+                    logger.info(f"topo string is not unique: {topo_string}")
+
+            
+            min_mlu_solution = min(mlu, key=mlu.get)
+            optimizer.set_solution_number(min_mlu_solution)
+            # must always populate changes after setting a solution number
+            optimizer.populate_changes()      
+            self.adapt_topology()      
+            self.sig_add_circuits = False        
+            
+        self.sig_add_circuits = False        
+
+
+
     def onset_v2_method(self):
         txp_count_dict = self.wolf.get_txp_count() # Maps node NAMES to their total transponders.
         self.optimizer = optimizer = Link_optimization(
@@ -1166,7 +1268,7 @@ class Simulation:
             self.max_load = 0.5
         else:
             # max_load = self.congestion_threshold_upper_bound
-            self.max_load = 1.0
+            self.max_load = 0.9
 
         result_topo = []
         add_links = []
@@ -1178,6 +1280,7 @@ class Simulation:
 
         self.sig_add_circuits = False
         return
+
 
     def adapt_topology(self, reverse=False): 
         logger.info("Adapting topology")
@@ -1228,7 +1331,7 @@ class Simulation:
         #     self.exit_early = True
 
     def OTP_method(self):
-        edge_congestion_file = path.join(
+        edge_congestion_file = os.path.join(
             self.PREV_ITER_ABS_PATH,
             "EdgeCongestionVsIterations.dat",
         )
@@ -1282,7 +1385,7 @@ class Simulation:
         return
 
     def greylambda_method(self):
-        edge_congestion_file = path.join(
+        edge_congestion_file = os.path.join(
             self.PREV_ITER_ABS_PATH,
             "EdgeCongestionVsIterations.dat",
         )
@@ -1312,7 +1415,7 @@ class Simulation:
         return
 
     def BVT_method(self):
-        edge_congestion_file = path.join(
+        edge_congestion_file = os.path.join(
             self.PREV_ITER_ABS_PATH,
             "EdgeCongestionVsIterations.dat",
         )
@@ -1345,20 +1448,20 @@ class Simulation:
 
     def save_doppler_results(self):
         optimizer = self.optimizer
-        self.return_data["n_solutions"].append(
+        self.return_data["Total Solutions"].append(
             len(optimizer.unique_solutions())
         )        
-        write_result_val(path.join(self.ITERATION_ABS_PATH, "TotalSolutions.dat"),
-                        "n_solutions", 
+        write_result_val(os.path.join(self.ITERATION_ABS_PATH, "TotalSolutions.dat"),
+                        "Total Solutions", 
                         len(optimizer.unique_solutions()), 
                         self.te_method, 
                         self.ITERATION_ID
         )        
-        self.return_data["opt_time"].append(
+        self.return_data["Doppler Optimization Time"].append(
             self.opt_time        
         )
-        write_result_val(path.join(self.ITERATION_ABS_PATH, "OptTime.dat"),
-                         "n_solutions",
+        write_result_val(os.path.join(self.ITERATION_ABS_PATH, "OptTime.dat"),
+                         "Total Solutions",
                          self.opt_time,
                          self.te_method,
                          self.ITERATION_ID
@@ -1374,16 +1477,16 @@ class Simulation:
         optimizer.model.setParam("SolutionNumber", best_sol)
         
         doppler_min_mlu = floor(optimizer.maxLinkUtil.x * 1000) / 1000
-        self.return_data["doppler_min_mlu"].append(
+        self.return_data["Doppler Min MLU"].append(
             doppler_min_mlu
         )        
-        write_result_val(path.join(self.ITERATION_ABS_PATH, "DopplerMinMLU.dat"),
-                         "doppler_min_mlu",
+        write_result_val(os.path.join(self.ITERATION_ABS_PATH, "DopplerMinMLU.dat"),
+                         "Doppler Min MLU",
                          doppler_min_mlu,
                          self.te_method,
                          self.ITERATION_ID
         )
-        write_result_vals(path.join(self.ITERATION_ABS_PATH, "DopplerMLU.dat"),
+        write_result_vals(os.path.join(self.ITERATION_ABS_PATH, "DopplerMLU.dat"),
                           "Solution ID",
                           "Max Link Util",
                           mlu_dict,
@@ -1394,7 +1497,7 @@ class Simulation:
         self.return_data["Optimal Topology ID"].append(
             optimal_topo_id
         )
-        write_result_val(path.join(self.ITERATION_ABS_PATH, "OptimalTopoID.dat"),
+        write_result_val(os.path.join(self.ITERATION_ABS_PATH, "OptimalTopoID.dat"),
                          "Optimal Topology ID",
                          optimal_topo_id, 
                          self.te_method,
@@ -1404,7 +1507,7 @@ class Simulation:
         self.return_data["Current Topology ID"].append(
             curr_topo_id
         )
-        write_result_val(path.join(self.ITERATION_ABS_PATH, "CurrTopoID.dat"),
+        write_result_val(os.path.join(self.ITERATION_ABS_PATH, "CurrTopoID.dat"),
                          "Current Topology ID",
                          curr_topo_id, 
                          self.te_method,
@@ -1412,7 +1515,7 @@ class Simulation:
         )
         opt_demand_stats = get_box_plot_stats(list(optimizer.demand_dict.values()))        
         write_result_vals(
-            path.join(
+            os.path.join(
                 self.ITERATION_ABS_PATH, "optimizer_demand_stats.dat"
             ), "stat", "value", opt_demand_stats
         )
@@ -1421,13 +1524,13 @@ class Simulation:
             optimizer.demand_matrix // self.scale_down_factor
         )
         write_result_vals(
-            path.join(
+            os.path.join(
                 self.ITERATION_ABS_PATH, "expected_demand_stats.dat"
             ), "stat", "value", expected_demand_stats 
         )
 
         plt_bxplt(
-            path.join(
+            os.path.join(
                 self.ITERATION_ABS_PATH, "expected_v_actual_demand_difference.png"
             ), [expected_demand_stats, opt_demand_stats])
         
@@ -1435,13 +1538,10 @@ class Simulation:
         opt_demand_stats['type'] = 'actual'
         df = DataFrame([expected_demand_stats, opt_demand_stats])
         df.to_csv(
-            path.join(
+            os.path.join(
                 self.ITERATION_ABS_PATH, "expected_v_actual_demand_difference.png"
             ), index=False
         )
-
-
-        
 
     def doppler_method(self, iter="N/A"):
         # optimizer = Link_optimization(
@@ -1476,7 +1576,7 @@ class Simulation:
         # opt_demand_stats = get_box_plot_stats(list(optimizer.demand_dict.values()))        
 
         # plt_bxplt(
-        #     path.join(
+        #     os.path.join(
         #         self.ITERATION_ABS_PATH, "expected_v_actual_demand_difference.png"
         #     ), [expected_demand_stats, opt_demand_stats])
         
@@ -1490,7 +1590,7 @@ class Simulation:
         
         # df = DataFrame([expected_demand_stats, opt_demand_stats, difference])
         # df.to_csv(
-        #     path.join(
+        #     os.path.join(
         #         self.ITERATION_ABS_PATH, "expected_v_actual_demand_difference.csv"
         #     ), index=False
         # )

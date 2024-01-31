@@ -80,7 +80,7 @@ log_file = f"logs/process_{pid}_log.txt"
 error_log_file = f"logs/process_{pid}_error.txt"
 
 # Configure the logger
-logging.basicConfig(filename=log_file, level=logging.DEBUG, format="%(asctime)s - %(name)s - %(module)s - %(funcName)s - %(levelname)s - %(message)s")
+logging.basicConfig(filename=log_file, level=logging.INFO, format="%(asctime)s - %(name)s - %(module)s - %(funcName)s - %(levelname)s - %(message)s")
 # Create formatter
 formatter = logging.Formatter(
     "%(asctime)s - %(name)s - %(module)s - %(funcName)s - %(levelname)s - %(message)s"
@@ -88,7 +88,6 @@ formatter = logging.Formatter(
 
 # Create logger with a dynamic name based on the process ID
 logger = logging.getLogger(f"onset-proc-{pid}")
-
 # Create console handler and set its level to debug
 # ch = logging.StreamHandler()
 # ch.setLevel(logging.DEBUG)
