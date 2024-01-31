@@ -45,6 +45,7 @@ from logging import FileHandler
 from os import makedirs, system
 from os.path import dirname, isfile
 
+DRAW = False
 
 class Simulation:
     def __init__(
@@ -441,13 +442,9 @@ class Simulation:
             )
             path_churn.append(diff_compare(PATH_DIFF, "path"))
             congestion_change.append(diff_compare(CONGESTION_DIFF))
-
-            draw_graph(
-                test_alpwolf.logical_graph,
-                os.path.join(
-                    GRAPHS_PATH, self.network_name + "_{}_{}".format(u, v)
-                ),
-            )
+            if DRAW: 
+                draw_graph( test_alpwolf.logical_graph, os.path.join(
+                        GRAPHS_PATH, self.network_name + "_{}_{}".format(u, v)))
 
         PLOT_DIR = os.path.join(self.EXPERIMENT_ABSOLUTE_PATH, "plot_dir")
         CONGESTION_VS_PATHCHURN = os.path.join(
@@ -643,11 +640,11 @@ class Simulation:
             # try:
             # create dot graph and put it into the appropriate file for this run.
             iteration_topo = ITERATION_ABS_PATH
-            logger.debug("Drawing initial topology")
-            initial_topo_img_file = f"data/graphs/img/0-{ITERATION_ID}"
-            draw_graph(self.wolf.logical_graph, 
-                       name=initial_topo_img_file)
-            logger.debug(f"Drawing initial topology --- Complete: {initial_topo_img_file}")
+            # logger.debug("Drawing initial topology")
+            # initial_topo_img_file = f"data/graphs/img/0-{ITERATION_ID}"
+            # draw_graph(self.wolf.logical_graph, 
+            #            name=initial_topo_img_file)
+            # logger.debug(f"Drawing initial topology --- Complete: {initial_topo_img_file}")
 
             if self.topology_programming_method == "cli":
                 client = self.wolf.cli()
@@ -744,7 +741,8 @@ class Simulation:
             )
 
             # Draw the link graph for the instanced topology.
-            draw_graph(self.wolf.logical_graph, 
+            if DRAW: 
+                draw_graph(self.wolf.logical_graph, 
                        name=f"data/graphs/img/1-{ITERATION_ID}")
 
             # self.base_graph._init_link_graph()
@@ -1212,9 +1210,10 @@ class Simulation:
                     # Draw the updated graph
                     post_sol_topo_img=f"data/graphs/img/{self.EXPERIMENT_ID}-{self.ITERATION_ID}-sol_{sol}-1.jpg"
                     post_sol_topo_img_circ=f"data/graphs/img/{self.EXPERIMENT_ID}-{self.ITERATION_ID}-sol_{sol}-1-circ.jpg"                    
-                    draw_graph(self.wolf.logical_graph, name=post_sol_topo_img)
-                    logger.info(f"Generated post-solution topology image: {post_sol_topo_img}")                                                
-                    draw_graph_circular(self.wolf.logical_graph, name=post_sol_topo_img_circ)
+                    if DRAW:
+                        draw_graph(self.wolf.logical_graph, name=post_sol_topo_img)
+                        logger.info(f"Generated post-solution topology image: {post_sol_topo_img}")                                                
+                        draw_graph_circular(self.wolf.logical_graph, name=post_sol_topo_img_circ)
                     logger.info(f"Generated post-solution topology circular image: {post_sol_topo_img_circ}")                        
                     # makedirs(sol_path, exist_ok=True)
                     Gml_to_dot(
@@ -1644,9 +1643,10 @@ class Simulation:
                         post_sol_topo_img=f"data/graphs/img/{self.EXPERIMENT_ID}-{self.ITERATION_ID}-sol_{sol}-1.jpg"
                         post_sol_topo_img_circ=f"data/graphs/img/{self.EXPERIMENT_ID}-{self.ITERATION_ID}-sol_{sol}-1-circ.jpg"                    
                         draw_graph(self.wolf.logical_graph, name=post_sol_topo_img)
-                        logger.info(f"Generated post-solution topology image: {post_sol_topo_img}")                                                
-                        draw_graph_circular(self.wolf.logical_graph, name=post_sol_topo_img_circ)
-                        logger.info(f"Generated post-solution topology circular image: {post_sol_topo_img_circ}")                        
+                        if DRAW: 
+                            logger.info(f"Generated post-solution topology image: {post_sol_topo_img}")                                                
+                            draw_graph_circular(self.wolf.logical_graph, name=post_sol_topo_img_circ)
+                            logger.info(f"Generated post-solution topology circular image: {post_sol_topo_img_circ}")                        
                         # makedirs(sol_path, exist_ok=True)
                         Gml_to_dot(
                             self.wolf.logical_graph,
