@@ -250,6 +250,7 @@ class Simulation:
         )
         if self.topology_programming_method == "TBE": 
             self.wolf.restrict_bandwidth(0.8)
+        makedirs("data/graphs/img", exist_ok=True)
 
     def _system(self, command: str):
         logger.info("Calling system command: {}".format(command))
@@ -533,7 +534,7 @@ class Simulation:
             self.sig_add_circuits = False
 
         self.sig_drop_circuits = False
-        logger.debug("Yates.perform_sim")
+        logger.info("Performing simulation ")
         name = self.network_name
         iterations = self.iterations        
         traffic = self.traffic_file
@@ -608,7 +609,7 @@ class Simulation:
             #     ITERATION_ID,
             #     "MaxCongestionVsIterations.dat",
             # )
-
+            logger.debug("Initializing Traffic Matrix")
             tm_i_data = [
                 str(float(demand_val) * self.demand_factor)
                 for demand_val in tm_data[iter_i].split()
@@ -622,7 +623,7 @@ class Simulation:
             self.temp_tm_i_file = self.nonce + "-" + ITERATION_ID
             with open(self.temp_tm_i_file, "w") as temp_fob:
                 temp_fob.write(tm_i_data_to_temp_file)
-            
+            logger.debug("Initializing Traffic Matrix --- Complete")
             reconfig_time = 0
             self.new_circuit = []
             self.chaff = []
@@ -642,9 +643,11 @@ class Simulation:
             # try:
             # create dot graph and put it into the appropriate file for this run.
             iteration_topo = ITERATION_ABS_PATH
-
+            logger.debug("Drawing initial topology")
+            initial_topo_img_file = f"data/graphs/img/0-{ITERATION_ID}"
             draw_graph(self.wolf.logical_graph, 
-                       name=f"data/graphs/img/0-{ITERATION_ID}")
+                       name=initial_topo_img_file)
+            logger.debug(f"Drawing initial topology --- Complete: {initial_topo_img_file}")
 
             if self.topology_programming_method == "cli":
                 client = self.wolf.cli()
@@ -745,8 +748,7 @@ class Simulation:
                        name=f"data/graphs/img/1-{ITERATION_ID}")
 
             # self.base_graph._init_link_graph()
-            if self.PREV_ITER_ABS_PATH\
-                and array_equal(tm_i_data, PREV_ITER_TM_DATA) and ( iter_congestion > 0 ) and ( len(self.new_circuit) == 0 ) and ( len(self.chaff) == 0 ):
+            if self.PREV_ITER_ABS_PATH and array_equal(tm_i_data, PREV_ITER_TM_DATA) and ( iter_congestion > 0 ) and ( len(self.new_circuit) == 0 ) and ( len(self.chaff) == 0 ):
                 # Prevents us from running the simulation if the topology has not changed
                 # TODO: We should also ensure that the traffic matrix is unique during this iteration. 
                 system(f"cp -r {self.PREV_ITER_ABS_PATH}/* {ITERATION_ABS_PATH}/")
@@ -1244,7 +1246,7 @@ class Simulation:
             optimizer.set_solution_number(min_mlu_solution)
             # must always populate changes after setting a solution number
             optimizer.populate_changes()      
-            self.adapt_topology()      
+            self.adapt_topology()
             self.sig_add_circuits = False        
             
         self.sig_add_circuits = False        

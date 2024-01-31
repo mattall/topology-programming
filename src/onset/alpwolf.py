@@ -476,7 +476,7 @@ class AlpWolf:
             0 on success.
             -1 of failure.
         """
-        logger.debug("Adding circuit {} {}.".format(u, v))
+        logger.info("Adding circuit {} {}.".format(u, v))
         if capacity is None:
             capacity = self.circuit_bandwidth
 

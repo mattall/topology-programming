@@ -814,7 +814,7 @@ class Link_optimization:
         with open(
             output_file, "w"
         ) as fob:
-            json.dump({"compute_time": compute_time, "list": list(self.tunnel_list), "tunnels": { s : {t : self.original_tunnel_dict[s, t] for t in self.nodes if t!=s} for s in self.nodes }}, fob)            
+            json.dump({"compute_time": compute_time, "list": list(self.tunnel_list), "tunnels": { s : {t : self.tunnel_dict[s, t] for t in self.nodes if t!=s} for s in self.nodes }}, fob)            
         logger.info(f"Computed paths and saved to {output_file}.")
         return 
     
