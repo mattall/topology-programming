@@ -1,16 +1,19 @@
 import sys
 import os
+from time import time
 from numbers import Number
 from numpy import loadtxt, sqrt, array_equal, floor
 from pandas import DataFrame
 from itertools import combinations
 from collections import Counter, defaultdict
+
+from traitlets import Float
 from onset.alpwolf import AlpWolf
 from onset.constants import SCRIPT_HOME
 from onset.defender import Defender
 from onset.utilities.config import CROSSFIRE
 from onset.optimization_two import Link_optimization
-
+from multiprocessing import Pool, Manager
 # from mcf_net_difference import Link_optimization
 from onset.constants import USER_HOME
 from onset.utilities.diff_compare import diff_compare
@@ -32,7 +35,8 @@ from onset.utilities.post_process import (
     read_link_congestion_to_dict,
     read_result_val,
     write_result_val,
-    write_result_vals
+    write_result_vals,
+    external_yates
 )
 from onset.utilities.sysUtils import count_lines
 from onset.utilities.tmg import rand_gravity_matrix
@@ -194,6 +198,7 @@ class Simulation:
         self.scale_down_factor = scale_down_factor
         self.top_k = top_k
         self.optimizer_time_limit_minutes = optimizer_time_limit_minutes
+        self.topo_solved = None
         # Set Experiment ID
         if self.use_heuristic.isdigit():
             self.EXPERIMENT_ID = "_".join(
@@ -236,9 +241,8 @@ class Simulation:
             self.EXPERIMENT_ABSOLUTE_PATH = os.path.join(
                 SCRIPT_HOME, "data", "results", self.EXPERIMENT_ID
             )
-        # The following three commands must be ordered as follows.
-        self._init_logging()
-
+        logger.info(f"Saving experiment results to: {self.EXPERIMENT_ABSOLUTE_PATH}")
+        # The following three commands must be ordered as follows.        
         # self.base_graph = FiberGraph(self.name)
         self.validate_yates_params()  # Depends on base_graph.
         # Depends on validated yates params.
@@ -256,29 +260,6 @@ class Simulation:
     def _system(self, command: str):
         logger.info("Calling system command: {}".format(command))
         return system(command)
-
-    def _init_logging(self):
-        logger.debug(
-            "Experiment Absolute Path: {}".format(
-                self.EXPERIMENT_ABSOLUTE_PATH
-            )
-        )
-        logger.info("Experiment ID:            {}".format(self.EXPERIMENT_ID))
-        # makedirs(self.EXPERIMENT_ABSOLUTE_PATH, exist_ok=True)
-        # log_file = os.path.join(
-        #     self.EXPERIMENT_ABSOLUTE_PATH, "{}.log".format(self.EXPERIMENT_ID)
-        # )
-        # if self.start_clean:
-        # if True:
-        #     if isfile(log_file):
-        #         self._system("rm {}".format(log_file))
-        # try:
-        #     file_log_handler = FileHandler(log_file)
-        # except FileNotFoundError:
-        #     makedirs(path.dirname(log_file), exist_ok=True)
-        #     file_log_handler = FileHandler(log_file)
-        # file_log_handler.setFormatter(formatter)
-        # logger.addHandler(file_log_handler)
 
     def _yates(self, topo_file, result_path, traffic_file=""):
         if traffic_file == "":
@@ -730,15 +711,16 @@ class Simulation:
             if self.line_code == "BVT": 
                 self.wolf.logical_graph.edges[('63', '133')]["capacity"] *= 0.75
             
-            updated_topology_file = iteration_topo
-            self.export_logical_topo_to_gml(
-                updated_topology_file + ".gml"
-            )
-            Gml_to_dot(
-                self.wolf.logical_graph,
-                iteration_topo + ".dot",
-                unit=unit,
-            )
+            
+            # if self.topo_solved: 
+            #     os.copy_file_range(self.topo_solved, iteration_topo + ".dot")
+            if not self.topo_solved: 
+                updated_topology_file = iteration_topo            
+                self.export_logical_topo_to_gml( updated_topology_file + ".gml" )                
+                Gml_to_dot( self.wolf.logical_graph, iteration_topo + ".dot", unit=unit )
+            else: 
+                system(f"cp {self.topo_solved} {iteration_topo}.dot")
+            self.topo_solved = None
 
             # Draw the link graph for the instanced topology.
             if DRAW: 
@@ -755,8 +737,7 @@ class Simulation:
                         iteration_topo + ".dot",
                         ITERATION_REL_PATH,
                         traffic_file=self.temp_tm_i_file                        
-                )    
-                
+                )                    
             if len(self.new_circuit) > 0:
                 if self.topology_programming_method == "doppler":
                     reconfig_time = 1
@@ -1177,22 +1158,112 @@ class Simulation:
         drop_links = []        
 
         self.opt_time = optimizer.onset_v3(self.te_method)
-        if "ecmp" not in self.te_method:
+        if "ecmp" not in self.te_method:            
             # Changes already populated. Just adapt.             
             self.adapt_topology()
             self.sig_add_circuits = False
+            self.save_doppler_results()           
             return
+        
         solCount = optimizer.model.solCount
-        mlu = {}
-        if solCount > 0: 
-            tried_solutions = set()
+        mlu_container = {}
+        if solCount > 0:
+            dot_files = {}
+            sol_paths = {}
+            solution_set = set()
+            sol_ids = []
+            for sol in range(solCount):
+                if sol >= 32: break
+                logger.info(f"Setting solution number set to : {sol}")
+                optimizer.set_solution_number(sol)                    
+                logger.info(f"Reading solution number : {optimizer.model.getParamInfo('SolutionNumber')[2]}")
+                self.optimizer.populate_changes()                    
+                topo_string = optimizer.get_topo_b64_xn()                
+                if topo_string not in solution_set:
+                    logger.info(f"Generated pre-solution topology image: {topo_string}")                        
+                    logger.info(f"Unique topo string is: {topo_string}")
+                    sol_topo = self.ITERATION_ABS_PATH + f"_sol_{sol}.dot"
+                    sol_path = self.ITERATION_REL_PATH + f"_sol_{sol}"
+                    self.adapt_topology()
+                    Gml_to_dot(
+                        self.wolf.logical_graph,
+                        sol_topo,
+                        unit=self.unit
+                    )
+                    write_gml(self.wolf.logical_graph, 
+                                self.ITERATION_ABS_PATH + f"_sol_{sol}.gml")
+                    self.adapt_topology(reverse=True)                    
+                    solution_set.add(topo_string) 
+                    dot_files[sol] = sol_topo 
+                    sol_paths[sol] = sol_path                    
+
+            # work = []
+            # for i in sol_paths:
+            #     dot_file = dot_files[i]
+            #     sol_path = sol_paths[i]                
+            #     work.append((dot_file, self.hosts_file, self.te_method, sol_path, self.temp_tm_i_file))            
+            #     work = work[:32]
+            # proc_results = []
+
+            sol_ids = sorted([ i for i in sol_paths.keys() ])
+            manager = Manager()
+            mlu_container = manager.dict({sol_id: "NaN" for sol_id in sol_ids})
+            work = []
+            for sol_id in sol_ids:                                        
+                work.append((dot_files[sol_id], self.hosts_file, self.te_method, sol_paths[sol_id], self.temp_tm_i_file, sol_id, mlu_container))
+            work = work
+            p = Pool(32)
+            
+            start = time()
+            p.starmap(external_yates, work)
+            
+            p.close()
+            p.join()
+            
+            end = time()
+            self.multi_sol_time = end - start
+            
+
+            (best_result_sol_number, sol_topo, mlu) = min(
+                [(key, topo, mlu) for (key, (topo, mlu)) in mlu_container.items()], key = lambda x : x[2]
+            )
+
+            # DO THIS BEFORE SETTING SOLUTION NUMBER FOR THE REST OF THE TOPOLOGY
+            self.multi_sol_number_best_sol = best_result_sol_number
+            self.multi_sol_best_mlu = mlu
+            self.save_doppler_results()            
+            optimizer.set_solution_number(best_result_sol_number)
+            
+            # must always populate changes after setting a solution number
+            optimizer.populate_changes()
+            self.adapt_topology()
+            self.topo_solved = sol_topo
+            self.sig_add_circuits = False
+            
+            
+            return     
+        
+
+        # if no solution, this saves NaN data.
+        self.save_doppler_results()
+        self.sig_add_circuits = False        
+        return 
+
+                    
+
+
+
+        if 0: 
+        # if solCount > 0: 
+            
+            solution_set = set()
             for sol in range(solCount):
                 logger.info(f"Setting solution number set to : {sol}")
                 optimizer.set_solution_number(sol)                    
                 logger.info(f"Reading solution number : {optimizer.model.getParamInfo('SolutionNumber')[2]}")
                 self.optimizer.populate_changes()                    
                 topo_string = optimizer.get_topo_b64_xn()                
-                if topo_string not in tried_solutions:
+                if topo_string not in solution_set:
                     # Draw the original graph
                     # pre_sol_topo_img=f"data/graphs/img/{self.ITERATION_ID}-sol_{sol}-0.jpg"                        
                     # pre_sol_topo_img_circ=f"data/graphs/img/{self.ITERATION_ID}-circ-sol_{sol}-0.jpg"
@@ -1232,7 +1303,7 @@ class Simulation:
                         logger.info(f"Solution has MLU: {this_mlu}")
                         mlu[sol] = this_mlu                        
                     self.adapt_topology(reverse=True)
-                    tried_solutions.add(topo_string)                    
+                    solution_set.add(topo_string)                    
                     self.sig_add_circuits = False
                     self.sig_drop_circuits = False
                     if this_mlu < 0.8:
@@ -1449,9 +1520,7 @@ class Simulation:
 
     def save_doppler_results(self):
         optimizer = self.optimizer
-        self.return_data["Total Solutions"].append(
-            len(optimizer.unique_solutions())
-        )        
+        
         write_result_val(os.path.join(self.ITERATION_ABS_PATH, "TotalSolutions.dat"),
                         "Total Solutions", 
                         len(optimizer.unique_solutions()), 
@@ -1459,90 +1528,95 @@ class Simulation:
                         self.ITERATION_ID
         )        
         self.return_data["Doppler Optimization Time"].append(
-            self.opt_time        
+            self.opt_time
         )
         write_result_val(os.path.join(self.ITERATION_ABS_PATH, "OptTime.dat"),
                          "Total Solutions",
                          self.opt_time,
                          self.te_method,
                          self.ITERATION_ID
-        )
-        
+        )                
+
+        # Solution NOT FOUND: fill data with none. accordingly
         if optimizer.model.SolCount < 1: 
-            return 
+            self.return_data["Total Solutions"].append( "NaN" )                    
+            self.return_data["Optimal Topology ID"].append( "NaN" )
+            self.return_data["Current Topology ID"].append( "NaN" )
+            self.return_data["Doppler Min MLU"].append( "NaN" )
 
-        mlu_dict = optimizer.get_max_link_util()
-        best_sol = optimizer.get_lowest_mlu_solution()
+        else: # Solution found - fill data accordingly
+            mlu_dict = optimizer.get_max_link_util()
+            best_sol = optimizer.get_lowest_mlu_solution()        
+            optimizer.model.setParam("SolutionNumber", best_sol)
+            self.return_data["Total Solutions"].append( len(optimizer.unique_solutions()) )
+            optimal_topo_id = self.optimizer.get_topo_b64_optimal()
+            self.return_data["Optimal Topology ID"].append( optimal_topo_id )
+            write_result_val(os.path.join(self.ITERATION_ABS_PATH, "OptimalTopoID.dat"),
+                            "Optimal Topology ID",
+                            optimal_topo_id, 
+                            self.te_method,
+                            self.ITERATION_ID
+            )
+            curr_topo_id = self.optimizer.get_topo_b64_xn()
+            self.return_data["Current Topology ID"].append( curr_topo_id )
+            write_result_val(os.path.join(self.ITERATION_ABS_PATH, "CurrTopoID.dat"),
+                            "Current Topology ID",
+                            curr_topo_id, 
+                            self.te_method,
+                            self.ITERATION_ID
+            )        
+            doppler_min_mlu = floor(optimizer.maxLinkUtil.x * 1000) / 1000
+            self.return_data["Doppler Min MLU"].append( doppler_min_mlu )
+            write_result_val(os.path.join(self.ITERATION_ABS_PATH, "DopplerMinMLU.dat"),
+                            "Doppler Min MLU",
+                            doppler_min_mlu,
+                            self.te_method,
+                            self.ITERATION_ID
+            )                                        
+            write_result_vals(os.path.join(self.ITERATION_ABS_PATH, "DopplerMLU.dat"),
+                            "Solution ID",
+                            "Max Link Util",
+                            mlu_dict,
+                            self.te_method,
+                            self.ITERATION_ID
+            )
+        try: 
+            self.return_data["Doppler Multi-Sol Time"].append(self.multi_sol_time)
+            self.return_data["Multi-sol Best Solution"].append(self.multi_sol_number_best_sol)
+            self.return_data["Multi-sol Min MLU"].append(self.multi_sol_best_mlu)
+        except: 
+            self.return_data["Doppler Multi-Sol Time"].append("NaN")
+            self.return_data["Doppler Multi-Sol Time"].append("NaN")
+            self.return_data["Doppler Multi-Sol Time"].append("NaN")
+        # Get results stats if we ran multiple solution models
         
-
-        optimizer.model.setParam("SolutionNumber", best_sol)
+        # opt_demand_stats = get_box_plot_stats(list(optimizer.demand_dict.values()))        
+        # write_result_vals(
+        #     os.path.join(
+        #         self.ITERATION_ABS_PATH, "optimizer_demand_stats.dat"
+        #     ), "stat", "value", opt_demand_stats
+        # )
         
-        doppler_min_mlu = floor(optimizer.maxLinkUtil.x * 1000) / 1000
-        self.return_data["Doppler Min MLU"].append(
-            doppler_min_mlu
-        )        
-        write_result_val(os.path.join(self.ITERATION_ABS_PATH, "DopplerMinMLU.dat"),
-                         "Doppler Min MLU",
-                         doppler_min_mlu,
-                         self.te_method,
-                         self.ITERATION_ID
-        )
-        write_result_vals(os.path.join(self.ITERATION_ABS_PATH, "DopplerMLU.dat"),
-                          "Solution ID",
-                          "Max Link Util",
-                          mlu_dict,
-                          self.te_method,
-                          self.ITERATION_ID
-        )
-        optimal_topo_id = self.optimizer.get_topo_b64_optimal()
-        self.return_data["Optimal Topology ID"].append(
-            optimal_topo_id
-        )
-        write_result_val(os.path.join(self.ITERATION_ABS_PATH, "OptimalTopoID.dat"),
-                         "Optimal Topology ID",
-                         optimal_topo_id, 
-                         self.te_method,
-                         self.ITERATION_ID
-        )
-        curr_topo_id = self.optimizer.get_topo_b64_xn()
-        self.return_data["Current Topology ID"].append(
-            curr_topo_id
-        )
-        write_result_val(os.path.join(self.ITERATION_ABS_PATH, "CurrTopoID.dat"),
-                         "Current Topology ID",
-                         curr_topo_id, 
-                         self.te_method,
-                         self.ITERATION_ID
-        )
-        opt_demand_stats = get_box_plot_stats(list(optimizer.demand_dict.values()))        
-        write_result_vals(
-            os.path.join(
-                self.ITERATION_ABS_PATH, "optimizer_demand_stats.dat"
-            ), "stat", "value", opt_demand_stats
-        )
-        
-        expected_demand_stats = get_box_plot_stats(
-            optimizer.demand_matrix // self.scale_down_factor
-        )
-        write_result_vals(
-            os.path.join(
-                self.ITERATION_ABS_PATH, "expected_demand_stats.dat"
-            ), "stat", "value", expected_demand_stats 
-        )
-
-        plt_bxplt(
-            os.path.join(
-                self.ITERATION_ABS_PATH, "expected_v_actual_demand_difference.png"
-            ), [expected_demand_stats, opt_demand_stats])
-        
-        expected_demand_stats['type'] = 'expected'
-        opt_demand_stats['type'] = 'actual'
-        df = DataFrame([expected_demand_stats, opt_demand_stats])
-        df.to_csv(
-            os.path.join(
-                self.ITERATION_ABS_PATH, "expected_v_actual_demand_difference.png"
-            ), index=False
-        )
+        # expected_demand_stats = get_box_plot_stats(
+        #     optimizer.demand_matrix // self.scale_down_factor
+        # )
+        # write_result_vals(
+        #     os.path.join(
+        #         self.ITERATION_ABS_PATH, "expected_demand_stats.dat"
+        #     ), "stat", "value", expected_demand_stats 
+        # )
+        # plt_bxplt(
+        #     os.path.join(
+        #         self.ITERATION_ABS_PATH, "expected_v_actual_demand_difference.png"
+        #     ), [expected_demand_stats, opt_demand_stats])        
+        # expected_demand_stats['type'] = 'expected'
+        # opt_demand_stats['type'] = 'actual'
+        # df = DataFrame([expected_demand_stats, opt_demand_stats])
+        # df.to_csv(
+        #     os.path.join(
+        #         self.ITERATION_ABS_PATH, "expected_v_actual_demand_difference.png"
+        #     ), index=False
+        # )
 
     def doppler_method(self, iter="N/A"):
         # optimizer = Link_optimization(

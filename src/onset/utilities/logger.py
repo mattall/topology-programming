@@ -81,7 +81,7 @@ log_file = f"logs/process_{pid}_log.txt"
 error_log_file = f"logs/process_{pid}_error.txt"
 
 # Configure the logger
-logging.basicConfig(filename=log_file, level=logging.DEBUG, format="%(asctime)s - %(name)s - %(module)s - %(funcName)s - %(levelname)s - %(message)s")
+logging.basicConfig(filename=log_file, level=logging.INFO, format="%(asctime)s - %(name)s - %(module)s - %(funcName)s - %(levelname)s - %(message)s")
 # Create formatter
 formatter = logging.Formatter(
     "%(asctime)s - %(name)s - %(module)s - %(funcName)s - %(levelname)s - %(message)s"
