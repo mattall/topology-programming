@@ -1,3 +1,4 @@
+from asyncio import CancelledError
 import sys
 sys.path.insert(0, "src/")
 sys.path.insert(0, "scripts/")
@@ -74,24 +75,18 @@ def main(argv):
         CANDIDATE_SET = ["max"]
 
     else:
-        PARALLEL = True
+        
         NETWORKS = ["sprint", "ANS", "CRL", "bellCanada", "surfNet"]
         VOLUMES = ["100Gbps", "150Gbps", "200Gbps"]
         NUM_TARGETED = [1, 2, 3, 4, 5]
         TE_METHODS = ["-ecmp", "-mcf"]
         CANDIDATE_SET = ["conservative"]
-        # NETWORKS = ["ANS"]
-        # NETWORKS = ["surfNet", "bellCanada"]
-        # VOLUMES = ["200Gbps"]
-        # NUM_TARGETED = [5]
-        # TE_METHODS = ["-mcf"]
-        # CANDIDATE_SET = ["conservative", "liberal", "max"]
         pool = Pool()
 
 
     data = {}
     exp_args = []
-    for te_method, exp, candidate_set in product(TE_METHODS, glob(f"{EXPERIMENT_DIR}*.json"), CANDIDATE_SET):
+    for te_method, exp, candidate_set in product(TE_METHODS, VOLUMES, NUM_TARGETED, TE_METHODS, CANDIDATE_SET):
         config = json.load(open(exp, "r"))
         network = config["network_name"]
         gml_file = config["gml_file"]
