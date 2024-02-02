@@ -5,6 +5,7 @@
 #       2b. 90-th percentile
 #       2c. Max
 
+from numbers import Number
 import re
 import os
 from os import path, listdir, makedirs
@@ -14,6 +15,7 @@ from matplotlib.pyplot import plot, xlabel
 from numpy import exp, result_type
 import sys
 from onset.constants import SCRIPT_HOME
+from onset.utilities.logger import logger
 from onset.constants import ZERO_INDEXED
 from onset.utilities.plotters import (
     congestion_multi_cdf,
@@ -458,7 +460,43 @@ def read_result_val(result_file: str) -> float:
         except:
             print(f"File: {result_file} contained illegal value, {result_val}")
             return result_val
-
+        
+def external_yates(topo_file, hosts_file, te_method, result_path, traffic_file, i, mlu_container):
+    from os import system
+    command_args = [
+        "yates",
+        topo_file,
+        traffic_file,
+        traffic_file,
+        hosts_file,
+        te_method,
+        "-num-tms",
+        "1",
+        "-out",
+        result_path,
+        "-budget",
+        "3",
+        ">>",
+        f"{traffic_file}_yates.out",
+    ]    
+    command = " ".join(command_args)
+    system(command)
+    max_congestion = read_result_val(
+        os.path.join(
+            SCRIPT_HOME,
+            "data",
+            "results",
+            result_path,
+            "MaxExpCongestionVsIterations.dat",
+        )
+    )
+    logger.info(f"{'/'.join( topo_file.split('/') )[:-3] } --- Max congestion:  {max_congestion}")
+    if isinstance(max_congestion, Number):
+        mlu_container[i] = (topo_file, max_congestion)
+        return
+    mlu_container[i] = ("NaN", "NaN")
+    return 
+    
 
 def calc_percent_diff(old: float, new: float) -> float:
     return (new - old) / old

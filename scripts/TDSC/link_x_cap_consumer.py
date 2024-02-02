@@ -23,7 +23,7 @@ def experiment(*args):
     attack_sim = Simulation(
         network,
         hosts[network],
-        f"optimal_{n_targets}_link_attack_{candidate_set}",
+        f"optimal_{n_targets}x{volume_per_target}_link_attack_{candidate_set}",
         iterations=iterations,
         te_method=te_method,
         traffic_file=traffic_file,
@@ -55,7 +55,7 @@ def experiment(*args):
 
 def main(argv):    
     if len(argv) == 1:
-        network, n_targets, te_method, volume_per_target, candidate_set = "sprint", 5, "-mcf", 200, "max"
+        network, n_targets, te_method, volume_per_target, candidate_set = "sprint", 5, "-ecmp", 200, "max"
     else: 
         try: 
             network, n_targets, te_method, volume_per_target, candidate_set = argv[1:]
