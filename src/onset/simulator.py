@@ -199,6 +199,7 @@ class Simulation:
         self.top_k = top_k
         self.optimizer_time_limit_minutes = optimizer_time_limit_minutes
         self.topo_solved = None
+        self.optimizer = None
         # Set Experiment ID
         if self.use_heuristic.isdigit():
             self.EXPERIMENT_ID = "_".join(
@@ -465,7 +466,7 @@ class Simulation:
         self,
         circuits=1,
         start_iter=0,
-        end_iter=0,
+        end_iter=None,
         repeat=False,
         unit="Gbps",
         demand_factor=1,
@@ -477,7 +478,7 @@ class Simulation:
         sim_param_tag = f"{self.circuits}_{start_iter}_{end_iter}_{int(repeat)}_{unit}_{self.demand_factor:.1f}"
         self.new_circuit = []
         self.chaff = []
-        if end_iter == 0:
+        if end_iter is None:
             end_iter = self.iterations
 
         return_data = self.return_data = {
@@ -529,10 +530,10 @@ class Simulation:
         # Make iteration range
         if repeat: 
             iter_range = []
-            for i in range(start_iter, end_iter):
+            for i in range(start_iter, end_iter+1):
                 iter_range.extend([i, i])
         else:
-            iter_range = [i for i in range(start_iter, end_iter)]
+            iter_range = [i for i in range(start_iter, end_iter+1)]
                         
         for i, iter_i in enumerate(iter_range):
             
@@ -636,8 +637,7 @@ class Simulation:
                 and not self.circuits_added
             ):
                 self.cache_method()
-                
-            
+
             # elif self.strategy == 'onset' and sig_add_circuits and not circuits_added:
 
             elif (  # Method from TDSC-23 - Link-flood DDoS Defense
@@ -799,7 +799,7 @@ class Simulation:
             return_data["Link Bandwidth Coefficient"].append(self.max_load)
             return_data["Demand Factor"].append(self.demand_factor)
             return_data["Optimization Time"].append(self.opt_time)
-
+            self.save_doppler_results()
             if iter_congestion == "SIG_EXIT":
                 return
 
@@ -820,7 +820,7 @@ class Simulation:
                 self.sig_drop_circuits = True
 
             if self.sig_drop_circuits:
-                logger.info(f"Max link util, {iter_congestion}, below threshold, {self.congestion_threshold_upper_bound}. Reverting changes.")
+                logger.info(f"Max link util, {iter_congestion}, below threshold, {self.congestion_threshold_lower_bound}. Reverting changes.")
                 self.adapt_topology(reverse=True)
                 # self.drop_circuits = self.flux_circuits[:]
                 # if len(self.drop_circuits) > 0:
@@ -1162,7 +1162,7 @@ class Simulation:
             # Changes already populated. Just adapt.             
             self.adapt_topology()
             self.sig_add_circuits = False
-            self.save_doppler_results()           
+                       
             return
         
         solCount = optimizer.model.solCount
@@ -1230,8 +1230,7 @@ class Simulation:
 
             # DO THIS BEFORE SETTING SOLUTION NUMBER FOR THE REST OF THE TOPOLOGY
             self.multi_sol_number_best_sol = best_result_sol_number
-            self.multi_sol_best_mlu = mlu
-            self.save_doppler_results()            
+            self.multi_sol_best_mlu = mlu            
             optimizer.set_solution_number(best_result_sol_number)
             
             # must always populate changes after setting a solution number
@@ -1244,8 +1243,7 @@ class Simulation:
             return     
         
 
-        # if no solution, this saves NaN data.
-        self.save_doppler_results()
+        # if no solution, this saves NaN data.        
         self.sig_add_circuits = False        
         return 
 
@@ -1520,25 +1518,42 @@ class Simulation:
 
     def save_doppler_results(self):
         optimizer = self.optimizer
-        
-        write_result_val(os.path.join(self.ITERATION_ABS_PATH, "TotalSolutions.dat"),
-                        "Total Solutions", 
-                        len(optimizer.unique_solutions()), 
-                        self.te_method, 
-                        self.ITERATION_ID
-        )        
-        self.return_data["Doppler Optimization Time"].append(
-            self.opt_time
-        )
-        write_result_val(os.path.join(self.ITERATION_ABS_PATH, "OptTime.dat"),
-                         "Total Solutions",
-                         self.opt_time,
-                         self.te_method,
-                         self.ITERATION_ID
-        )                
+        if optimizer is None:
+            self.opt_time = "NaN"
+            write_result_val(os.path.join(self.ITERATION_ABS_PATH, "TotalSolutions.dat"),
+                            "Total Solutions", 
+                            "NaN", 
+                            self.te_method, 
+                            self.ITERATION_ID
+            )        
+            self.return_data["Doppler Optimization Time"].append(
+                self.opt_time
+            )
+            write_result_val(os.path.join(self.ITERATION_ABS_PATH, "OptTime.dat"),
+                            "Optimization Time",
+                            self.opt_time,
+                            self.te_method,
+                            self.ITERATION_ID
+            )                
+        else:    
+            write_result_val(os.path.join(self.ITERATION_ABS_PATH, "TotalSolutions.dat"),
+                            "Total Solutions", 
+                            len(optimizer.unique_solutions()), 
+                            self.te_method, 
+                            self.ITERATION_ID
+            )        
+            self.return_data["Doppler Optimization Time"].append(
+                self.opt_time
+            )
+            write_result_val(os.path.join(self.ITERATION_ABS_PATH, "OptTime.dat"),
+                            "Total Solutions",
+                            self.opt_time,
+                            self.te_method,
+                            self.ITERATION_ID
+            )                
 
         # Solution NOT FOUND: fill data with none. accordingly
-        if optimizer.model.SolCount < 1: 
+        if (optimizer is None) or (optimizer.model.SolCount < 1): 
             self.return_data["Total Solutions"].append( "NaN" )                    
             self.return_data["Optimal Topology ID"].append( "NaN" )
             self.return_data["Current Topology ID"].append( "NaN" )
@@ -1684,9 +1699,8 @@ class Simulation:
         else:            
             self.opt_time = optimizer.doppler()  
 
-        self.save_doppler_results()
+        
         solCount = optimizer.model.solCount
-
         if solCount > 0: 
             # if self.run_all: 
             if True: 
