@@ -67,3 +67,4 @@ scripts/batch
 logs
 .vscode/settings.json
 scripts/TDSC/notebooks/
+temp/

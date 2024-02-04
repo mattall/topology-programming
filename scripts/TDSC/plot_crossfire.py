@@ -17,7 +17,8 @@ import pandas as pd
 plt.close('all')
 
 HOME = os_path.expanduser("~")
-chdir(f"{HOME}/src/topology-programming")
+# chdir(f"{HOME}/src/topology-programming")
+chdir(f"/home/mhall7/durairajanlab.matt/topology-programming/")
 
 sys_path.insert(0, "src/")
 sys_path.insert(0, "src/utilities")
@@ -89,16 +90,12 @@ for network, scale, routing in product(result_df["Network"].unique(), result_df[
     # print(data[["Network", "Strategy", "Routing", "Congestion"]])    
 
     if routing == "ECMP": 
-        pallet = ECMP_Pallet
-        legend_key = ["ECMP", "ECMP+ONSET" ]
+        palette = ECMP_Pallet
+        legend_key = ["ECMP+ONSET" , "ECMP"]
     if routing == "Ripple*":
-        pallet = MCF_Pallet        
-        legend_key = ["Ripple*", "Ripple*+ONSET" ]
+        palette = MCF_Pallet                
+        legend_key = ["Ripple*+ONSET", "Ripple*" ]
 
-    label = {
-        "ECMP":
-        "MCF"
-    }
     # baseline_df = np.array(data_1["Congestion"])
     # onset_df = np.array(data_2["Congestion"])
 
@@ -111,14 +108,17 @@ for network, scale, routing in product(result_df["Network"].unique(), result_df[
 
     plt.rc('font', size=22)
     figurename = f"data/plots/crossfire/congestion-{network}-{routing}-{scale}".replace(" ", "_")
-    # )
 
-    # ax1 = sns.ecdfplot(data=baseline_df, x="Congestion", linestyle="--", linewidth=3, color = pallet[0], labels="")
-    # ax2 = sns.ecdfplot(data=onset_df, x="Congestion", linewidth=3, color = pallet[1] )
+    fig1, ax1 = plt.subplots()
+    fig2, ax2 = plt.subplots()
+    ax = sns.ecdfplot(data=onset_df, x="Congestion", linewidth=3, palette = palette)
+    ax1 = sns.ecdfplot(data=baseline_df, x="Congestion", linestyle="--", linewidth=3, color = palette)
 
-    ax2 = sns.ecdfplot(data=data, x="Congestion", hue="Strategy", linewidth=3)
+    plt.legend(title=None)
+    # ax2 = sns.ecdfplot(data=data, x="Congestion", hue="Strategy", linewidth=3, palette=palette)
     # Set up the initial legend.                    
     # my_legend = plt.legend(legend_key, bbox_to_anchor=(-0.2, 2), loc='upper left', borderaxespad=0, ncol=2, frameon=False)
+    # my_legend = plt.legend(legend_key,  bbox_to_anchor=(-0.2, 2), loc='upper left', borderaxespad=0, ncol=2, frameon=False)  
     # handles, labels = my_legend.get_legend_handles_labels()
     plt.tick_params(length=8)
     # export_legend(my_legend, figurename + "_legend")
@@ -132,10 +132,10 @@ for network, scale, routing in product(result_df["Network"].unique(), result_df[
     plt.clf()
     plt.close()
     with open(figurename + "_stats.txt", 'w') as fob:
-        fob.write("\t,Network,\tLoss Events,\ttotal\n")
+        fob.write("\t\t\t,Network,\tLoss Events,\ttotal\n")
         fob.write(f"{routing},\t{network},\t{len(baseline_df[baseline_df['Loss'] > 0])},\t{len(baseline_df)}\n")
         fob.write(f"{routing}+ONSET,\t{network},\t{len(onset_df[onset_df['Loss'] > 0])},\t{len(onset_df)}")
     print(f"saved: {figurename}_stats.txt")
     if routing == "Ripple*":
-        print( data[["Network", "Strategy", "Routing", "Congestion"]].sort_values(by="Strategy") )
+        # print( data[["Network", "Strategy", "Routing", "Congestion"]].sort_values(by="Strategy") )
         break

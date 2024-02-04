@@ -7,7 +7,6 @@ from pandas import DataFrame
 from itertools import combinations
 from collections import Counter, defaultdict
 
-from traitlets import Float
 from onset.alpwolf import AlpWolf
 from onset.constants import SCRIPT_HOME
 from onset.defender import Defender
@@ -38,7 +37,7 @@ from onset.utilities.post_process import (
     write_result_vals,
     external_yates
 )
-from onset.utilities.sysUtils import count_lines
+from onset.utilities.sysUtils import count_lines, percent_diff
 from onset.utilities.tmg import rand_gravity_matrix
 from onset.utilities.graph_utils import write_gml
 from networkx.relabel import relabel_nodes
@@ -283,11 +282,11 @@ class Simulation:
             ">>",
             f"{self.temp_tm_i_file}_yates.out",
         ]
-        gurobi_status = self._system("gurobi_cl")        
-        if gurobi_status == 0:
-            logger.debug("gurobi_cl is in path.")
-        else:
-            raise(f"Error: gurobi_cl not in path {sys.path}") # type: ignore
+        # gurobi_status = self._system("gurobi_cl")        
+        # if gurobi_status == 0:
+        #     logger.debug("gurobi_cl is in path.")
+        # else:
+        #     raise(f"Error: gurobi_cl not in path {sys.path}") # type: ignore
         self._system(" ".join(command_args))
         max_congestion = read_result_val(
             os.path.join(
@@ -588,10 +587,10 @@ class Simulation:
             #     ITERATION_ID,
             #     "MaxCongestionVsIterations.dat",
             # )
-            logger.debug("Initializing Traffic Matrix")
+            logger.info(f"Initializing Traffic Matrix ({i}, {iter_i})")
             tm_i_data = [
                 str(float(demand_val) * self.demand_factor)
-                for demand_val in tm_data[iter_i].split()
+                for demand_val in tm_data[iter_i-1].split()
             ]
             tm_i_data_to_temp_file = " ".join(tm_i_data)
 
@@ -728,9 +727,13 @@ class Simulation:
                        name=f"data/graphs/img/1-{ITERATION_ID}")
 
             # self.base_graph._init_link_graph()
-            if self.PREV_ITER_ABS_PATH and array_equal(tm_i_data, PREV_ITER_TM_DATA) and ( iter_congestion > 0 ) and ( len(self.new_circuit) == 0 ) and ( len(self.chaff) == 0 ):
+            if (self.PREV_ITER_ABS_PATH and ( iter_congestion > 0 )
+                and percent_diff(tm_i_data, PREV_ITER_TM_DATA) + iter_congestion < self.congestion_threshold_upper_bound                  
+                and ( len(self.new_circuit) == 0 ) and ( len(self.chaff) == 0 )):
+                logger.debug("skipping computation")
+                logger.debug(f"Prev: {self.PREV_ITER_ABS_PATH}\t{iter_congestion}\tPercent diff {percent_diff(tm_i_data, PREV_ITER_TM_DATA) + iter_congestion}\t Threshold{self.congestion_threshold_upper_bound}")
                 # Prevents us from running the simulation if the topology has not changed
-                # TODO: We should also ensure that the traffic matrix is unique during this iteration. 
+                # TODO: Check on that percent diff heuristic.  
                 system(f"cp -r {self.PREV_ITER_ABS_PATH}/* {ITERATION_ABS_PATH}/")
             else:
                 iter_congestion = self._yates(
@@ -1212,7 +1215,7 @@ class Simulation:
             for sol_id in sol_ids:                                        
                 work.append((dot_files[sol_id], self.hosts_file, self.te_method, sol_paths[sol_id], self.temp_tm_i_file, sol_id, mlu_container))
             work = work
-            p = Pool(32)
+            p = Pool(120)
             
             start = time()
             p.starmap(external_yates, work)
@@ -1601,8 +1604,8 @@ class Simulation:
             self.return_data["Multi-sol Min MLU"].append(self.multi_sol_best_mlu)
         except: 
             self.return_data["Doppler Multi-Sol Time"].append("NaN")
-            self.return_data["Doppler Multi-Sol Time"].append("NaN")
-            self.return_data["Doppler Multi-Sol Time"].append("NaN")
+            self.return_data["Multi-sol Best Solution"].append("NaN")
+            self.return_data["Multi-sol Min MLU"].append("NaN")
         # Get results stats if we ran multiple solution models
         
         # opt_demand_stats = get_box_plot_stats(list(optimizer.demand_dict.values()))        

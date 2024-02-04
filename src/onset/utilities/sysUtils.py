@@ -1,4 +1,5 @@
 from os import listdir, chdir, makedirs, path, system, remove, rmdir
+import numpy as np
 from pprint import pprint
 import shutil
 from subprocess import check_output, Popen, PIPE
@@ -68,6 +69,15 @@ def file_writer(filepath, queue):
         return max_congestion
 
 
+
+def percent_diff(A, B):
+    # USED BY SIMULATOR> BE CAREFUL MODIFYING>
+    A = sum(np.array(A).astype(float))
+    B = sum(np.array(B).astype(float))
+    try: 
+        return (A - B) / (B) 
+    except:
+        return -1
 
 def clock(f, *args, **kwargs):
     # clocks the time to run a function
