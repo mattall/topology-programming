@@ -25,7 +25,7 @@ from math import ceil
 # customs
 from onset.utilities.plot_reconfig_time import calc_haversine
 from onset.utilities.graph import (
-    link_on_path, astar_path_generator
+    Gml_to_dot, link_on_path, astar_path_generator, write_gml
     # find_shortest_paths, 
     # find_paths_with_flow,     
     # write_paths
@@ -201,7 +201,7 @@ class Link_optimization:
         time_limit_minutes=1,
         dynamic_scale_down=False,
         debug=False
-    ):
+    ):        
         self.manager = None
         self.TIME_LIMIT_MINUTES = time_limit_minutes
         self.SCALE_DOWN_FACTOR = scale_down_factor # to avoid numerical issues in optimization
@@ -284,6 +284,22 @@ class Link_optimization:
         self.add_candidate_links_to_super_graph()
         if compute_paths:
             self.get_shortest_paths()
+
+    def write_test_topology(self, out_file, unit): 
+        G = nx.Graph()
+        G.add_nodes_from(self.core_G)
+        for key, val in nx.get_node_attributes(self.core_G, "Latitude").items(): 
+            G.nodes[key]["Latitude"] = val
+        for key, val in nx.get_node_attributes(self.core_G, "Longitude").items(): 
+            G.nodes[key]["Longitude"] = val
+        for node, transponders in nx.get_node_attributes(self.core_G, "transponder").items(): 
+            G.nodes[node]["txp_count"] = len(transponders)
+
+        G.add_edges_from(e for e in self.edge_vars if self.edge_vars[e].xn >= 0.5)
+        Gml_to_dot(G, out_file + '.dot', unit)
+        write_gml(G, out_file + '.gml')
+        return
+            
 
     def set_solution_number(self, sol:int):
         m = self.model
@@ -468,11 +484,11 @@ class Link_optimization:
         to_do = ordered_node_pairs.difference(done)
         start = time.time()
         if self.PARALLEL: 
-            p = Pool(32)
+            p = Pool()
         else:
             p = Pool(1)
-        # p.starmap_async(shortest_path_worker, work)
-        result = p.starmap(astar_path_worker, work)        
+        p.starmap_async(shortest_path_worker, work)
+        # result = p.starmap(astar_path_worker, work)        
         cycle = 1
         refresh_period = 10                                
         # Check on progress of the pool, update to log periodically. 
@@ -799,23 +815,41 @@ class Link_optimization:
             logger.info("Computed original paths and saved to disc.")
 
     def load_paths(self):
+        # with open(
+        #     f"./data/paths/optimization/{self.network}_{self.candidate_set}.json", "r"
+        # ) as fob:
+        #     json_obj = json.load(fob)
+        #     self.tunnel_list = json_obj["list"]
+        #     tunnel_dict = json_obj["tunnels"]
+        #     for s, t in self.all_node_pairs: 
+        #         self.tunnel_dict[s, t] = tunnel_dict[s][t]
         with open(
-            f"./data/paths/optimization/{self.network}_{self.candidate_set}.json", "r"
+            f"./data/paths/optimization/{self.network}_{self.candidate_set}.pkl", "rb"
         ) as fob:
-            json_obj = json.load(fob)
-            self.tunnel_list = json_obj["list"]
-            tunnel_dict = json_obj["tunnels"]
-            for s, t in self.all_node_pairs: 
-                self.tunnel_dict[s, t] = tunnel_dict[s][t]
+            obj = pickle.load(fob)
+            self.tunnel_dict = obj["tunnels"]
+            self.tunnel_list = obj["list"]
+            for (s, t) in self.tunnel_dict: 
+                self.tunnel_tuple_dict[s, t] = self.tunnel_dict[s, t]
+
         return
 
     def save_paths(self, compute_time):
-        output_file = f"./data/paths/optimization/{self.network}_{self.candidate_set}.json"
-        with open(
-            output_file, "w"
-        ) as fob:
-            json.dump({"compute_time": compute_time, "list": list(self.tunnel_list), "tunnels": { s : {t : self.tunnel_dict[s, t] for t in self.nodes if t!=s} for s in self.nodes }}, fob)            
+        if self.debug:
+            output_file = f"./data/paths/optimization/{self.network}_{self.candidate_set}.json"
+            with open(
+                output_file, "w"
+            ) as fob:
+                json.dump({"compute_time": compute_time, "list": list(self.tunnel_list), "tunnels": { s : {t : self.tunnel_dict[s, t] for t in self.nodes if t!=s} for s in self.nodes }}, fob)            
+        
         logger.info(f"Computed paths and saved to {output_file}.")
+        output_file = f"./data/paths/optimization/{self.network}_{self.candidate_set}.pkl"
+        with open(
+            output_file, "wb"
+        ) as fob:
+            pickle.dump({"compute_time": compute_time, "list": list(self.tunnel_list), "tunnels": self.tunnel_dict}, fob)
+        logger.info(f"Computed paths and saved to {output_file}.")
+
         return 
     
     def load_original_paths(self):
@@ -1042,8 +1076,8 @@ class Link_optimization:
 
         m.addConstr( maxLinkUtil <= self.congestion_threshold_upper_bound )        
 
-        m.setObjective( maxLinkUtil, sense=GRB.MINIMIZE )
-        # m.setObjective( graphSimilarity + maxLinkUtil, sense=GRB.MINIMIZE )
+        # m.setObjective( maxLinkUtil, sense=GRB.MINIMIZE )
+        m.setObjective( graphSimilarity + maxLinkUtil, sense=GRB.MINIMIZE )
         
         # my_paths, path_edges = extract_paths(flow_vars, self.tunnel_tuple_dict)
         # path_flows = m.addVars(my_paths, name="path_flow")
@@ -1061,8 +1095,13 @@ class Link_optimization:
         # Optimize the model                
         m.optimize()        
         opt_time = m.Runtime
+        # Save relevant model variables to class.
         self.flow_vars = flow_vars
-        
+        self.maxLinkUtil = maxLinkUtil
+        self.edge_vars = edge_vars
+        self.directionless_edge_vars = directionless_edge_vars
+        self.graphSimilarity = graphSimilarity
+
         if m.SolCount > 0:
             logger.info(f"Optimal solution found in {opt_time}s.")
             self.populate_changes(edge_vars)
@@ -1071,11 +1110,6 @@ class Link_optimization:
             if self.debug: 
                 self.write_iis()
         
-        # Save relevant model variables to class.
-        self.maxLinkUtil = maxLinkUtil
-        self.edge_vars = edge_vars
-        self.directionless_edge_vars = directionless_edge_vars
-        self.graphSimilarity = graphSimilarity
 
         return opt_time
     

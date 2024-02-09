@@ -26,7 +26,9 @@ networks = [
     "areon",
     "Regional",
     "linear_3",
-    "square"    
+    "square",
+    "CEN",
+    "Gigapop"
 ]
 
 t_classes = [
@@ -61,7 +63,9 @@ hosts = {
     "areon": 10, 
     "Regional": 12,
     "linear_3": 3,
-    'square': 4
+    'square': 4,
+    "CEN": 18,
+    "Gigalpop": 10
     }
 
 mcf_loss_factor = {
@@ -97,8 +101,14 @@ mcf_loss_factor = {
     },
     "linear_3": {
         "background": 1.0
+    },
+    "CEN": {
+        "background": 1.0
+    },
+    "Gigapop": {
+        "background": 1.0
     }
-    }
+}
 
 
 demand_scale = [
@@ -117,11 +127,11 @@ demand_scale = [
     "1.3",
     "1.4",
     "1.5",
-    ]
+]
 
 repeat = {
     "TBE": False, 
     "greylambda": True, 
     "TE": False,
     "Doppler": False
-    }
+}

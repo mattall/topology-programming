@@ -1,4 +1,5 @@
 import sys
+from sys import argv
 import glob
 import os
 import errno
@@ -9,7 +10,7 @@ from experiment_params import *
 from copy import deepcopy
 import multiprocessing
 
-def experiment(args):
+def experiment(network, traffic, scale, te, tp, top_k, n_ftx, candidate_link_choice_method, optimizer_time_limit_minutes, dry=False):
     """Run one iteration of a topology programming experiment
 
     Args:
@@ -30,13 +31,10 @@ def experiment(args):
     from onset.utilities.logger import logger
     from onset.utilities.post_process import read_result_val
     from onset.simulator import Simulation
-    SCALE_DOWN_FACTOR = 10**7
-    network, t_class, scale, te_method, tp_method, use_cached_result, top_k, n_ftx, candidate_link_choice_method, optimizer_time_limit_minutes = args
-
     def get_result_path(sim):
         #helper function 
         result_path = my_sim.perform_sim(
-            repeat=repeat[tp_method], demand_factor=demand_factor, dry=True
+            repeat=repeat[tp], demand_factor=demand_factor, dry=True
         )
         # result_path = my_sim.perform_sim(repeat=repeat[tp_method], demand_factor=demand_factor)
 
@@ -59,22 +57,30 @@ def experiment(args):
         logger.info(f"Read Congestion, Loss, Throughput values from: {res_path}")
         return result, res_path
 
+    SCALE_DOWN_FACTOR = 10**7    
+    args = network, traffic, scale, te, tp, top_k, n_ftx, candidate_link_choice_method, optimizer_time_limit_minutes
+
     pid = os.getpid()
     logger.info(f"Process-{pid} started with data: {args}")
     
-    experiment_name = "-".join([str(_) for _ in (te_method, tp_method, network, t_class, scale, n_ftx, top_k, candidate_link_choice_method, optimizer_time_limit_minutes)])
-    traffic_file = f"data/traffic/{t_class}_{network}-tm"
+    experiment_name = "-".join([str(_) for _ in (te, tp, network, traffic, scale, n_ftx, top_k, candidate_link_choice_method, optimizer_time_limit_minutes)])
+    report_path = f"data/reports/{experiment_name}.csv"
+    
+    if os.path.exists(report_path): 
+        return
+        
+    traffic_file = f"data/traffic/{traffic}_{network}-tm"
     my_sim = Simulation(
         network,
         hosts[network],
         experiment_name,
         iterations=1,
         fallow_transponders=n_ftx,
-        te_method="-" + te_method,
+        te_method="-" + te,
         traffic_file=traffic_file,
         # fallow_tx_allocation_strategy="static",        
         fallow_tx_allocation_strategy="dynamic_doppler", 
-        topology_programming_method=tp_method,
+        topology_programming_method=tp,
         congestion_threshold_upper_bound=0.99999,
         congestion_threshold_lower_bound=0.99999,
         scale_down_factor=SCALE_DOWN_FACTOR, 
@@ -98,7 +104,7 @@ def experiment(args):
 
 
     result = my_sim.perform_sim(
-        demand_factor=demand_factor, repeat=repeat[tp_method]
+        demand_factor=demand_factor, repeat=repeat[tp]
     )        
     report_path = f"data/reports/{experiment_name}.csv"
     
@@ -107,7 +113,7 @@ def experiment(args):
     # make sure we have now found the correct result path. 
 
     with open(report_path, "w") as report_fob:
-        report_fob.write(f"{network},{t_class},{scale},{te_method},{tp_method},{top_k},{n_ftx},{candidate_link_choice_method},{optimizer_time_limit_minutes},")
+        report_fob.write(f"{network},{traffic},{scale},{te},{tp},{top_k},{n_ftx},{candidate_link_choice_method},{optimizer_time_limit_minutes},")
         for tv in tracked_vars:
             if tv in result \
             and isinstance(result[tv], list) \
@@ -172,24 +178,26 @@ def main():
     if DEBUG: 
         PARALLEL = False
         # TEST
-        network = ["Campus", "Regional"]
+        # network = ["Campus", "Regional"]
+        network = ["CEN"]
         # network = ["Campus"]
         # network = ["Regional"]
         # network = ["square"]
         # network = ["four-node"]
         traffic = ["background"]
-        scale = ["0.1"]
+        scale = ["1"]
         te = ["mcf"]    
         tp = ["Doppler"]
-        top_k = [90]
-        n_ftx = [3]
+        top_k = [50]
+        n_ftx = [0]
         use_cached_result = [True],
-        candidate_link_choice_method = ["max"]
+        candidate_link_choice_method = ["conservative"]
         optimizer_time_limit_minutes = [0.5]
 
     else:
         PARALLEL = True
-        network = ["Campus", "Regional"]    
+        # network = ["Campus", "Regional"]    
+        network = ["Gigapop"]
         traffic = ["background"]
         scale = ["0.5"]
         te = ["mcf"]
@@ -199,36 +207,49 @@ def main():
         use_cached_result = [True]
         candidate_link_choice_method = ["conservative", "max"]
         optimizer_time_limit_minutes = [0.5, 1, 5]
-
-    # time_limit = [60]
-    # sol_limit = [1]
-    experiment_params = product(network, 
-                                traffic, 
-                                scale, 
-                                te, 
-                                tp, 
-                                use_cached_result, 
-                                top_k, 
-                                n_ftx, 
-                                candidate_link_choice_method, 
-                                optimizer_time_limit_minutes)
-    if PARALLEL: 
-        pool = multiprocessing.Pool(10)
-        pool.map_async(
-            experiment, 
-            experiment_params)
-        pool.close()
-        pool.join()
-    else:
-        for e in experiment_params:
-            experiment(e)
-            # break                                       
-
-    concat_reports(product(te, tp, network, traffic))
+                
+    for p in product(network, traffic, scale, te, tp, top_k, n_ftx, use_cached_result, candidate_link_choice_method, optimizer_time_limit_minutes): 
+        print(f"{argv[0]} " + ' '.join(str(_) for _ in p))
+    exit()
+    PARALLEL = False
+    try: 
+        network, traffic, scale, te, tp, top_k, n_ftx, candidate_link_choice_method, optimizer_time_limit_minutes = argv[1:]
+    except Exception as e: 
+        print(e)
+        print(argv[1:])
     
-    # args = ("Comcast","background","0.8","mcf","greylambda")
-    # args = ("Comcast","background-plus-flashcrowd","0.3","mcf","greylambda")
-    # experiment(*args)
+    experiment(network, traffic, scale, te, tp, int(top_k), int(n_ftx), candidate_link_choice_method, float(optimizer_time_limit_minutes), dry=True)
+
+    
+    # # time_limit = [60]
+    # # sol_limit = [1]
+    # experiment_params = argv[1:]
+    # # experiment_params = product(network, 
+    # #                             traffic, 
+    # #                             scale, 
+    # #                             te, 
+    # #                             tp, 
+    # #                             use_cached_result, 
+    # #                             top_k, 
+    # #                             n_ftx, 
+    # #                             candidate_link_choice_method, 
+    # #                             optimizer_time_limit_minutes)
+    # if PARALLEL: 
+    #     pool = multiprocessing.Pool(10)
+    #     pool.map_async(
+    #         experiment, 
+    #         experiment_params)
+    #     pool.close()
+    #     pool.join()
+    # else:
+    #     for e in experiment_params:
+    #         experiment(e)
+    #         # break                                       
+
+    
+    # # args = ("Comcast","background","0.8","mcf","greylambda")
+    # # args = ("Comcast","background-plus-flashcrowd","0.3","mcf","greylambda")
+    # # experiment(*args)
 
 if __name__ == "__main__":
     main()

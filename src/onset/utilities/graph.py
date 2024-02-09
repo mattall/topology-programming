@@ -150,18 +150,15 @@ def find_shortest_paths(source, dest, edges, path_limit):
     
     return paths
 
-
 class Gml_to_dot:
-    def __init__(self, gml, outFile):
+    def __init__(self, gml, outFile, unit="Gbps"):
         # Get providers
         print("[Gml_to_dot] inFile: {}, outFile: {}".format(gml, outFile))
-        self.write_gml_to_dot(gml, outFile)
+        self.write_gml_to_dot(gml, outFile, unit)
 
     # def __call__(self, inFile, outfile):
 
     def reduce_range(self, nodes, links, link_capacity):
-        return nodes, links, link_capacity
-
         # links and nodes are sets.
 
         nodes = sorted(nodes)
@@ -189,7 +186,16 @@ class Gml_to_dot:
             mac_list.append("{}{}{}:{}{}:{}{}".format(mac, *hex_num))
         return mac_list
 
-    def write_dot_graph(self, nodes, links, link_capacity, name):
+    def write_dot_graph(self, nodes, links, link_capacity, name, unit="Gbps"):
+        """Writes a .dot file compatible with Yates for a graph. Generates IP addresses for nodes and port assignments for edges between nodes.        
+
+        Args:
+            nodes (iterable): should be a reduced range, i.e., 0...n-1 where there are n nodes in the graph
+            links (iterable): pairs of nodes.
+            link_capacity (int): 
+            name (path): path to output file. Method doesn't add '.dot' automatically, so path should include extension if desired.
+            unit (str, optional): Unit of capacity. Defaults to "Gbps".
+        """        
         nodes = list(nodes)
         links = list(links)
         switch_ips = [str(ip_address(a)) for a in range(len(nodes))]
@@ -197,7 +203,7 @@ class Gml_to_dot:
         mac_addrs = self.mac_range(len(nodes) * 2)
         # with open("./" + name + '.dot', 'w') as fob:
         with open(name, "w") as fob:
-            fob.write("digraph topology {\n\n")
+            fob.write("digraph topology {\n")
             for x in sorted(nodes):
                 mac = mac_addrs.pop()
                 ip = switch_ips.pop()
@@ -207,7 +213,7 @@ class Gml_to_dot:
                     )
                 )
 
-            fob.write("\n")
+            # fob.write("\n")
             for x in sorted(nodes):
                 mac = mac_addrs.pop()
                 ip = host_ips.pop()
@@ -217,23 +223,19 @@ class Gml_to_dot:
                     )
                 )
 
-            fob.write("\n")
+            # fob.write("\n")
             for x in sorted(nodes):
                 capacity = max(
                     link_capacity.values()
                 )  # ensure congestion happens "in network," not at hosts.
                 fob.write(
-                    'h{0} -> s{0}\t[src_port=0, dst_port=0, cost=1, capacity="{1}Gbps"];\n'.format(
-                        x, capacity
-                    )
+                    f'h{x} -> s{x}\t[src_port=0, dst_port=0, cost=1, capacity="{capacity}{unit}"];\n'
                 )
                 fob.write(
-                    's{0} -> h{0}\t[src_port=0, dst_port=0, cost=1, capacity="{1}Gbps"];\n'.format(
-                        x, capacity
-                    )
+                    f's{x} -> h{x}\t[src_port=0, dst_port=0, cost=1, capacity="{capacity}{unit}"];\n'
                 )
 
-            fob.write("\n")
+            # fob.write("\n")
             for a, b in sorted(links):
                 try:
                     capacity = link_capacity[(a, b)]
@@ -241,21 +243,21 @@ class Gml_to_dot:
                     for l in link_capacity:
                         print(l, link_capacity[l])
                     exit()
-
+                
                 fob.write(
-                    's{0} -> s{1}\t[src_port={1}, dst_port={0}, cost=1, capacity="{2}Gbps"];\n'.format(
-                        a, b, capacity
-                    )
+                    f's{a} -> s{b}\t[src_port={b}, dst_port={a}, cost=1, capacity="{capacity}{unit}"];\n'
                 )
-                fob.write(
-                    's{0} -> s{1}\t[src_port={1}, dst_port={0}, cost=1, capacity="{2}Gbps"];\n'.format(
-                        b, a, capacity
+                if (a, b) != sorted(links)[-1]:
+                    fob.write(
+                        f's{b} -> s{a}\t[src_port={a}, dst_port={b}, cost=1, capacity="{capacity}{unit}"];\n'
                     )
-                )
-
+                else:
+                    fob.write(
+                        f's{b} -> s{a}\t[src_port={a}, dst_port={b}, cost=1, capacity="{capacity}{unit}"];'
+                    )
             fob.write("}")
 
-    def write_gml_to_dot(self, gml, out_file):
+    def write_gml_to_dot(self, gml, out_file, unit="Gbps"):
         if type(gml) is str and path.isfile(gml):
             G = read_gml(gml)
         else:
@@ -276,8 +278,7 @@ class Gml_to_dot:
             nodes, links, link_capacity
         )
 
-        self.write_dot_graph(vertices, edges, edge_capacity, out_file)
-
+        self.write_dot_graph(vertices, edges, edge_capacity, out_file, unit=unit)
 
 def _link_on_path(path, link):
     # function adapted from:
@@ -434,9 +435,16 @@ def parse_edges(path):
 
 
 def write_gml(G, name):
+    """takes nx.Graph object and writes it to a gml file.
+
+    Args:
+        G (nx.Graph): An undirected graph
+        name (path): name of output file (include extension .gml)
+    """    
     with open(name, "w") as fob:
         fob.write("graph [\n")
         for node in sorted(G.nodes()):
+            if "h" in node: continue
             id = node.strip("s")
             fob.write("\tnode [\n")
             fob.write("\t\tid {}\n".format(id))
@@ -445,16 +453,24 @@ def write_gml(G, name):
                 fob.write("\t\t{} {}\n".format(key, value))
             fob.write("\t]\n")
         for s, t in G.edges():
+            if "h" in s or "h" in t: continue
             src = s.strip("s")
             dst = t.strip("s")
             fob.write("\tedge [\n")
             fob.write("\t\tsource {}\n".format(src))
             fob.write("\t\ttarget {}\n".format(dst))
+            if ("Latitude" in G.nodes[s] and "Longitude" in G.nodes[s] and 
+                "Latitude" in G.nodes[t] and "Longitude" in G.nodes[t]):
+                distance = calc_haversine(G.nodes[s]["Latitude"], G.nodes[s]["Longitude"],
+                                          G.nodes[t]["Latitude"], G.nodes[t]["Longitude"])
+                if "distance" not in G.edges[s, t]:
+                    G.edges[s, t]["distance"] = distance
             for key, value in G.edges[s, t].items():
                 fob.write("\t\t{} {}\n".format(key, value))
             fob.write("\t]\n")
         fob.write("]")
         return
+
 
 
 def is_subpath(a, b, input_path, distance=1):

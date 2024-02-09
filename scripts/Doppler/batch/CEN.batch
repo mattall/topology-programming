@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Checklist: reset --array 
+# update logging
+# update job name
+
+
+#SBATCH --partition=compute      ### Partition
+#SBATCH --job-name=CEN-doppler  ### Job Name
+#SBATCH --nodes=1              ### Number of Nodes
+#SBATCH --ntasks=120             ### Number of tasks per array job
+#SBATCH --account=durairajanlab ### Account used for job submission
+#SBATCH --output=scripts/Doppler/logs/CEN-doppler.out             ### file in which to store job stdout
+#SBATCH --error=scripts/Doppler/logs/CEN-doppler.err              ### file in which to store job stderr
+#SBATCH --array=0-198%2    ### Array index, replace <NUMBER_OF_COMMANDS> with the total number of commands in args.txt
+
+# Load necessary modules or activate a virtual environment if needed
+source .venv/bin/activate
+
+# Read the specific line from args.txt corresponding to the current array task
+command=$(sed -n "${SLURM_ARRAY_TASK_ID}p" scripts/Doppler/batch/CEN-args.txt)
+
+# Execute the command
+python $command

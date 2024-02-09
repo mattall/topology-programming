@@ -7,6 +7,8 @@ from pandas import DataFrame
 from itertools import combinations
 from collections import Counter, defaultdict
 
+from pyparsing import alphanums
+
 from onset.alpwolf import AlpWolf
 from onset.constants import SCRIPT_HOME
 from onset.defender import Defender
@@ -532,7 +534,7 @@ class Simulation:
             for i in range(start_iter, end_iter+1):
                 iter_range.extend([i, i])
         else:
-            iter_range = [i for i in range(start_iter, end_iter+1)]
+            iter_range = [i for i in range(start_iter, end_iter)]
                         
         for i, iter_i in enumerate(iter_range):
             
@@ -717,7 +719,7 @@ class Simulation:
                 updated_topology_file = iteration_topo            
                 self.export_logical_topo_to_gml( updated_topology_file + ".gml" )                
                 Gml_to_dot( self.wolf.logical_graph, iteration_topo + ".dot", unit=unit )
-            else: 
+            else:                 
                 system(f"cp {self.topo_solved} {iteration_topo}.dot")
             self.topo_solved = None
 
@@ -1659,6 +1661,7 @@ class Simulation:
             time_limit_minutes  = self.optimizer_time_limit_minutes,
             congestion_threshold_upper_bound    = \
                 self.congestion_threshold_upper_bound,
+            parallel_execution  = True
             
         )
 
@@ -1693,16 +1696,66 @@ class Simulation:
         # optimizer.run_model_minimize_cost()
         
         # optimizer.LINK_CAPACITY *= max_load
-        
-        if "ecmp" in self.te_method:
-            # self.opt_time = optimizer.doppler_ecmp()
-            self.opt_time = optimizer.doppler_ecmp_alt()
-            # return
-            # optimizer.ecmp_routing_algorithm()
-        else:            
-            self.opt_time = optimizer.doppler()  
+        optimizer.doppler()
+        solCount = optimizer.model.solCount
+        mlu_container = {}
+        if solCount > 0:
+            dot_files = {}
+            sol_paths = {}
+            solution_set = set()
+            sol_ids = []
+            for sol in range(solCount):
+                logger.info(f"Setting solution number set to : {sol}")
+                optimizer.set_solution_number(sol)
+                logger.info(f"Reading solution number : {optimizer.model.getParamInfo('SolutionNumber')[2]}")
+                topo_string = optimizer.get_topo_b64_xn()
+                if topo_string not in solution_set:
+                    logger.info(f"Generated pre-solution topology image: {topo_string}")
+                    logger.info(f"Unique topo string is: {topo_string}")
+                    sol_abs_topo = self.ITERATION_ABS_PATH + f"_sol_{sol}"
+                    sol_rel_path = self.ITERATION_REL_PATH + f"_sol_{sol}"
+                    optimizer.write_test_topology(sol_abs_topo, self.unit)
+                    dot_files[sol] = sol_rel_path + '.dot'
+                    sol_paths[sol] = sol_rel_path
 
+            # sol_ids = sorted([ i for i in sol_paths.keys() ])
+            # manager = Manager()
+            # mlu_container = manager.dict({sol_id: "NaN" for sol_id in sol_ids})
+            # work = []
+            # for sol_id in sol_ids:
+            #     work.append((dot_files[sol_id], self.hosts_file, self.te_method, sol_paths[sol_id], self.temp_tm_i_file, sol_id, mlu_container))
+            
+            # p = Pool(120)
+            # start = time()
+            # p.starmap(external_yates, work)
+            # p.close()
+            # p.join()
+            # end = time()
+            # self.multi_sol_time = end - start
+            # records = []            
+            # for key, val in mlu_container.items():
+            #     if len(val) == 2: 
+            #         (best_result_sol_number, sol_topo, mlu) = (key, val[0], val[1])
+            #         records.append(best_result_sol_number, sol_topo, mlu)
+            # min( records, key = lambda x : x[2] )
+            # # DO THIS BEFORE SETTING SOLUTION NUMBER FOR THE REST OF THE TOPOLOGY
+            # self.multi_sol_number_best_sol = best_result_sol_number
+            # self.multi_sol_best_mlu = mlu
+
+            # optimizer.set_solution_number(best_result_sol_number)
+            # must always populate changes after setting a solution number
+            # optimizer.populate_changes()
+            # self.adapt_topology()
+            self.optimizer.set_solution_number(0)
+            # self.topo_solved = dot_files[0]
+            # self.sig_add_circuits = False
+            return
         
+        # if no solution, this saves NaN data.        
+        self.sig_add_circuits = False        
+        return 
+
+        '''
         solCount = optimizer.model.solCount
         if solCount > 0: 
             # if self.run_all: 
@@ -1763,3 +1816,4 @@ class Simulation:
                 self.adapt_topology()
         self.sig_add_circuits = False        
 
+    '''
