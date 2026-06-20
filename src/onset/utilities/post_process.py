@@ -16,6 +16,7 @@ from numpy import exp, result_type
 import sys
 from onset.constants import SCRIPT_HOME
 from onset.utilities.logger import logger
+from onset.utilities.executables import resolve_yates_executable
 from onset.constants import ZERO_INDEXED
 from onset.utilities.plotters import (
     congestion_multi_cdf,
@@ -464,7 +465,7 @@ def read_result_val(result_file: str) -> float:
 def external_yates(topo_file, hosts_file, te_method, result_path, traffic_file, i, mlu_container):
     from os import system
     command_args = [
-        "yates",
+        resolve_yates_executable(),
         topo_file,
         traffic_file,
         traffic_file,

@@ -30,7 +30,32 @@ Ensure you have the following installed:
 - Python **3.8+**
 - Required dependencies (install via `pip`)
 - Gurobi (for network optimization)
+- YATES (for traffic-engineering evaluation)
 - NetworkX, NumPy, Matplotlib
+
+### **YATES**
+This simulator invokes the external `yates` command when evaluating traffic
+engineering methods. YATES is not vendored into this repository; install it from
+[cornell-netlab/yates](https://github.com/cornell-netlab/yates) or initialize
+the optional submodule if present:
+
+```bash
+git submodule update --init --recursive external/yates
+cd external/yates
+make && make install
+```
+
+If YATES is built locally but not installed on your `PATH`, set:
+
+```bash
+export YATES_BIN=/absolute/path/to/yates
+```
+
+You can check the local environment with:
+
+```bash
+scripts/check-env.sh
+```
 
 ### **Clone the Repository**
 ```bash

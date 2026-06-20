@@ -22,6 +22,7 @@ from onset.utilities.gml_to_dot import Gml_to_dot
 # from onset.utilities.logger import NewLogger
 # logger = NewLogger().get_logger()
 from onset.utilities.logger import logger
+from onset.utilities.executables import resolve_yates_executable
 from onset.utilities.plot_reconfig_time import get_reconfig_time
 from onset.utilities.plotters import (
     cdf_average_congestion,
@@ -269,7 +270,7 @@ class Simulation:
         if self.shakeroute:
             result_path = os.path.join(self.network_name, result_path)
         command_args = [
-            "yates",
+            resolve_yates_executable(),
             topo_file,
             traffic_file,
             traffic_file,

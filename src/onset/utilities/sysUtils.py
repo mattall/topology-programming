@@ -9,6 +9,7 @@ from .config import user, host
 import re
 
 from onset.constants import PLOT_DIR
+from onset.utilities.executables import resolve_yates_executable
 
 def file_writer(filepath, queue):
     # open the file
@@ -32,7 +33,7 @@ def file_writer(filepath, queue):
 
     def _yates(self, topo_file, result_path, traffic_file):
         command_args = [
-            "yates",
+            resolve_yates_executable(),
             topo_file,
             traffic_file,
             traffic_file,
@@ -223,4 +224,3 @@ def to_json(data):
     if isinstance(data, dict):
         return {key_to_json(key): to_json(data[key]) for key in data}
     raise TypeError
-
