@@ -71,26 +71,16 @@ else
     status=1
 fi
 
-if [ -n "${YATES_BIN:-}" ]; then
-    if [ -x "$YATES_BIN" ]; then
-        printf "ok: YATES_BIN -> %s\n" "$YATES_BIN"
-    else
-        printf "missing: YATES_BIN is set but not executable -> %s\n" "$YATES_BIN"
-        status=1
-    fi
-else
-    check_cmd yates "Install cornell-netlab/yates or set YATES_BIN=/absolute/path/to/yates."
-fi
-
 if [ "$require_gurobi" = "1" ]; then
     check_cmd gurobi_cl "Install Gurobi and ensure gurobi_cl is on PATH."
     check_python_import gurobipy "Install gurobipy and ensure your Gurobi license is configured."
 else
-    check_optional_cmd gurobi_cl "Required for optimization-backed TE/topology paths, but not ECMP evaluation."
-    check_optional_python_import gurobipy "Required for optimization-backed TE/topology paths, but not ECMP evaluation."
+    check_optional_cmd gurobi_cl "Required for Gurobi-backed topology optimization, but not ECMP/MCF TE evaluation."
+    check_optional_python_import gurobipy "Required for Gurobi-backed topology optimization, but not ECMP/MCF TE evaluation."
 fi
 check_python_import networkx "Install project Python dependencies with pip install ."
 check_python_import numpy "Install project Python dependencies with pip install ."
+check_python_import scipy "Install project Python dependencies with pip install ."
 
 if [ "$status" -eq 0 ]; then
     if [ "$warnings" -eq 0 ]; then

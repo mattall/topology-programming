@@ -1,15 +1,12 @@
 from os import listdir, chdir, makedirs, path, system, remove, rmdir
 import numpy as np
-from pprint import pprint
 import shutil
-from subprocess import check_output, Popen, PIPE
+from subprocess import check_output
 from time import process_time
 from ..constants import SCRIPT_HOME
-from .config import user, host
 import re
 
 from onset.constants import PLOT_DIR
-from onset.utilities.executables import resolve_yates_executable
 
 def file_writer(filepath, queue):
     # open the file
@@ -30,46 +27,6 @@ def file_writer(filepath, queue):
             queue.task_done()
     # mark the exit signal as processed, after the file was closed
     queue.task_done()
-
-    def _yates(self, topo_file, result_path, traffic_file):
-        command_args = [
-            resolve_yates_executable(),
-            topo_file,
-            traffic_file,
-            traffic_file,
-            self.hosts_file,
-            self.te_method,
-            "-num-tms",
-            "1",
-            "-out",
-            result_path,
-            "-budget",
-            "3",
-            ">>",
-            f"{self.temp_tm_i_file}_yates.out",
-        ]
-        gurobi_status = self._system("gurobi_cl")        
-        if gurobi_status == 0:
-            logger.debug("gurobi_cl is in path.")
-        else:
-            raise(f"Error: gurobi_cl not in path {sys.path}") # type: ignore
-        self._system(" ".join(command_args))
-        max_congestion = read_result_val(
-            os.path.join(
-                SCRIPT_HOME,
-                "data",
-                "results",
-                result_path,
-                "MaxExpCongestionVsIterations.dat",
-            )
-        )
-        logger.info("Max congestion: {}".format(max_congestion))
-        if self.exit_early and float(max_congestion) == 1.0:
-            logger.info("Max Congestion has reached 1. Ending simulation.")
-            return "SIG_EXIT"
-        return max_congestion
-
-
 
 def percent_diff(A, B):
     # USED BY SIMULATOR> BE CAREFUL MODIFYING>
@@ -140,13 +97,6 @@ def export_vid(folder):
         "ffmpeg -r 3 -i %00d.png -vcodec mpeg4 -y {}.mp4".format(movie_name)
     )
     chdir(SCRIPT_HOME)
-
-
-def test_ssh():
-    cmd = "ssh {user}@{host} {cmd}".format(user=user, host=host, cmd="ls -l")
-    print(cmd)
-    proc = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE).communicate()
-    pprint(proc)
 
 
 def reindex_down(link: tuple) -> tuple:

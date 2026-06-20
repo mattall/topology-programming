@@ -11,4 +11,6 @@
 #SBATCH --ntasks-per-node=1               ### number of tasks to launch per node
 #SBATCH --cpus-per-task=1                 ### number of cores for each task
  
-yates data/graphs/dot/Comcast.dot data/traffic/background_Comcast-tm data/traffic/background_Comcast-tm data/hosts/Comcast.hosts -num-tms 1 -budget 2 -mcf
+PYTHONPATH=src python -m onset.te data/graphs/dot/Comcast.dot \
+  data/traffic/background_Comcast-tm data/hosts/Comcast.hosts \
+  --method mcf --budget 2 --out TNSM/comcast_test2_mcf

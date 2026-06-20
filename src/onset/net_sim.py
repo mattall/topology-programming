@@ -1,9 +1,9 @@
 # main.py
 # Written by MNH
 # Takes network graph (.dot format) and TM Series.
-# Produces two network simulations with traffic engineering sim (YATES).
-#   1) Run YATES over the plain network graph.
-#   2) Run YATES over the adaptive graph.
+# Produces two simulations using the internal traffic-engineering engine.
+#   1) Evaluate the plain network graph.
+#   2) Evaluate the adaptive graph.
 import sys
 sys.path.insert(0, '/home/m/src/topology-programming/src/')
 from onset.utilities.flows import sanitize_magnitude

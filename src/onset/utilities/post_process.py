@@ -15,8 +15,8 @@ from matplotlib.pyplot import plot, xlabel
 from numpy import exp, result_type
 import sys
 from onset.constants import SCRIPT_HOME
+from onset.te import evaluate
 from onset.utilities.logger import logger
-from onset.utilities.executables import resolve_yates_executable
 from onset.constants import ZERO_INDEXED
 from onset.utilities.plotters import (
     congestion_multi_cdf,
@@ -462,36 +462,26 @@ def read_result_val(result_file: str) -> float:
             print(f"File: {result_file} contained illegal value, {result_val}")
             return result_val
         
-def external_yates(topo_file, hosts_file, te_method, result_path, traffic_file, i, mlu_container):
-    from os import system
-    command_args = [
-        resolve_yates_executable(),
-        topo_file,
-        traffic_file,
-        traffic_file,
-        hosts_file,
-        te_method,
-        "-num-tms",
-        "1",
-        "-out",
-        result_path,
-        "-budget",
-        "3",
-        ">>",
-        f"{traffic_file}_yates.out",
-    ]    
-    command = " ".join(command_args)
-    system(command)
-    max_congestion = read_result_val(
-        os.path.join(
-            SCRIPT_HOME,
-            "data",
-            "results",
-            result_path,
-            "MaxExpCongestionVsIterations.dat",
-        )
+def evaluate_te(
+    topo_file,
+    hosts_file,
+    te_method,
+    result_path,
+    traffic_file,
+    i,
+    mlu_container,
+):
+    result = evaluate(
+        topo_file=topo_file,
+        traffic_file=traffic_file,
+        hosts_file=hosts_file,
+        te_method=te_method,
+        result_path=result_path,
+        budget=3,
     )
-    logger.info(f"{'/'.join( topo_file.split('/') )[:-3] } --- Max congestion:  {max_congestion}")
+    max_congestion = result.max_congestion
+    topology_name = "/".join(topo_file.split("/"))[:-3]
+    logger.info(f"{topology_name} --- Max congestion: {max_congestion}")
     if isinstance(max_congestion, Number):
         mlu_container[i] = (topo_file, max_congestion)
         return
@@ -508,8 +498,8 @@ def get_candidate_links(
 ) -> list:
     """Gives a list of candidate links to add to the base network. The links returned are verified to not increase the max link congestion in the network when the given number of circuits are given to the link.
 
-    NOTE: The circuits returned are indexed from 0 - they DO NOT map to congestion and other metrics collected
-          by Yates. To map them to hosts in the Yates view, add 1.
+    NOTE: The circuits are indexed from zero. Add one to map them to the
+          host names used in TE metric files.
 
     Args:
         network (str): name of the network.

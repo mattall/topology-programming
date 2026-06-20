@@ -9,6 +9,9 @@ experiment production, especially Doppler and TDSC evaluation.
   - Added this knowledge tree, the YATES submodule, executable resolution, and
     environment checks.
   - Direction: make the research codebase recoverable by a new maintainer.
+- `1887e44 Document and automate reproducible YATES setup`
+  - Closed the historical external-engine setup loop and established ANS ECMP
+    result parity before the internal replacement branch.
 
 - `19b8f7f Update and rename README.rst to README.md`
   - Replaced the old README with a Markdown overview.
@@ -71,6 +74,6 @@ The current parameter axes in `exp-v2.py` include:
 - Tests reference data files and one test contains
   `self.my_sim.perform_sim(self.demand_factor=100)`, which is syntactically
   suspicious. Expect test cleanup before relying on the suite.
-- YATES's Frenetic dependency has incomplete upper bounds in opam. Use
-  `scripts/setup-yates.sh`; a plain install currently resolves incompatible
-  Core/Async/TCP-IP versions.
+- ECMP and MCF TE evaluation now live in `src/onset/te/`; historical SemiMCF
+  and Raecke variants are intentionally unsupported pending evidence they are
+  needed by a current experiment.

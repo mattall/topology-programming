@@ -122,7 +122,7 @@ class Gml_to_dot:
         return mac_list
 
     def write_dot_graph(self, nodes, links, link_capacity, name, unit="Gbps"):
-        """Writes a .dot file compatible with Yates for a graph. Generates IP addresses for nodes and port assignments for edges between nodes.        
+        """Write a TE-compatible DOT graph with node addresses and edge ports.
 
         Args:
             nodes (iterable): should be a reduced range, i.e., 0...n-1 where there are n nodes in the graph

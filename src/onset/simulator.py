@@ -16,13 +16,12 @@ from onset.utilities.config import CROSSFIRE
 from onset.optimization_two import Link_optimization
 from multiprocessing import Pool, Manager
 # from mcf_net_difference import Link_optimization
-from onset.constants import USER_HOME
 from onset.utilities.diff_compare import diff_compare
 from onset.utilities.gml_to_dot import Gml_to_dot
 # from onset.utilities.logger import NewLogger
 # logger = NewLogger().get_logger()
 from onset.utilities.logger import logger
-from onset.utilities.executables import resolve_yates_executable
+from onset.te import evaluate
 from onset.utilities.plot_reconfig_time import get_reconfig_time
 from onset.utilities.plotters import (
     cdf_average_congestion,
@@ -38,7 +37,7 @@ from onset.utilities.post_process import (
     read_result_val,
     write_result_val,
     write_result_vals,
-    external_yates
+    evaluate_te
 )
 from onset.utilities.sysUtils import count_lines, percent_diff
 from onset.utilities.tmg import rand_gravity_matrix
@@ -91,8 +90,8 @@ class Simulation:
 
             iterations (int, optional): Number of simulated epochs. Defaults to 0.
 
-            te_method (str, optional): Traffic engineering method - Must be supported
-                by Yates or self-implemented. Defaults to '-ecmp'.
+            te_method (str, optional): Internal traffic engineering method.
+                Supported values are '-ecmp' and '-mcf'. Defaults to '-ecmp'.
 
             start_clean (bool, optional): Overwrites simulation traffic matrices with new data. Defaults to False.
 
@@ -247,8 +246,7 @@ class Simulation:
         logger.info(f"Saving experiment results to: {self.EXPERIMENT_ABSOLUTE_PATH}")
         # The following three commands must be ordered as follows.        
         # self.base_graph = FiberGraph(self.name)
-        self.validate_yates_params()  # Depends on base_graph.
-        # Depends on validated yates params.
+        self.validate_simulation_inputs()
         self.wolf = AlpWolf(
             self.topo_file,
             self.fallow_transponders,
@@ -264,42 +262,20 @@ class Simulation:
         logger.info("Calling system command: {}".format(command))
         return system(command)
 
-    def _yates(self, topo_file, result_path, traffic_file=""):
+    def _evaluate_te(self, topo_file, result_path, traffic_file=""):
         if traffic_file == "":
             traffic_file = self.traffic_file
         if self.shakeroute:
             result_path = os.path.join(self.network_name, result_path)
-        command_args = [
-            resolve_yates_executable(),
-            topo_file,
-            traffic_file,
-            traffic_file,
-            self.hosts_file,
-            self.te_method,
-            "-num-tms",
-            "1",
-            "-out",
-            result_path,
-            "-budget",
-            "3",
-            ">>",
-            f"{self.temp_tm_i_file}_yates.out",
-        ]
-        # gurobi_status = self._system("gurobi_cl")        
-        # if gurobi_status == 0:
-        #     logger.debug("gurobi_cl is in path.")
-        # else:
-        #     raise(f"Error: gurobi_cl not in path {sys.path}") # type: ignore
-        self._system(" ".join(command_args))
-        max_congestion = read_result_val(
-            os.path.join(
-                SCRIPT_HOME,
-                "data",
-                "results",
-                result_path,
-                "MaxExpCongestionVsIterations.dat",
-            )
+        result = evaluate(
+            topo_file=topo_file,
+            traffic_file=traffic_file,
+            hosts_file=self.hosts_file,
+            te_method=self.te_method,
+            result_path=result_path,
+            budget=3,
         )
+        max_congestion = result.max_congestion
         logger.info("Max congestion: {}".format(max_congestion))
         if self.exit_early and float(max_congestion) == 1.0:
             logger.info("Max Congestion has reached 1. Ending simulation.")
@@ -331,7 +307,7 @@ class Simulation:
         Gml_to_dot(initial_graph, INITIAL_GRAPH_PATH)
 
         if (
-            self._yates(INITIAL_GRAPH_PATH, INITIAL_RESULTS_REL_PATH)
+            self._evaluate_te(INITIAL_GRAPH_PATH, INITIAL_RESULTS_REL_PATH)
             == "SIG_EXIT"
         ):
             return
@@ -388,7 +364,7 @@ class Simulation:
             )
 
             if (
-                self._yates(TEST_GRAPH_PATH, TEST_RESULTS_REL_PATH)
+                self._evaluate_te(TEST_GRAPH_PATH, TEST_RESULTS_REL_PATH)
                 == "SIG_EXIT"
             ):
                 return
@@ -455,12 +431,12 @@ class Simulation:
 
         # Relabels to be consistent with naming in Ripple.
         if 0:  # to make consistent with ripple examples.
-            yates_to_ripple_map = {
+            te_to_ripple_map = {
                 node: ("sw" + str(int(node) - 1)) for (node) in G
             }
 
-        yates_to_ripple_map = {node: ("s{}".format(node)) for (node) in G}
-        gml_view = relabel_nodes(G, yates_to_ripple_map, copy=True)
+        te_to_ripple_map = {node: ("s{}".format(node)) for (node) in G}
+        gml_view = relabel_nodes(G, te_to_ripple_map, copy=True)
         write_gml(gml_view, name)
         del gml_view
 
@@ -739,7 +715,7 @@ class Simulation:
                 # TODO: Check on that percent diff heuristic.  
                 system(f"cp -r {self.PREV_ITER_ABS_PATH}/* {ITERATION_ABS_PATH}/")
             else:
-                iter_congestion = self._yates(
+                iter_congestion = self._evaluate_te(
                         iteration_topo + ".dot",
                         ITERATION_REL_PATH,
                         traffic_file=self.temp_tm_i_file                        
@@ -850,11 +826,6 @@ class Simulation:
             # self._system("rm %s" % temp_tm_i)
             PREV_ITER_TM_DATA = tm_i_data
             self.PREV_ITER_ABS_PATH = ITERATION_ABS_PATH
-            # command_args = ["yates", iteration_topo, temp_tm_i, temp_tm_i, hosts,
-            #                 te_method, "-num-tms", "1", "-out", ITERATION_REL_PATH]
-            # logger.debug("Executing command: {}".format(" ".join(command_args)))
-            # self._system(" ".join(command_args))
-
             # self.base_graph.set_weights(CONGESTION_PATH)
             # self.base_graph.draw_graphs(ITERATION_ABS_PATH)
             # edge_congestion = get_edge_congestion(CONGESTION_PATH)
@@ -868,12 +839,12 @@ class Simulation:
             #     pass
         return return_data
 
-    def validate_yates_params(self):
-        """validates yates by ensuring that the necessary files implied by `self.name` exist.
+    def validate_simulation_inputs(self):
+        """Validate the files implied by ``network_name``.
         If the topo file is not found, then the program halts.
         traffic and hosts files are generated if they are needed.
-        Side effect: Assigns the following object variables to strings describing a verified
-        paths in the file system: self.topo_file, self.hosts_file, self.traffic_file
+        Side effect: assigns object variables to verified filesystem paths:
+        self.topo_file, self.hosts_file, and self.traffic_file.
         Also modifies self.base_graph.
         """
         name = self.network_name
@@ -1221,7 +1192,7 @@ class Simulation:
             p = Pool(120)
             
             start = time()
-            p.starmap(external_yates, work)
+            p.starmap(evaluate_te, work)
             
             p.close()
             p.join()
@@ -1298,7 +1269,7 @@ class Simulation:
                     )
                     write_gml(self.wolf.logical_graph, 
                                 self.ITERATION_ABS_PATH + f"sol_{sol}.gml")
-                    this_mlu = self._yates(
+                    this_mlu = self._evaluate_te(
                         sol_topo, 
                         sol_path, 
                         self.temp_tm_i_file
@@ -1728,7 +1699,7 @@ class Simulation:
             
             # p = Pool(120)
             # start = time()
-            # p.starmap(external_yates, work)
+            # p.starmap(evaluate_te, work)
             # p.close()
             # p.join()
             # end = time()
@@ -1800,7 +1771,7 @@ class Simulation:
                         )
                         write_gml(self.wolf.logical_graph, 
                                   self.ITERATION_ABS_PATH + f"sol_{sol}.gml")
-                        self._yates(
+                        self._evaluate_te(
                             sol_topo, 
                             sol_path, 
                             self.temp_tm_i_file

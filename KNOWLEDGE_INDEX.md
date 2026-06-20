@@ -26,15 +26,13 @@ read first.
 - `scripts/Doppler/experiment_params.py`: network, host-count, method, repeat,
   and demand-scale constants for Doppler experiments.
 - `scripts/Doppler/batch/CEN.batch`: example SLURM array workflow.
-- `scripts/setup-yates.sh`: reproducible YATES/Frenetic setup in an isolated
-  opam switch.
-- `scripts/check-env.sh`: local preflight for Python, YATES, optional Gurobi,
-  and core Python imports.
+- `src/onset/te/`: internal ECMP/MCF routing and metric generation.
+- `scripts/check-env.sh`: local preflight for Python, optional Gurobi, and core
+  Python imports.
 - `scripts/smoke_ans_ecmp.py`: nonzero ANS/ECMP end-to-end smoke test.
-- `external/yates`: pinned git submodule for Cornell Netlab YATES.
 - `scripts/TDSC/`: crossfire/rolling attack evaluation scripts and plotting.
 - `src/onset/network_model.py`: graph import and network model enrichment.
-- `src/onset/utilities/`: graph, traffic, result, plotting, and Yates helpers.
+- `src/onset/utilities/`: graph, traffic, result, and plotting helpers.
 
 ## Current Read
 

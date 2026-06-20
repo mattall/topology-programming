@@ -109,7 +109,7 @@ class Attacker:
         # load paths as json format
         self.n_hosts = n_hosts
         if path_file.endswith(".json"):
-            self.txt_path_file = None  # Paths derived by Yates or GML file
+            self.txt_path_file = None  # Paths derived by TE evaluation or GML file
             self.json_path_file = path_file
             with open(self.json_path_file, "r") as fob:
                 self.json_paths = json.load(fob)

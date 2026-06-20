@@ -68,3 +68,4 @@ logs
 .vscode/settings.json
 scripts/TDSC/notebooks/
 temp/
+/external/yates/

@@ -27,7 +27,7 @@ The simulator models **traffic dynamics**, **network topologies**, and **perform
 ## **🛠 Installation**
 ### **Clone the Repository**
 ```bash
-git clone --recurse-submodules https://github.com/mattall/topology-programming.git
+git clone https://github.com/mattall/topology-programming.git
 cd topology-programming
 ```
 
@@ -46,23 +46,11 @@ python -m pip install -e .
 The `TMgen` dependency is currently fetched over GitHub SSH, so package
 installation requires working GitHub SSH credentials.
 
-### **YATES**
+### **Traffic Engineering**
 
-YATES is pinned as the `external/yates` submodule and is used for traffic
-engineering routing and measurement. Its upstream OCaml dependencies have
-drifted, so a plain `make && make install` is not reproducible today.
-
-Install opam 2.2+, `pkgconf`, and a C toolchain, then run:
-
-```bash
-scripts/setup-yates.sh
-export YATES_BIN="$(opam exec --switch=yates -- which yates)"
-```
-
-The setup script creates an isolated OCaml 4.12 switch, pins the compatible
-Frenetic/Core/Async/TCP-IP versions, applies the repository's Frenetic
-compatibility patch, and installs YATES. It does not require a Gurobi license
-for ECMP.
+ECMP and MCF routing are implemented in the Python package. ECMP uses
+NetworkX shortest paths; MCF uses SciPy's open-source HiGHS linear-programming
+backend. Neither method requires YATES, Gurobi, or an external executable.
 
 Check the environment and run the nonzero ANS/ECMP integration smoke test:
 
@@ -75,9 +63,9 @@ The tested smoke result has MLU `0.804324`, loss `0.0`, and throughput `1.0`.
 
 ### **Gurobi**
 
-ECMP routing through YATES works without Gurobi. MCF and optimization-backed
-topology-programming methods require `gurobipy`, `gurobi_cl`, and a valid
-license. Require those checks explicitly with:
+Some topology-programming methods still require `gurobipy`, `gurobi_cl`, and a
+valid license. Internal ECMP and MCF evaluation do not. Require Gurobi checks
+explicitly with:
 
 ```bash
 REQUIRE_GUROBI=1 scripts/check-env.sh
@@ -119,7 +107,6 @@ Each **line represents a time step**, and contains a **flattened matrix** (rows 
 For a known-good end-to-end run, start with:
 
 ```bash
-export YATES_BIN="$(opam exec --switch=yates -- which yates)"
 PYTHONPATH=src .venv/bin/python scripts/smoke_ans_ecmp.py
 ```
 

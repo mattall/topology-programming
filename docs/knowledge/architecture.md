@@ -9,7 +9,7 @@ metrics. Most experiment scripts are thin orchestration around that simulator.
 - `src/onset/simulator.py`
   - Main `Simulation` class.
   - Owns experiment IDs, result directories, traffic matrix selection/scaling,
-    topology export, topology programming dispatch, Yates invocation, and metric
+    topology export, topology programming dispatch, TE evaluation, and metric
     collection.
 - `src/onset/optimization_two.py`
   - Active `Link_optimization` implementation.
@@ -32,10 +32,10 @@ metrics. Most experiment scripts are thin orchestration around that simulator.
     crossfire, flash-crowd, and rolling attacks.
 - `src/onset/utilities/`
   - Graph conversion/path helpers, traffic-matrix generators, flow utilities,
-    plotting, post-processing, logging, and Yates wrappers.
-- `src/onset/utilities/executables.py`
-  - Resolves external command dependencies such as YATES from environment
-    variables or `PATH`.
+    plotting, post-processing, and logging.
+- `src/onset/te/`
+  - In-process ECMP routing, MCF optimization through SciPy/HiGHS, congestion
+    simulation, and result-file generation.
 
 ## Simulator Lifecycle
 
@@ -59,8 +59,7 @@ At a high level, `Simulation.perform_sim(...)` does this:
    - `BVT`
    - `TBE`
    - any method containing `Doppler`
-6. Run traffic engineering/evaluation, usually through YATES helpers. The
-   executable is resolved from `YATES_BIN` or `yates` on `PATH`.
+6. Run ECMP or MCF traffic engineering through `onset.te.evaluate`.
 7. Write result files such as:
    - `MaxExpCongestionVsIterations.dat`
    - `CongestionLossVsIterations.dat`
@@ -70,18 +69,20 @@ At a high level, `Simulation.perform_sim(...)` does this:
 
 ## Traffic Engineering Boundary
 
-YATES is currently both a routing engine and a statistics engine. For each
-evaluated topology, the simulator passes topology, actual/predicted traffic,
-hosts, and `te_method` to YATES. YATES writes path assignments and metrics such
-as MLU, loss, throughput, and path counts back under `data/results/`.
+`onset.te.evaluate` is both the routing and statistics boundary. For each
+evaluated topology, the simulator passes topology, traffic, hosts, `te_method`,
+and result path. The engine writes path assignments and metrics such as MLU,
+loss, throughput, and path counts under `data/results/`.
 
 The experiment scripts primarily exercise `-ecmp` and `-mcf`. Some historical
-paths also name `-semimcfraeke`, `-semimcfraekeft`, and `-semimcfecmp`, but the
-recent Doppler/TDSC grids center on ECMP and MCF. In `onset_v3`, ECMP candidate
-topologies may additionally be ranked by invoking YATES on each candidate.
+paths name `-semimcfraeke`, `-semimcfraekeft`, and `-semimcfecmp`; these legacy
+methods are not implemented by the internal engine and now fail with a clear
+error. In `onset_v3`, ECMP candidate topologies are ranked in parallel through
+the same internal evaluator.
 
-This boundary is the target for a future in-core TE replacement: preserve the
-result-file/metric contract while implementing ECMP and MCF routing directly.
+Compatibility details are deliberate: capacity suffixes use YATES's binary
+multipliers, non-switch access links receive its historical 100x multiplier,
+and ECMP is capped deterministically by the path budget (currently three).
 
 ## Doppler Path
 

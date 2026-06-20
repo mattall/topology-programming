@@ -33,14 +33,14 @@ The best mental model is:
 - Candidate links: possible links/circuits the optimizer may add or choose
   among.
 - MLU: maximum link utilization, a central result metric.
-- YATES: external traffic engineering/evaluation tool invoked by helper code.
-  Use `YATES_BIN` or put `yates` on `PATH`.
+- Internal TE engine: `src/onset/te/` implements ECMP and MCF routing and
+  writes the simulator's historical metric-file contract.
 
 ## What Is Polished vs. Researchy
 
 Treat this as a living research repo. Some paths are clearly current and some
 are legacy. The package is installable in the PyScaffold style, but actual
-experiment execution depends on external data and YATES. Gurobi is additionally
-required for MCF and optimization-backed topology methods. Use
+experiment execution depends on external data. Gurobi is additionally required
+for optimization-backed topology methods, but not internal ECMP or MCF. Use
 `scripts/check-env.sh` for a quick local dependency check and
 `scripts/smoke_ans_ecmp.py` for a known end-to-end ECMP run.

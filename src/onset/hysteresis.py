@@ -20,7 +20,7 @@ from os import path, makedirs, listdir, rmdir, remove, system, chdir
 from pprint import pprint
 from onset.utilities.links_as_nodes import verbose_transform_link_to_node
 from onset.utilities.logger import logger
-from onset.utilities.sysUtils import delete_dir, export_vid, test_ssh
+from onset.utilities.sysUtils import delete_dir, export_vid
 from onset.constants import SCRIPT_HOME
 
 
@@ -133,8 +133,7 @@ class FiberGraph(object):
                     line.startswith("(") and "h" not in line
                 ):  # silently ignores everything that's NOT presumably a core edge..
                     edge, weight = line.split(":")
-                    # Yates indexes from 1. GML files index from 0.
-                    # Hack to shift edges from file.
+                    # TE result nodes are one-indexed; GML nodes are zero-indexed.
                     edge = edge.strip()
                     # edge = edge_downshift(edge)
                     weight = float(weight.strip())
@@ -485,9 +484,6 @@ def main():
             steps=10, kind="complete", alpha=0.1, beta=0.2
         )
 
-    if 0:
-        test_ssh()
-
     if 1:
         myG = FiberGraph()
         gml_file = path.join(SCRIPT_HOME, "graphs", "gml", "Abilene.gml")
@@ -495,7 +491,7 @@ def main():
 
     # Todo:
     # 1. read GML into FiberGraph. DONE
-    # 2. run yates on file and map congestion to the FiberGraph
+    # 2. evaluate the file and map congestion to the FiberGraph
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run a small nonzero ANS/ECMP integration test through YATES."""
+"""Run a small nonzero ANS/ECMP integration test through the internal TE engine."""
 
 from onset.simulator import Simulation
 
@@ -8,7 +8,7 @@ def main() -> None:
     result = Simulation(
         "ANS",
         18,
-        "smoke_ans_yates_ecmp",
+        "smoke_ans_internal_ecmp",
         iterations=1,
         te_method="-ecmp",
         traffic_file="data/traffic/ANS_coremelt_every_link_2.00e+11.txt",

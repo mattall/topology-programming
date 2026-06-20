@@ -1,6 +1,6 @@
 # Data and Environment
 
-Running this project depends on local data and external optimization/TE tools.
+Running this project depends on local data and, for some methods, optimization tools.
 Expect setup work before experiments run end to end.
 
 ## Python Package
@@ -9,7 +9,7 @@ The project uses a PyScaffold-style Python package:
 
 - package root: `src/onset/`
 - install target: `pip install .`
-- test command: `pytest`
+- focused test command: `python -m unittest tests.te_engine_test`
 
 Dependencies are listed in `setup.cfg`. Important ones include:
 
@@ -26,50 +26,19 @@ Dependencies are listed in `setup.cfg`. Important ones include:
 
 The simulator expects:
 
-- YATES or compatible traffic-engineering executable access for external TE
-  evaluation paths. The expected upstream is
-  `https://github.com/cornell-netlab/yates`.
-- Gurobi, `gurobipy`, and a working Gurobi license for MCF and
-  optimization-backed topology methods. ECMP evaluation does not require it.
+- NetworkX and SciPy for internal ECMP/MCF traffic engineering. SciPy uses its
+  bundled open-source HiGHS solver.
+- Gurobi, `gurobipy`, and a working Gurobi license for Gurobi-backed topology
+  programming methods. Internal ECMP and MCF do not require it.
 - Graphviz-style tooling may be needed for `.dot` output and graph rendering.
 - SLURM if using the batch scripts directly.
 
 `src/onset/constants.py` sets `SCRIPT_HOME` to `os.path.abspath(".")`, so many
 paths assume commands are run from the repository root.
 
-The simulator resolves YATES as follows:
-
-1. Use `YATES_BIN` if it is set.
-2. Otherwise use `yates` from `PATH`.
-
-Run `scripts/check-env.sh` to check Python, YATES, optional Gurobi, and core
+Run `scripts/check-env.sh` to check Python, optional Gurobi, and core
 Python imports. Set `REQUIRE_GUROBI=1` to make missing Gurobi components fail
 the check.
-
-## YATES Submodule
-
-YATES remains a separate project pinned as a submodule under:
-
-```text
-external/yates
-```
-
-The upstream dependency bounds are not sufficient for a reproducible build
-against current opam repositories. Use the tested setup script:
-
-```bash
-scripts/setup-yates.sh
-export YATES_BIN="$(opam exec --switch=yates -- which yates)"
-```
-
-The script requires opam 2.2+, `pkgconf`, Git, Make, and a C toolchain. It:
-
-1. Initializes `external/yates`.
-2. Creates an isolated OCaml 4.12 opam switch named `yates`.
-3. Uses Core 0.14.1, Async 0.14.0, PPX Jane 0.14.0, and TCP/IP 7.1.2.
-4. Checks out Frenetic commit `fdce6cc` under ignored `.cache/` storage.
-5. Applies `scripts/patches/frenetic-tcpip-checksum.patch`.
-6. Builds and installs YATES into the switch.
 
 Verify the real integration path with:
 
@@ -77,7 +46,7 @@ Verify the real integration path with:
 PYTHONPATH=src .venv/bin/python scripts/smoke_ans_ecmp.py
 ```
 
-This runs one nonzero ANS traffic matrix through baseline ECMP and checks that
+This runs one nonzero ANS traffic matrix through internal baseline ECMP and checks that
 MLU is positive, loss is zero, and normalized throughput is one. The locally
 verified MLU is `0.804324`.
 
@@ -87,7 +56,7 @@ Common input locations:
 
 - `data/graphs/gml/`: GML topologies.
 - `data/graphs/json/`: JSON topologies, when available.
-- `data/graphs/dot/`: DOT topologies for Yates-style runs.
+- `data/graphs/dot/`: DOT topologies for TE evaluation.
 - `data/traffic/`: flattened traffic matrices.
 - `data/hosts/`: host files.
 - `data/txp/`: transponder allocation data.
