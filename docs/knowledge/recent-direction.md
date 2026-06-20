@@ -5,6 +5,11 @@ experiment production, especially Doppler and TDSC evaluation.
 
 ## Commit Signals
 
+- `3cf835d documentation and vendoring dependencies`
+  - Added this knowledge tree, the YATES submodule, executable resolution, and
+    environment checks.
+  - Direction: make the research codebase recoverable by a new maintainer.
+
 - `19b8f7f Update and rename README.rst to README.md`
   - Replaced the old README with a Markdown overview.
   - The new README is broad and partially aspirational; it does not capture the
@@ -66,4 +71,6 @@ The current parameter axes in `exp-v2.py` include:
 - Tests reference data files and one test contains
   `self.my_sim.perform_sim(self.demand_factor=100)`, which is syntactically
   suspicious. Expect test cleanup before relying on the suite.
-
+- YATES's Frenetic dependency has incomplete upper bounds in opam. Use
+  `scripts/setup-yates.sh`; a plain install currently resolves incompatible
+  Core/Async/TCP-IP versions.

@@ -25,50 +25,63 @@ The simulator models **traffic dynamics**, **network topologies**, and **perform
 ---
 
 ## **🛠 Installation**
-### **Prerequisites**
-Ensure you have the following installed:
-- Python **3.8+**
-- Required dependencies (install via `pip`)
-- Gurobi (for network optimization)
-- YATES (for traffic-engineering evaluation)
-- NetworkX, NumPy, Matplotlib
-
-### **YATES**
-This simulator invokes the external `yates` command when evaluating traffic
-engineering methods. YATES is not vendored into this repository; install it from
-[cornell-netlab/yates](https://github.com/cornell-netlab/yates) or initialize
-the optional submodule if present:
-
-```bash
-git submodule update --init --recursive external/yates
-cd external/yates
-make && make install
-```
-
-If YATES is built locally but not installed on your `PATH`, set:
-
-```bash
-export YATES_BIN=/absolute/path/to/yates
-```
-
-You can check the local environment with:
-
-```bash
-scripts/check-env.sh
-```
-
 ### **Clone the Repository**
 ```bash
-git clone https://github.com/mattall/topology-programming.git
+git clone --recurse-submodules https://github.com/mattall/topology-programming.git
 cd topology-programming
 ```
 
-### **Install Dependencies**
+### **Python Environment**
+
+Python 3.8 or newer is required. Most commands assume they are run from the
+repository root.
+
 ```bash
-pip install -r requirements.txt
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -e .
 ```
 
-*For Gurobi installation, follow the [official guide](https://www.gurobi.com/documentation/).*
+The `TMgen` dependency is currently fetched over GitHub SSH, so package
+installation requires working GitHub SSH credentials.
+
+### **YATES**
+
+YATES is pinned as the `external/yates` submodule and is used for traffic
+engineering routing and measurement. Its upstream OCaml dependencies have
+drifted, so a plain `make && make install` is not reproducible today.
+
+Install opam 2.2+, `pkgconf`, and a C toolchain, then run:
+
+```bash
+scripts/setup-yates.sh
+export YATES_BIN="$(opam exec --switch=yates -- which yates)"
+```
+
+The setup script creates an isolated OCaml 4.12 switch, pins the compatible
+Frenetic/Core/Async/TCP-IP versions, applies the repository's Frenetic
+compatibility patch, and installs YATES. It does not require a Gurobi license
+for ECMP.
+
+Check the environment and run the nonzero ANS/ECMP integration smoke test:
+
+```bash
+scripts/check-env.sh
+PYTHONPATH=src .venv/bin/python scripts/smoke_ans_ecmp.py
+```
+
+The tested smoke result has MLU `0.804324`, loss `0.0`, and throughput `1.0`.
+
+### **Gurobi**
+
+ECMP routing through YATES works without Gurobi. MCF and optimization-backed
+topology-programming methods require `gurobipy`, `gurobi_cl`, and a valid
+license. Require those checks explicitly with:
+
+```bash
+REQUIRE_GUROBI=1 scripts/check-env.sh
+```
 
 ---
 
@@ -102,19 +115,25 @@ Each **line represents a time step**, and contains a **flattened matrix** (rows 
 ---
 
 ## **🚀 Running the Simulator**
-The **main simulation** can be run using:
+
+For a known-good end-to-end run, start with:
+
 ```bash
-python src/onset/simulator.py <network_name> <number_of_nodes> <experiment_name>
+export YATES_BIN="$(opam exec --switch=yates -- which yates)"
+PYTHONPATH=src .venv/bin/python scripts/smoke_ans_ecmp.py
 ```
 
-### **Example Usage**
+The historical command-line wrapper is `src/onset/net_sim.py`. Current research
+campaigns are generally launched through scripts under `scripts/Doppler/`,
+`scripts/TDSC/`, or `scripts/TNSM/`; read
+[`KNOWLEDGE_INDEX.md`](KNOWLEDGE_INDEX.md) before selecting a workflow.
+
+### **Legacy CLI Example**
+
 ```bash
-python src/onset/simulator.py example_network 18 experiment1
+PYTHONPATH=src .venv/bin/python src/onset/net_sim.py ANS 18 example \
+  -i 1 -te ecmp -t data/traffic/ANS_coremelt_every_link_2.00e+11.txt
 ```
-This command:
-- Loads the `example_network.gml` topology from `data/graphs/gml/`.
-- Assumes the network has 18 nodes.
-- Saves results in `data/results/experiment1/`.
 
 ---
 

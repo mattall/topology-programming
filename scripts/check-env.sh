@@ -2,6 +2,8 @@
 set -u
 
 status=0
+warnings=0
+require_gurobi="${REQUIRE_GUROBI:-0}"
 python_bin="${PYTHON_BIN:-}"
 
 if [ -z "$python_bin" ]; then
@@ -36,6 +38,30 @@ check_python_import() {
     fi
 }
 
+check_optional_cmd() {
+    name="$1"
+    hint="$2"
+
+    if command -v "$name" >/dev/null 2>&1; then
+        printf "ok: %s -> %s\n" "$name" "$(command -v "$name")"
+    else
+        printf "optional: missing %s\n  %s\n" "$name" "$hint"
+        warnings=1
+    fi
+}
+
+check_optional_python_import() {
+    module="$1"
+    hint="$2"
+
+    if "$python_bin" -c "import ${module}" >/dev/null 2>&1; then
+        printf "ok: %s import %s\n" "$python_bin" "$module"
+    else
+        printf "optional: missing %s import %s\n  %s\n" "$python_bin" "$module" "$hint"
+        warnings=1
+    fi
+}
+
 printf "Checking topology-programming environment...\n"
 
 if command -v "$python_bin" >/dev/null 2>&1 || [ -x "$python_bin" ]; then
@@ -56,13 +82,22 @@ else
     check_cmd yates "Install cornell-netlab/yates or set YATES_BIN=/absolute/path/to/yates."
 fi
 
-check_cmd gurobi_cl "Install Gurobi and ensure gurobi_cl is on PATH."
-check_python_import gurobipy "Install gurobipy and ensure your Gurobi license is configured."
+if [ "$require_gurobi" = "1" ]; then
+    check_cmd gurobi_cl "Install Gurobi and ensure gurobi_cl is on PATH."
+    check_python_import gurobipy "Install gurobipy and ensure your Gurobi license is configured."
+else
+    check_optional_cmd gurobi_cl "Required for optimization-backed TE/topology paths, but not ECMP evaluation."
+    check_optional_python_import gurobipy "Required for optimization-backed TE/topology paths, but not ECMP evaluation."
+fi
 check_python_import networkx "Install project Python dependencies with pip install ."
 check_python_import numpy "Install project Python dependencies with pip install ."
 
 if [ "$status" -eq 0 ]; then
-    printf "Environment check passed.\n"
+    if [ "$warnings" -eq 0 ]; then
+        printf "Environment check passed.\n"
+    else
+        printf "Environment check passed with optional components missing.\n"
+    fi
 else
     printf "Environment check failed.\n"
 fi

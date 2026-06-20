@@ -38,10 +38,9 @@ The best mental model is:
 
 ## What Is Polished vs. Researchy
 
-Treat this as a living research repo. Some paths are clearly current, some are
-legacy, and some top-level metadata is stale. For example, `README.md` gives a
-useful public-facing description, but `setup.cfg` still points
-`long_description` at `README.rst`, which no longer exists after the latest
-rename. The package is installable in the PyScaffold style, but actual
-experiment execution depends on external data, Gurobi, and likely Yates.
-Use `scripts/check-env.sh` for a quick local dependency check.
+Treat this as a living research repo. Some paths are clearly current and some
+are legacy. The package is installable in the PyScaffold style, but actual
+experiment execution depends on external data and YATES. Gurobi is additionally
+required for MCF and optimization-backed topology methods. Use
+`scripts/check-env.sh` for a quick local dependency check and
+`scripts/smoke_ans_ecmp.py` for a known end-to-end ECMP run.

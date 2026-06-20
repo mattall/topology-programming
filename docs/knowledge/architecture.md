@@ -68,6 +68,21 @@ At a high level, `Simulation.perform_sim(...)` does this:
    - Doppler-specific files like `TotalSolutions.dat`, `OptTime.dat`,
      `DopplerMinMLU.dat`, `CurrTopoID.dat`, and `OptimalTopoID.dat`.
 
+## Traffic Engineering Boundary
+
+YATES is currently both a routing engine and a statistics engine. For each
+evaluated topology, the simulator passes topology, actual/predicted traffic,
+hosts, and `te_method` to YATES. YATES writes path assignments and metrics such
+as MLU, loss, throughput, and path counts back under `data/results/`.
+
+The experiment scripts primarily exercise `-ecmp` and `-mcf`. Some historical
+paths also name `-semimcfraeke`, `-semimcfraekeft`, and `-semimcfecmp`, but the
+recent Doppler/TDSC grids center on ECMP and MCF. In `onset_v3`, ECMP candidate
+topologies may additionally be ranked by invoking YATES on each candidate.
+
+This boundary is the target for a future in-core TE replacement: preserve the
+result-file/metric contract while implementing ECMP and MCF routing directly.
+
 ## Doppler Path
 
 The current Doppler path is spread across:
