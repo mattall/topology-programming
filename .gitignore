@@ -15,7 +15,6 @@ __pycache__/*
 .DS_Store
 .*
 
-
 # Project files
 .ropeproject
 .project
@@ -68,4 +67,5 @@ logs
 .vscode/settings.json
 scripts/TDSC/notebooks/
 temp/
+tmp/
 /external/yates/
