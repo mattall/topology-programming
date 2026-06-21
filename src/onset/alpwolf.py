@@ -10,6 +10,7 @@ from collections import defaultdict
 from copy import copy
 from itertools import combinations
 from math import ceil
+from typing import cast
 from networkx import is_strongly_connected
 from networkx import Graph, read_gml, set_node_attributes, relabel_nodes
 from networkx.algorithms.centrality.betweenness import (
@@ -61,14 +62,14 @@ class AlpWolf:
         self.logical_graph = self.__init_logical_graph(self.base_graph)
         self.n_nodes = len(self.base_graph.nodes())
         # node-pair (u,v) -> num_circuits (int)
-        self.circuits = defaultdict(int)
+        self.circuits: dict[tuple[str, str], int] = defaultdict(int)
         self.fallow_transponders = fallow_transponders
         self.fallow_tx_allocation_strategy = fallow_tx_allocation_strategy
         self.fallow_tx_allocation_file = fallow_tx_allocation_file
-        self.txp_count = {}        
+        self.txp_count: dict[str, int] = {}        
         self.top_k = top_k        
         # self.n_super_nodes = ceil(self.n_nodes * 0.1)
-        self.initial_bandwidth_dict = defaultdict(lambda: defaultdict(float))
+        self.initial_bandwidth_dict: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
         self.import_capacity = False
         self.bandwidth_restricted = False
         self.commands = {
@@ -352,9 +353,6 @@ class AlpWolf:
 
         return
 
-    def get_transponders(self, node) -> dict:
-        return self.base_graph.nodes[node]["transponder"]
-
     def get_available_transponder_count(self, node) -> int:
         txps = self.get_transponders(node)  # get transponders at the node
         count = 0
@@ -365,16 +363,16 @@ class AlpWolf:
 
     def get_transponders(self, node=None) -> dict:
         if node is None:
-            return {
+            return cast(dict, {
                 node: self.base_graph.nodes[node]["transponder"]
                 for node in self.base_graph.nodes
-            }
+            })
         elif node in self.base_graph:
-            return self.base_graph.nodes[node]["transponder"]
+            return cast(dict, self.base_graph.nodes[node]["transponder"])
         else:
             raise Exception(f"Node {node, type(node)} not found")
 
-    def get_txp_count(self, node=None) -> list:
+    def get_txp_count(self, node: str | None = None) -> dict[str, int] | int:
         if node is None:
             return self.txp_count
         elif node in self.base_graph:
@@ -403,10 +401,10 @@ class AlpWolf:
         for transponder in t_dict:
             assignment = t_dict[transponder]
             if assignment == -1:  # transponder is unassigned.
-                return transponder
+                return cast(int, transponder)
         return -1
 
-    def get_peer_transponder(self, t_dict: dict, node_n: int) -> int:
+    def get_peer_transponder(self, t_dict: dict, node_n: str) -> int:
         """Returns an index to a transponder in t_dict paired to the node_n
         If no transponder is paired to node_n, returns -1.
 
@@ -420,15 +418,15 @@ class AlpWolf:
         for transponder in t_dict:
             assignment = t_dict[transponder]
             if assignment == node_n:  # transponder is unassigned.
-                return transponder
+                return cast(int, transponder)
         return -1
 
     def can_add_circuit(
         self,
         u: str,
         v: str,
-        transponder_u: int = None,
-        transponder_v: int = None,
+        transponder_u: int | None = None,
+        transponder_v: int | None = None,
     ) -> bool:
         logger.debug("Testing if we can add circuit {} {}.".format(u, v))
         if transponder_u == None or transponder_v == None:
@@ -443,16 +441,15 @@ class AlpWolf:
         if transponder_u == -1 or transponder_v == -1:            
             logger.error("Cannot add circuit. Transponder pair unavailable")
             raise Exception
-            return False
         return True
 
     def add_circuit(
         self,
         u: str,
         v: str,
-        transponder_u: int = None,
-        transponder_v: int = None,
-        capacity: int = None,
+        transponder_u: int | None = None,
+        transponder_v: int | None = None,
+        capacity: int | None = None,
     ) -> int:
         """Adds a circuit between nodes u and v.
 
@@ -556,7 +553,6 @@ class AlpWolf:
         if self.circuits[(u, v)] == 0:
             logger.debug("Cannot drop Circuit {} {} - does not exist.".format(u, v))
             raise Exception
-            return 0
 
         if transponder_u == None or transponder_v == None:
             transponder_v = self.get_peer_transponder(
@@ -757,6 +753,7 @@ class AlpWolf:
                     )
                 )
             return candidates
+        return []
 
     def get_circuits(self):
         """Return all circuits and their bandwidth in Gb/s"""
@@ -777,7 +774,7 @@ class AlpWolf:
         Returns:
             int: Bandwidth between the nodes, Gb/s
         """
-        return self.logical_graph[u][v]["capacity"]
+        return cast(int, self.logical_graph[u][v]["capacity"])
 
     def list_transponders(self, node_n):
         """Lists the transponders and their assignment for a node_n.
@@ -790,7 +787,7 @@ class AlpWolf:
         """
         logger.info(self.base_graph.nodes[node_n]["transponder"])
 
-    def restrict_bandwidth(self, fraction: float, edge: tuple[str, str] = None):
+    def restrict_bandwidth(self, fraction: float, edge: tuple[str, str] | None = None):
         assert fraction < 1, "restriction should be a fraction of the whole"
         if self.bandwidth_restricted:
             print("Bandwidth is restricted, cannot restrict again")
