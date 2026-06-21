@@ -94,7 +94,7 @@ def _build_edge_flow_milp(problem: OptimizationProblem, objective_mode: str = "c
     x_offset = 0
     x_count = n_undirected
     f_offset = x_count
-    flow_var_index: dict[Tuple, int] = {}  # (comm_idx, u, v) -> col
+    flow_var_index: dict[tuple, int] = {}  # (comm_idx, u, v) -> col
     f_idx = f_offset
     for ci, comm in enumerate(commodities):
         allowed = problem.tunnel_edge_sets.get(comm, frozenset())
@@ -144,7 +144,7 @@ def _build_edge_flow_milp(problem: OptimizationProblem, objective_mode: str = "c
                     inflow[fcol] = 1.0
                 if u == node:  # flows OUT OF node
                     outflow[fcol] = -1.0
-            combined = {}
+            combined: dict[int, float] = {}
             for col, coeff in inflow.items():
                 combined[col] = combined.get(col, 0.0) + coeff
             for col, coeff in outflow.items():
@@ -509,7 +509,7 @@ def solve_baseline(
     sc = problem.scaled_capacity
     norm_demand = {c: problem.demand[c] / sc for c in commodities}
 
-    flow_var_index: dict[Tuple, int] = {}
+    flow_var_index: dict[tuple, int] = {}
     f_idx = 0
     for ci, comm in enumerate(commodities):
         allowed = problem.tunnel_edge_sets.get(comm, frozenset())
@@ -538,7 +538,7 @@ def solve_baseline(
             continue
         allowed = problem.tunnel_edge_sets.get((s, t), frozenset())
         for node in nodes:
-            entries = {}
+            entries: dict[int, float] = {}
             for (u, v) in sorted(allowed):
                 fcol = flow_var_index.get((ci, u, v))
                 if fcol is None:
@@ -586,11 +586,11 @@ def solve_baseline(
             row_ub.append(0.0)
 
     n_con = len(rows)
-    ri, ci, vi = [], [], []
+    ri, cj, vi = [], [], []
     for i, r in enumerate(rows):
         for col, val in r.items():
-            ri.append(i); ci.append(col); vi.append(val)
-    A = csr((vi, (ri, ci)), shape=(n_con, n_vars))
+            ri.append(i); cj.append(col); vi.append(val)
+    A = csr((vi, (ri, cj)), shape=(n_con, n_vars))
 
     lp = highspy.HighsLp()
     lp.num_col_ = n_vars
@@ -1226,7 +1226,7 @@ def _build_path_flow_core_milp(problem: OptimizationProblem):
     norm_demand = {c: problem.demand[c] / sc for c in problem.demand}
 
     # Enumerate path variables: flat list of (s,t,i) -> col
-    path_vars: dict[Tuple, int] = {}
+    path_vars: dict[tuple, int] = {}
     path_idx_to_edge_cols: dict[int, list[int]] = {}
     next_path = 0
     for (s, t), path_idxs in pd.commodity_to_paths.items():
@@ -1476,6 +1476,7 @@ def _extract_path_flow_budget(
     solver_mlu = float(solution[im["mlu_idx"]])
 
     pd = problem.path_data
+    assert pd is not None
     sc = problem.scaled_capacity
     n_dir = im.get("n_dir", len(pd.supergraph_directed_edges))
 
