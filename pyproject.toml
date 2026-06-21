@@ -27,10 +27,9 @@ testing = [
     "pytest-cov",
 ]
 dev = [
-    "pylint>=2.8.3",
-    "autopep8>=1.5.7",
-    "isort>=5.8.0",
-    "pycodestyle>=2.7.0",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+    "pre-commit>=3.7.0",
 ]
 
 [project.urls]
@@ -47,7 +46,23 @@ addopts = "--cov onset --cov-report term-missing --verbose"
 testpaths = ["tests"]
 norecursedirs = ["dist", "build", ".tox"]
 
-[tool.flake8]
-max_line_length = 88
-extend_ignore = "E203,W503"
-exclude = ".tox,build,dist,.eggs,docs/conf.py"
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+warn_unused_ignores = true
+warn_return_any = true
+warn_unreachable = true
+exclude = "vendor/|build/|\.tox/"
+
