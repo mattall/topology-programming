@@ -69,6 +69,8 @@ before selecting a workflow.
 ```
 src/onset/
 ├── simulator.py            # Simulation class, perform_sim loop, dispatch
+├── handlers.py             # Method handler functions (_run_milp_method, _run_otp, ...)
+├── validation.py           # Input validation, topology/traffic/host verification
 ├── method_registry.py      # MethodConfig, _METHOD_REGISTRY, _resolve_method
 ├── reporter.py             # write_optimization_reports, evaluate_candidate_topologies
 ├── open_doppler.py         # HiGHS MILP builders and solvers (all four methods)

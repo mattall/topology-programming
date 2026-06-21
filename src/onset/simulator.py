@@ -1,256 +1,32 @@
-import sys
 import os
-from time import time
-from itertools import combinations
-from collections import Counter, defaultdict
+from collections import defaultdict
 from typing import Optional
 
 from onset.alpwolf import AlpWolf
 from onset.constants import SCRIPT_HOME
 from onset.preprocessing import build_optimization_problem
-from onset.open_doppler import solve_edge_flow_changes_mlu, solve_path_flow_budget, solve_path_flow_core
 from onset.base_types import TopologySolution, OptimizationResult
 from onset.method_registry import _METHOD_REGISTRY, _resolve_method, MethodConfig
+from onset.handlers import _run_milp_method, _run_otp, _run_greylambda, _run_cache, _run_bvt, _run_tbe, _run_cli
+from onset.validation import (
+    _evaluate_te, _system, evaluate_performance_from_adding_link,
+    export_logical_topo_to_gml, validate_simulation_inputs,
+)
 from onset.reporter import write_optimization_reports
 from onset.utilities.config import CROSSFIRE
-
-# Lazy import: gurobipy must not be loaded at module level.
-# The open backend (default) does not require it; only legacy methods do.
-
-
-
-from onset.utilities.diff_compare import diff_compare
 from onset.utilities.gml_to_dot import Gml_to_dot
-# from onset.utilities.logger import NewLogger
-# logger = NewLogger().get_logger()
 from onset.utilities.logger import logger
-from onset.te import evaluate
 from onset.utilities.plot_reconfig_time import get_reconfig_time
-from onset.utilities.plotters import (
-    cdf_average_congestion,
-    cdf_churn,
-    draw_graph,
-    plot_points,
-)
-from onset.utilities.post_process import (
-    read_link_congestion_to_dict,
-    read_result_val,
-)
-from onset.utilities.sysUtils import count_lines, percent_diff
-from onset.utilities.tmg import rand_gravity_matrix
-from onset.utilities.graph_utils import write_gml
-from networkx.relabel import relabel_nodes
+from onset.utilities.plotters import draw_graph
+from onset.utilities.post_process import read_result_val
+from onset.utilities.sysUtils import percent_diff
 
 from copy import deepcopy
 from hashlib import sha1
 
 from os import makedirs, system
-from os.path import dirname, isfile
 
 DRAW = False
-
-
-# ------------------------------------------------------------------
-# Handler functions for topology programming method dispatch
-# ------------------------------------------------------------------
-
-def _run_milp_method(sim, config: MethodConfig) -> None:
-    """Unified handler for all four MILP methods (doppler, onset_v3, onset_v2, onset)."""
-    import logging
-    logger = logging.getLogger(__name__)
-
-    sim.max_load = 0.9
-
-    # Determine top_k: 1 for MCF, configurable for ECMP
-    if sim.te_method == "-mcf":
-        top_k = 1
-    else:
-        top_k = getattr(sim, 'top_k', 100)
-
-    result = sim._run_topology_optimization(
-        objective_mode=config.objective_mode,
-        solver=config.solver_method,
-        top_k=top_k,
-    )
-
-    if result is None:
-        return
-
-    if sim.te_method == "-mcf":
-        if result.has_solutions:
-            sim.apply_solution(result.selected_solution)
-    elif sim.te_method == "-ecmp" and config.uses_ecmp_multisol:
-        if result.has_solutions:
-            from onset.reporter import evaluate_candidate_topologies
-            best_sol, multi_time, best_idx, best_mlu = evaluate_candidate_topologies(
-                solutions=result.solutions,
-                wolf=sim.wolf,
-                iteration_abs_path=sim.ITERATION_ABS_PATH,
-                iteration_rel_path=sim.ITERATION_REL_PATH,
-                hosts_file=sim.hosts_file,
-                te_method=sim.te_method,
-                temp_tm_file=sim.temp_tm_i_file,
-                unit=sim.unit,
-            )
-            sim.multi_sol_time = multi_time
-            sim.multi_sol_number_best_sol = best_idx
-            sim.multi_sol_best_mlu = best_mlu
-            if best_sol is not None:
-                sim.apply_solution(best_sol)
-    else:
-        if result.has_solutions:
-            sim.apply_solution(result.selected_solution)
-
-
-def _run_otp(sim, config: MethodConfig) -> None:
-    edge_congestion_file = os.path.join(
-        sim.PREV_ITER_ABS_PATH,
-        "EdgeCongestionVsIterations.dat",
-    )
-    edge_congestion_d = read_link_congestion_to_dict(
-        edge_congestion_file
-    )
-    congested_edges = [
-        k
-        for k in edge_congestion_d
-        if edge_congestion_d[k] > 0.80
-    ]
-
-    def find_shortcut_link(congested_edges):
-        node_counter = Counter()
-        message = "Looking for a shortcut link among: "
-        congested_edges = [
-            e.strip("()").replace("s", "").split(",")
-            for e in congested_edges
-        ]
-        for e in congested_edges:
-            u, v = e
-            node_counter.update((u, v))
-            message += f"({u}, {v}) "
-        logger.info(message)
-        midpoint = max(node_counter, key=node_counter.get)
-        terminals = []
-        for c in congested_edges:
-            this = c[:]
-            if midpoint in this:
-                this.remove(midpoint)
-                terminals.append(this[0])
-        shortcuts = [
-            c
-            for c in combinations(terminals, 2)
-            if c[0] != c[1]
-            and c not in sim.wolf.logical_graph.edges()
-        ]
-        logger.info(
-            f"Found the following shortcut: {shortcuts}"
-        )
-        return shortcuts
-
-    shortcuts = find_shortcut_link(congested_edges)
-    for edge in shortcuts:
-        u, v = edge
-        for _ in range(sim.circuits):
-            sim.wolf.add_circuit(u, v, 100)
-            sim.flux_circuits.append((u, v))
-    # flux_circuits.extend(congested_edges)
-    sim.sig_add_circuits = False
-    return
-
-
-def _run_greylambda(sim, config: MethodConfig) -> None:
-    edge_congestion_file = os.path.join(
-        sim.PREV_ITER_ABS_PATH,
-        "EdgeCongestionVsIterations.dat",
-    )
-    edge_congestion_d = read_link_congestion_to_dict(
-        edge_congestion_file
-    )
-    congested_edges = [
-        k
-        for k in edge_congestion_d
-        if edge_congestion_d[k] == 1
-    ]
-    for edge in congested_edges:
-        if isinstance(edge, str):
-            u, v = edge.strip("()").replace("s", "").split(",")
-        elif isinstance(edge, tuple) and len(edge) == 2:
-            u, v = edge
-        else:
-            raise ValueError(f"Unexpected edge type: {type(edge)}")
-        for _ in range(sim.circuits):
-            added = sim.wolf.add_circuit(u, v)
-            if added == 0:
-                sim.circuits_added = True
-
-    sim.flux_circuits.extend(congested_edges)
-    sim.sig_add_circuits = False
-    return
-
-
-def _run_cache(sim, config: MethodConfig) -> None:
-    from onset.defender import Defender
-    defender = Defender(
-        sim.network_name,
-        sim.circuits,
-        sim.candidate_link_choice_method,
-        sim.use_heuristic,
-        sim.PREV_ITER_ABS_PATH,
-        sim.attack_proportion,
-    )
-    # TODO: Pass get_strategic_circuit the paths file from the previous iteration.
-    sim.new_circuit = defender.get_strategic_circuit()
-    if (
-        type(sim.new_circuit) == tuple
-        and len(sim.new_circuit) == 2
-    ):
-        logger.debug(
-            "Adding {} ({}, {}) circuits.".format(
-                sim.circuits
-            ),
-            *sim.new_circuit,
-        )
-        for _ in range(sim.circuits):
-            u, v = sim.new_circuit
-            sim.wolf.add_circuit(u, v)
-    return
-
-
-def _run_bvt(sim, config: MethodConfig) -> None:
-    edge_congestion_file = os.path.join(
-        sim.PREV_ITER_ABS_PATH,
-        "EdgeCongestionVsIterations.dat",
-    )
-    edge_congestion_d = read_link_congestion_to_dict(
-        edge_congestion_file
-    )
-    congested_edges = [
-        k
-        for k in edge_congestion_d
-        if edge_congestion_d[k] == 1
-    ]
-
-    # for edge in congested_edges:
-    #     u, v = edge.strip("()").replace("s", "").split(",")
-    #     u = int(u)
-    #     v = int(v)
-    #     for _ in range(circuits):
-    #         sim.wolf.add_circuit(u, v)
-    # flux_circuits.extend(congested_edges)
-    sim.sig_add_circuits = False
-    return
-
-
-def _run_tbe(sim, config: MethodConfig) -> None:
-    if "flashcrowd" in sim.traffic_file \
-        and sim.demand_factor > 0.9:
-
-        sim.wolf.relax_restricted_bandwidth()
-    # sig_add_circuits = False
-    return
-
-
-def _run_cli(sim, config: MethodConfig) -> None:
-    sim.wolf.cli()
 
 
 class Simulation:
@@ -464,186 +240,41 @@ class Simulation:
         makedirs("data/graphs/img", exist_ok=True)
 
     def _system(self, command: str):
-        logger.info("Calling system command: {}".format(command))
-        return system(command)
+        return _system(command)
 
     def _evaluate_te(self, topo_file, result_path, traffic_file=""):
         if traffic_file == "":
             traffic_file = self.traffic_file
-        if self.shakeroute:
-            result_path = os.path.join(self.network_name, result_path)
-        result = evaluate(
+        return _evaluate_te(
             topo_file=topo_file,
+            result_path=result_path,
             traffic_file=traffic_file,
+            shakeroute=self.shakeroute,
             hosts_file=self.hosts_file,
             te_method=self.te_method,
-            result_path=result_path,
-            budget=3,
+            exit_early=self.exit_early,
+            network_name=self.network_name,
         )
-        max_congestion = result.max_congestion
-        logger.info("Max congestion: {}".format(max_congestion))
-        if self.exit_early and float(max_congestion) == 1.0:
-            logger.info("Max Congestion has reached 1. Ending simulation.")
-            return "SIG_EXIT"
-        return max_congestion
 
     def evaluate_performance_from_adding_link(self, circuits_to_add=1):
-        # self.EXPERIMENT_ABSOLUTE_PATH += (
-        #     "_circuits_{}".format(circuits_to_add))
-        # self.EXPERIMENT_ID += ("_circuits_{}".format(circuits_to_add))
-        path_churn = []
-        congestion_change = []
-
-        # prep directory
-        GRAPHS_PATH = os.path.join(self.EXPERIMENT_ABSOLUTE_PATH, "graphs")
-        makedirs(GRAPHS_PATH, exist_ok=True)
-
-        # prep initial file
-        initial_graph = self.wolf.logical_graph
-        INITIAL_GRAPH_PATH = os.path.join(
-            GRAPHS_PATH, self.network_name + "_0.dot"
+        return evaluate_performance_from_adding_link(
+            wolf=self.wolf,
+            network_name=self.network_name,
+            experiment_absolute_path=self.EXPERIMENT_ABSOLUTE_PATH,
+            experiment_id=self.EXPERIMENT_ID,
+            use_heuristic=self.use_heuristic,
+            te_method=self.te_method,
+            traffic_file=self.traffic_file,
+            shakeroute=self.shakeroute,
+            hosts_file=self.hosts_file,
+            exit_early=self.exit_early,
+            circuits_to_add=circuits_to_add,
         )
-        INITIAL_RESULTS_REL_PATH = os.path.join(self.EXPERIMENT_ID, "__0")
-
-        # Write Graphs to files
-        self.export_logical_topo_to_gml(
-            INITIAL_GRAPH_PATH.replace(".dot", ".gml"), G=initial_graph
-        )
-        Gml_to_dot(initial_graph, INITIAL_GRAPH_PATH)
-
-        if (
-            self._evaluate_te(INITIAL_GRAPH_PATH, INITIAL_RESULTS_REL_PATH)
-            == "SIG_EXIT"
-        ):
-            return
-
-        PATH_DIFF_FOLDER = os.path.join(
-            self.EXPERIMENT_ABSOLUTE_PATH, "path_diff"
-        )
-        CONGESTION_DIFF_FOLDER = os.path.join(
-            self.EXPERIMENT_ABSOLUTE_PATH, "congestion_diff"
-        )
-        makedirs(PATH_DIFF_FOLDER, exist_ok=True)
-        makedirs(CONGESTION_DIFF_FOLDER, exist_ok=True)
-
-        INITIAL_PATHS = os.path.join(
-            self.EXPERIMENT_ABSOLUTE_PATH,
-            "__0",
-            "paths",
-            self.te_method.strip("-") + "_0",
-        )
-        INITIAL_CONGESTION = os.path.join(
-            self.EXPERIMENT_ABSOLUTE_PATH,
-            "__0",
-            "MaxExpCongestionVsIterations.dat",
-        )
-        # Run experiment
-        if self.use_heuristic != "":
-            # FIXME CHANGE BACK TO `candid_set='ranked'`
-            # candidate_circuits = self.wolf.get_candidate_circuits(candid_set='ranked', k=5, l=5)
-            candidate_circuits = self.wolf.get_candidate_circuits(
-                candid_set="all"
-            )
-        else:
-            candidate_circuits = self.wolf.get_candidate_circuits(
-                candid_set="all"
-            )
-
-        for u, v in candidate_circuits:
-            TEST_RESULTS_REL_PATH = os.path.join(
-                self.EXPERIMENT_ID, "{}_{}".format(u, v)
-            )
-            test_alpwolf = deepcopy(self.wolf)
-            for _ in range(circuits_to_add):
-                test_alpwolf.add_circuit(u, v)
-
-            TEST_GRAPH_PATH = os.path.join(
-                GRAPHS_PATH, self.network_name + "_{}_{}.dot".format(u, v)
-            )
-
-            # Write Graphs to files
-            Gml_to_dot(test_alpwolf.logical_graph, TEST_GRAPH_PATH)
-            self.export_logical_topo_to_gml(
-                TEST_GRAPH_PATH.replace(".dot", ".gml"),
-                G=test_alpwolf.logical_graph,
-            )
-
-            if (
-                self._evaluate_te(TEST_GRAPH_PATH, TEST_RESULTS_REL_PATH)
-                == "SIG_EXIT"
-            ):
-                return
-
-            TEST_PATHS = os.path.join(
-                self.EXPERIMENT_ABSOLUTE_PATH,
-                "{}_{}".format(u, v),
-                "paths",
-                self.te_method.strip("-") + "_0",
-            )
-            TEST_CONGESTION = os.path.join(
-                self.EXPERIMENT_ABSOLUTE_PATH,
-                "{}_{}".format(u, v),
-                "MaxExpCongestionVsIterations.dat",
-            )
-
-            PATH_DIFF = os.path.join(
-                self.EXPERIMENT_ABSOLUTE_PATH,
-                "path_diff",
-                "{}_{}.txt".format(u, v),
-            )
-            CONGESTION_DIFF = os.path.join(
-                self.EXPERIMENT_ABSOLUTE_PATH,
-                "congestion_diff",
-                "{}_{}.txt".format(u, v),
-            )
-
-            self._system(
-                "diff {} {} > {}".format(INITIAL_PATHS, TEST_PATHS, PATH_DIFF)
-            )
-            self._system(
-                "diff {} {} > {}".format(
-                    INITIAL_CONGESTION, TEST_CONGESTION, CONGESTION_DIFF
-                )
-            )
-            path_churn.append(diff_compare(PATH_DIFF, "path"))
-            congestion_change.append(diff_compare(CONGESTION_DIFF))
-            if DRAW: 
-                draw_graph( test_alpwolf.logical_graph, os.path.join(
-                        GRAPHS_PATH, self.network_name + "_{}_{}".format(u, v)))
-
-        PLOT_DIR = os.path.join(self.EXPERIMENT_ABSOLUTE_PATH, "plot_dir")
-        CONGESTION_VS_PATHCHURN = os.path.join(
-            PLOT_DIR, "congestion_vs_pathChurn"
-        )
-        makedirs(PLOT_DIR, exist_ok=True)
-        plot_points(
-            path_churn,
-            congestion_change,
-            "Path Churn",
-            "Congestion Change",
-            CONGESTION_VS_PATHCHURN,
-        )
-        CONGESTION_CDF = os.path.join(PLOT_DIR, "congestion_cdf")
-        PATHCHURN_CDF = os.path.join(PLOT_DIR, "pathChurn_cdf")
-        cdf_average_congestion(congestion_change, CONGESTION_CDF)
-        cdf_churn(path_churn, PATHCHURN_CDF)
-
-        return self.EXPERIMENT_ABSOLUTE_PATH
 
     def export_logical_topo_to_gml(self, name, G=None):
-        if G == None:
+        if G is None:
             G = self.wolf.logical_graph
-
-        # Relabels to be consistent with naming in Ripple.
-        if 0:  # to make consistent with ripple examples.
-            te_to_ripple_map = {
-                node: ("sw" + str(int(node) - 1)) for (node) in G
-            }
-
-        te_to_ripple_map = {node: ("s{}".format(node)) for (node) in G}
-        gml_view = relabel_nodes(G, te_to_ripple_map, copy=True)
-        write_gml(gml_view, name)
-        del gml_view
+        return export_logical_topo_to_gml(name=name, G=G)
 
     def perform_sim(
         self,
@@ -980,201 +611,20 @@ class Simulation:
         traffic and hosts files are generated if they are needed.
         Side effect: assigns object variables to verified filesystem paths:
         self.topo_file, self.hosts_file, and self.traffic_file.
-        Also modifies self.base_graph.
         """
-        name = self.network_name
-        # Verify topology file and build base graph
+        self.topo_file, self.hosts_file, self.traffic_file = validate_simulation_inputs(
+            network_name=self.network_name,
+            shakeroute=self.shakeroute,
+            topology_programming_method=self.topology_programming_method,
+            traffic_file=self.traffic_file,
+            start_clean=self.start_clean,
+            num_hosts=self.num_hosts,
+            iterations=self.iterations,
+            magnitude=self.magnitude,
+        )
 
-        def verify_topo():
-            logger.debug("verifying topology file.")
-            gml_handle = os.path.join(
-                SCRIPT_HOME, "data", "graphs", "gml", name + ".gml"
-            )
-            json_handle = os.path.join(
-                SCRIPT_HOME, "data", "graphs", "json", name + ".json"
-            )
-            if (
-                self.shakeroute
-                and self.topology_programming_method != "baseline"
-            ):
-                base_topo_file = os.path.join(
-                    SCRIPT_HOME,
-                    "data",
-                    "graphs",
-                    "fiber_cut",
-                    self.shakeroute,
-                    self.topology_programming_method + ".gml",
-                )
-
-            elif isfile(gml_handle):
-                base_topo_file = gml_handle
-
-            elif isfile(json_handle):
-                base_topo_file = json_handle
-            else:
-                logger.error(
-                    f"Error topology file not found: {gml_handle} or {json_handle}",
-                    exc_info=1,
-                )
-                exit(-1)
-            logger.info(f"topology file check passed with base topology file: {base_topo_file}.")
-            self.topo_file = base_topo_file
-
-            # DON'T CALL nx.read_gml. Instead use FiberGraph.import_gml_graph
-            # self.base_graph = FiberGraph(self.name, read_gml(base_topo_file))
-
-            # self.import_gml_graph(base_topo_file)
-
-            # try:
-            #     self.base_graph.import_dot_graph(base_topo_file)
-            # except KeyError:
-            #     topo_file = os.path.join(SCRIPT_HOME, "data", "graphs", "dot", name+"-location.dot")
-            #     self.base_graph.import_dot_graph(base_topo_file)
-            # self.num_hosts = len([n for n in self.base_graph.G.nodes if n.startswith('h')])
-            # self.num_hosts = len(self.base_graph.G.nodes)
-            return
-
-        # Verify hosts file
-        def verify_hosts():
-            logger.debug("verifying hosts file.")
-            if self.shakeroute:
-                hosts_file = os.path.join(
-                    SCRIPT_HOME, "data", "hosts", self.shakeroute + ".hosts"
-                )
-            else:
-                hosts_file = os.path.join(
-                    SCRIPT_HOME, "data", "hosts", name + ".hosts"
-                )
-            hosts_folder = os.path.join(SCRIPT_HOME, "data", "hosts")
-            try:  # sets self.num_hosts and checks file exists.
-                assert isfile(
-                    hosts_file
-                ), "Error topology file not found: {}".format(hosts_file)
-                logger.debug("Host file successfully located.")
-                # g = read_dot(self.topo_file)
-                # self.num_hosts = len([n for n in g.nodes if n.startswith('h')])
-                lines = count_lines(hosts_file)
-                assert (
-                    lines == self.num_hosts
-                ), "Host file has wrong number of lines. expected: {} got: {}".format(
-                    self.num_hosts, lines
-                )
-
-            except AssertionError:  # Create the hosts file
-
-                def create_host_file():
-                    logger.debug("Creating host file.")
-                    # g = read_dot(self.topo_file)
-                    # self.num_hosts = len([n for n in g.nodes if n.startswith('h')])
-                    # create host dir if needed.
-                    makedirs(dirname(hosts_file), exist_ok=True)
-
-                    with open(hosts_file, "w") as host_fob:
-                        for i in range(1, self.num_hosts + 1):
-                            host_fob.write("h" + str(i) + "\n")
-
-                    logger.debug("Host file successfully created.")
-
-                create_host_file()
-            logger.debug("Host file check passed.")
-            self.hosts_file = hosts_file
-            return 
-
-        # Verify traffic file
-        def verify_traffic():
-            logger.debug("verifying traffic file.")
-            if self.traffic_file == "":
-                logger.debug(
-                    "no file stated. Generating common traffic file string"
-                )
-                traffic_file = os.path.join(
-                    SCRIPT_HOME, "data", "traffic", name + ".txt"
-                )
-            else:
-                logger.debug(
-                    "Attempting to use traffic file provided by user."
-                )
-                logger.debug("file: {}".format(self.traffic_file))
-                traffic_file = self.traffic_file
-
-            try:
-                if self.start_clean:  # start_clean
-                    self._system("rm {}".format(traffic_file))
-                assert isfile(
-                    traffic_file
-                ), "Error traffic file not found: {}".format(traffic_file)
-                logger.debug("traffic file found.")
-                line_count = count_lines(traffic_file)
-                if line_count < self.iterations:
-                    logger.error(
-                        "traffic file found, but has too few lines. expected: {} got: {}".format(
-                            self.iterations, line_count
-                        )
-                    )
-                    assert False
-                logger.debug("traffic file line-count passed.")
-                # check total entries on each line is correct.
-                with open(traffic_file, 'r') as tm_fob:
-                    lines = tm_fob.readlines()
-                    last_line = lines.pop()
-                    # if (last_line.strip() != ""):
-                    #     logger.error(f"File: {traffic_file} needs to end with an empty/blank line.")
-                    #     assert False
-                    num_expected_entries = self.num_hosts ** 2
-                    for l in lines:
-                        num_entries = len(l.strip().split())
-                        if num_entries != num_expected_entries:                           
-                            logger.error(f"Traffic matrix (TM): {traffic_file}. Network hosts (n): {self.num_hosts}. Line in TM should have n^2 entries ({num_expected_entries}). Got {num_entries}.")
-                            assert False
-                    # M = loadtxt(traffic_file)
-                    # if sqrt(len(M)) != self.num_hosts:
-                    #     logger.error(                            
-                    #     )
-                    #     assert False
-
-            except AssertionError:
-                if self.start_clean:
-                    pass
-                else:
-                    logger.error(
-                        f"Error verifying traffic file: {traffic_file}\n  Create one now? [y/n]"
-                    )
-
-                    create = input()
-                    if create.lower().startswith("y"):
-                        pass
-                    else:
-                        exit()
-
-                rand_gravity_matrix(
-                    self.num_hosts,
-                    self.iterations,
-                    self.magnitude,
-                    traffic_file,
-                )
-                lines = count_lines(traffic_file)
-                assert (
-                    lines >= self.iterations
-                ), "traffic file created, but has too few lines. expected: {} got: {}".format(
-                    self.iterations, lines
-                )
-
-            logger.debug("Host file check passed.")
-            self.traffic_file = traffic_file
-
-        verify_topo()
-        verify_hosts()
-        verify_traffic()
-        return
-
-
-
-
-
-
-
-
-
+    # ------------------------------------------------------------------
+    # Open-backend AlpWolf integration
     # ------------------------------------------------------------------
     # Open-backend AlpWolf integration
     # ------------------------------------------------------------------
