@@ -1,0 +1,164 @@
+"""Method registry for topology programming dispatch.
+
+Maps topology_programming_method strings to MethodConfig entries,
+replacing the old if/elif dispatch chain in simulator.py.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Callable, Dict, Optional
+
+from onset.open_doppler import (
+    solve_edge_flow_changes_mlu,
+    solve_path_flow_budget,
+    solve_path_flow_core,
+)
+
+
+@dataclass(frozen=True)
+class MethodConfig:
+    """Configuration for a topology programming method."""
+
+    name: str
+    is_milp: bool
+    objective_mode: Optional[str]  # "changes_plus_mlu" or "mlu"
+    solver_method: Optional[str]  # "doppler", "onset_v3", "onset_v2", "onset"
+    solve_fn: Optional[Callable]  # solver callable for MILP methods
+    uses_ecmp_multisol: bool
+    description: str
+    handler: Optional[Callable[..., None]] = None  # (Simulation, MethodConfig) -> None; resolved at import time
+
+
+# ---------------------------------------------------------------------------
+# Solver callables: maps solver_method string → solver function
+# ---------------------------------------------------------------------------
+
+_SOLVER_CALLABLES: Dict[str, Callable] = {
+    "doppler": solve_edge_flow_changes_mlu,
+    "onset_v3": lambda p: solve_edge_flow_changes_mlu(p, objective_mode="mlu"),
+    "onset_v2": solve_path_flow_core,
+    "onset": solve_path_flow_budget,
+}
+
+
+# ---------------------------------------------------------------------------
+# Method registry
+# ---------------------------------------------------------------------------
+# Handler functions are module-level functions in simulator.py.
+# They are imported lazily at dispatch time to avoid circular imports.
+# The string names here are resolved to actual callables via
+# _resolve_handler() at the bottom of simulator.py.
+
+_METHOD_REGISTRY: Dict[str, MethodConfig] = {
+    "doppler": MethodConfig(
+        name="doppler",
+        is_milp=True,
+        objective_mode="changes_plus_mlu",
+        solver_method="doppler",
+        solve_fn=_SOLVER_CALLABLES["doppler"],
+        uses_ecmp_multisol=False,
+        description="Doppler reconnaissance defense (TNSM 2024)",
+    ),
+    "onset_v3": MethodConfig(
+        name="onset_v3",
+        is_milp=True,
+        objective_mode="mlu",
+        solver_method="onset_v3",
+        solve_fn=_SOLVER_CALLABLES["onset_v3"],
+        uses_ecmp_multisol=True,
+        description="ONSET DDoS defense — post major revision (TDSC 2025)",
+    ),
+    "onset_v2": MethodConfig(
+        name="onset_v2",
+        is_milp=True,
+        objective_mode="mlu",
+        solver_method="onset_v2",
+        solve_fn=_SOLVER_CALLABLES["onset_v2"],
+        uses_ecmp_multisol=False,
+        description="ONSET DDoS defense — path-based formulation (TDSC 2025)",
+    ),
+    "onset": MethodConfig(
+        name="onset",
+        is_milp=True,
+        objective_mode="mlu",
+        solver_method="onset",
+        solve_fn=_SOLVER_CALLABLES["onset"],
+        uses_ecmp_multisol=False,
+        description="Original topology programming formulation (OptSys 2021)",
+    ),
+    "OTP": MethodConfig(
+        name="OTP",
+        is_milp=False,
+        objective_mode=None,
+        solver_method=None,
+        solve_fn=None,
+        uses_ecmp_multisol=False,
+        description="Offline Traffic Provisioning — shortcut-link heuristic",
+    ),
+    "greylambda": MethodConfig(
+        name="greylambda",
+        is_milp=False,
+        objective_mode=None,
+        solver_method=None,
+        solve_fn=None,
+        uses_ecmp_multisol=False,
+        description="Greylambda — add circuits on fully-congested edges",
+    ),
+    "cache": MethodConfig(
+        name="cache",
+        is_milp=False,
+        objective_mode=None,
+        solver_method=None,
+        solve_fn=None,
+        uses_ecmp_multisol=False,
+        description="Cache-based defense (Defender module)",
+    ),
+    "BVT": MethodConfig(
+        name="BVT",
+        is_milp=False,
+        objective_mode=None,
+        solver_method=None,
+        solve_fn=None,
+        uses_ecmp_multisol=False,
+        description="Bandwidth-variable transceiver emulation",
+    ),
+    "TBE": MethodConfig(
+        name="TBE",
+        is_milp=False,
+        objective_mode=None,
+        solver_method=None,
+        solve_fn=None,
+        uses_ecmp_multisol=False,
+        description="Temporary bandwidth expansion during flashcrowd",
+    ),
+    "cli": MethodConfig(
+        name="cli",
+        is_milp=False,
+        objective_mode=None,
+        solver_method=None,
+        solve_fn=None,
+        uses_ecmp_multisol=False,
+        description="Interactive CLI mode",
+    ),
+}
+
+
+def _resolve_method(name: str) -> MethodConfig:
+    """Resolve a topology_programming_method string to a MethodConfig.
+
+    Performs exact match first, then falls back to case-insensitive
+    substring match (e.g., "Doppler-v2" matches "doppler").
+    """
+    if name in _METHOD_REGISTRY:
+        return _METHOD_REGISTRY[name]
+
+    name_lower = name.lower()
+    for key, config in _METHOD_REGISTRY.items():
+        if key.lower() in name_lower:
+            return config
+
+    raise ValueError(
+        f"Unknown topology_programming_method: {name!r}. "
+        f"Valid: {sorted(_METHOD_REGISTRY.keys())}"
+    )

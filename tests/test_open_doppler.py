@@ -618,7 +618,7 @@ class TestPathFlowCoreBuilder:
     """Tests for the path-flow core builder."""
 
     def test_builds_without_error(self):
-        prob = _build_path_problem_budget_1()
+        prob = _build_path_problem_core()
         lp, im = _build_path_flow_core_milp(prob)
         assert lp.num_col_ > 0
         assert lp.num_row_ > 0
@@ -626,13 +626,13 @@ class TestPathFlowCoreBuilder:
         assert im["n_path_vars"] == 2
 
     def test_solve_returns_solution(self):
-        prob = _build_path_problem_budget_1()
+        prob = _build_path_problem_core()
         result = solve_path_flow_core(prob)
         assert result.has_solutions
         assert result.status == OptimizerStatus.TOP_K_REACHED
 
     def test_core_edges_always_active(self):
-        prob = _build_path_problem_budget_1()
+        prob = _build_path_problem_core()
         result = solve_path_flow_core(prob)
         sol = result.selected_solution
         # Core edges a-b, b-c, c-d must be selected
@@ -640,7 +640,7 @@ class TestPathFlowCoreBuilder:
             assert e in sol.selected_edges, f"Core edge {e} not selected"
 
     def test_solution_invariants(self):
-        prob = _build_path_problem_budget_1()
+        prob = _build_path_problem_core()
         result = solve_path_flow_core(prob)
         sol = result.selected_solution
         assert sol.selected_edges == (

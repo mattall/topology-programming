@@ -3,7 +3,6 @@ set -u
 
 status=0
 warnings=0
-require_gurobi="${REQUIRE_GUROBI:-0}"
 python_bin="${PYTHON_BIN:-}"
 
 if [ -z "$python_bin" ]; then
@@ -71,13 +70,9 @@ else
     status=1
 fi
 
-if [ "$require_gurobi" = "1" ]; then
-    check_cmd gurobi_cl "Install Gurobi and ensure gurobi_cl is on PATH."
-    check_python_import gurobipy "Install gurobipy and ensure your Gurobi license is configured."
-else
-    check_optional_cmd gurobi_cl "Required for Gurobi-backed topology optimization, but not ECMP/MCF TE evaluation."
-    check_optional_python_import gurobipy "Required for Gurobi-backed topology optimization, but not ECMP/MCF TE evaluation."
-fi
+check_optional_cmd gurobi_cl "Required for Gurobi-backed topology optimization."
+check_optional_python_import gurobipy "Required for Gurobi-backed topology optimization."
+check_python_import highspy "Install highspy with pip install highspy."
 check_python_import networkx "Install project Python dependencies with pip install ."
 check_python_import numpy "Install project Python dependencies with pip install ."
 check_python_import scipy "Install project Python dependencies with pip install ."

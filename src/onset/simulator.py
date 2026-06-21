@@ -1,50 +1,24 @@
 import sys
 import os
 from time import time
-from numbers import Number
-from numpy import loadtxt, sqrt, array_equal, floor
-from pandas import DataFrame
 from itertools import combinations
 from collections import Counter, defaultdict
-
-from pyparsing import alphanums
+from typing import Optional
 
 from onset.alpwolf import AlpWolf
 from onset.constants import SCRIPT_HOME
-from onset.defender import Defender
 from onset.preprocessing import build_optimization_problem
 from onset.open_doppler import solve_edge_flow_changes_mlu, solve_path_flow_budget, solve_path_flow_core
-from onset.base_types import TopologySolution, OptimizationResult, BackendProvenance
+from onset.base_types import TopologySolution, OptimizationResult
+from onset.method_registry import _METHOD_REGISTRY, _resolve_method, MethodConfig
+from onset.reporter import write_optimization_reports
 from onset.utilities.config import CROSSFIRE
-from multiprocessing import Pool, Manager
 
 # Lazy import: gurobipy must not be loaded at module level.
 # The open backend (default) does not require it; only legacy methods do.
 
 
-def _get_optimizer_class(backend: str = "open"):
-    """Return the Link_optimization class for the requested backend.
 
-    The 'open' backend uses SciPy/HiGHS and never imports gurobipy.
-    The 'gurobi-legacy' backend lazily imports the existing implementation.
-    """
-    if backend == "open":
-        from onset.open_doppler import solve_edge_flow_changes_mlu
-        return solve_edge_flow_changes_mlu
-    elif backend == "gurobi-legacy":
-        try:
-            from onset.optimization_two import Link_optimization
-        except ImportError as exc:
-            raise ImportError(
-                "The 'gurobi-legacy' backend requires gurobipy. "
-                "Install with: pip install gurobipy>=10.0.1"
-            ) from exc
-        return Link_optimization
-    else:
-        raise ValueError(
-            f"Unknown backend: {backend!r}. "
-            "Expected 'open' or 'gurobi-legacy'."
-        )
 from onset.utilities.diff_compare import diff_compare
 from onset.utilities.gml_to_dot import Gml_to_dot
 # from onset.utilities.logger import NewLogger
@@ -56,30 +30,228 @@ from onset.utilities.plotters import (
     cdf_average_congestion,
     cdf_churn,
     draw_graph,
-    draw_graph_circular,
     plot_points,
-    get_box_plot_stats,
-    plt_bxplt
 )
 from onset.utilities.post_process import (
     read_link_congestion_to_dict,
     read_result_val,
-    write_result_val,
-    write_result_vals,
-    evaluate_te
 )
 from onset.utilities.sysUtils import count_lines, percent_diff
 from onset.utilities.tmg import rand_gravity_matrix
 from onset.utilities.graph_utils import write_gml
 from networkx.relabel import relabel_nodes
-import traceback
+
 from copy import deepcopy
 from hashlib import sha1
-from logging import FileHandler
+
 from os import makedirs, system
 from os.path import dirname, isfile
 
 DRAW = False
+
+
+# ------------------------------------------------------------------
+# Handler functions for topology programming method dispatch
+# ------------------------------------------------------------------
+
+def _run_milp_method(sim, config: MethodConfig) -> None:
+    """Unified handler for all four MILP methods (doppler, onset_v3, onset_v2, onset)."""
+    import logging
+    logger = logging.getLogger(__name__)
+
+    sim.max_load = 0.9
+
+    # Determine top_k: 1 for MCF, configurable for ECMP
+    if sim.te_method == "-mcf":
+        top_k = 1
+    else:
+        top_k = getattr(sim, 'top_k', 100)
+
+    result = sim._run_topology_optimization(
+        objective_mode=config.objective_mode,
+        solver=config.solver_method,
+        top_k=top_k,
+    )
+
+    if result is None:
+        return
+
+    if sim.te_method == "-mcf":
+        if result.has_solutions:
+            sim.apply_solution(result.selected_solution)
+    elif sim.te_method == "-ecmp" and config.uses_ecmp_multisol:
+        if result.has_solutions:
+            from onset.reporter import evaluate_candidate_topologies
+            best_sol, multi_time, best_idx, best_mlu = evaluate_candidate_topologies(
+                solutions=result.solutions,
+                wolf=sim.wolf,
+                iteration_abs_path=sim.ITERATION_ABS_PATH,
+                iteration_rel_path=sim.ITERATION_REL_PATH,
+                hosts_file=sim.hosts_file,
+                te_method=sim.te_method,
+                temp_tm_file=sim.temp_tm_i_file,
+                unit=sim.unit,
+            )
+            sim.multi_sol_time = multi_time
+            sim.multi_sol_number_best_sol = best_idx
+            sim.multi_sol_best_mlu = best_mlu
+            if best_sol is not None:
+                sim.apply_solution(best_sol)
+    else:
+        if result.has_solutions:
+            sim.apply_solution(result.selected_solution)
+
+
+def _run_otp(sim, config: MethodConfig) -> None:
+    edge_congestion_file = os.path.join(
+        sim.PREV_ITER_ABS_PATH,
+        "EdgeCongestionVsIterations.dat",
+    )
+    edge_congestion_d = read_link_congestion_to_dict(
+        edge_congestion_file
+    )
+    congested_edges = [
+        k
+        for k in edge_congestion_d
+        if edge_congestion_d[k] > 0.80
+    ]
+
+    def find_shortcut_link(congested_edges):
+        node_counter = Counter()
+        message = "Looking for a shortcut link among: "
+        congested_edges = [
+            e.strip("()").replace("s", "").split(",")
+            for e in congested_edges
+        ]
+        for e in congested_edges:
+            u, v = e
+            node_counter.update((u, v))
+            message += f"({u}, {v}) "
+        logger.info(message)
+        midpoint = max(node_counter, key=node_counter.get)
+        terminals = []
+        for c in congested_edges:
+            this = c[:]
+            if midpoint in this:
+                this.remove(midpoint)
+                terminals.append(this[0])
+        shortcuts = [
+            c
+            for c in combinations(terminals, 2)
+            if c[0] != c[1]
+            and c not in sim.wolf.logical_graph.edges()
+        ]
+        logger.info(
+            f"Found the following shortcut: {shortcuts}"
+        )
+        return shortcuts
+
+    shortcuts = find_shortcut_link(congested_edges)
+    for edge in shortcuts:
+        u, v = edge
+        for _ in range(sim.circuits):
+            sim.wolf.add_circuit(u, v, 100)
+            sim.flux_circuits.append((u, v))
+    # flux_circuits.extend(congested_edges)
+    sim.sig_add_circuits = False
+    return
+
+
+def _run_greylambda(sim, config: MethodConfig) -> None:
+    edge_congestion_file = os.path.join(
+        sim.PREV_ITER_ABS_PATH,
+        "EdgeCongestionVsIterations.dat",
+    )
+    edge_congestion_d = read_link_congestion_to_dict(
+        edge_congestion_file
+    )
+    congested_edges = [
+        k
+        for k in edge_congestion_d
+        if edge_congestion_d[k] == 1
+    ]
+    for edge in congested_edges:
+        if isinstance(edge, str):
+            u, v = edge.strip("()").replace("s", "").split(",")
+        elif isinstance(edge, tuple) and len(edge) == 2:
+            u, v = edge
+        else:
+            raise ValueError(f"Unexpected edge type: {type(edge)}")
+        for _ in range(sim.circuits):
+            added = sim.wolf.add_circuit(u, v)
+            if added == 0:
+                sim.circuits_added = True
+
+    sim.flux_circuits.extend(congested_edges)
+    sim.sig_add_circuits = False
+    return
+
+
+def _run_cache(sim, config: MethodConfig) -> None:
+    from onset.defender import Defender
+    defender = Defender(
+        sim.network_name,
+        sim.circuits,
+        sim.candidate_link_choice_method,
+        sim.use_heuristic,
+        sim.PREV_ITER_ABS_PATH,
+        sim.attack_proportion,
+    )
+    # TODO: Pass get_strategic_circuit the paths file from the previous iteration.
+    sim.new_circuit = defender.get_strategic_circuit()
+    if (
+        type(sim.new_circuit) == tuple
+        and len(sim.new_circuit) == 2
+    ):
+        logger.debug(
+            "Adding {} ({}, {}) circuits.".format(
+                sim.circuits
+            ),
+            *sim.new_circuit,
+        )
+        for _ in range(sim.circuits):
+            u, v = sim.new_circuit
+            sim.wolf.add_circuit(u, v)
+    return
+
+
+def _run_bvt(sim, config: MethodConfig) -> None:
+    edge_congestion_file = os.path.join(
+        sim.PREV_ITER_ABS_PATH,
+        "EdgeCongestionVsIterations.dat",
+    )
+    edge_congestion_d = read_link_congestion_to_dict(
+        edge_congestion_file
+    )
+    congested_edges = [
+        k
+        for k in edge_congestion_d
+        if edge_congestion_d[k] == 1
+    ]
+
+    # for edge in congested_edges:
+    #     u, v = edge.strip("()").replace("s", "").split(",")
+    #     u = int(u)
+    #     v = int(v)
+    #     for _ in range(circuits):
+    #         sim.wolf.add_circuit(u, v)
+    # flux_circuits.extend(congested_edges)
+    sim.sig_add_circuits = False
+    return
+
+
+def _run_tbe(sim, config: MethodConfig) -> None:
+    if "flashcrowd" in sim.traffic_file \
+        and sim.demand_factor > 0.9:
+
+        sim.wolf.relax_restricted_bandwidth()
+    # sig_add_circuits = False
+    return
+
+
+def _run_cli(sim, config: MethodConfig) -> None:
+    sim.wolf.cli()
+
 
 class Simulation:
     def __init__(
@@ -108,7 +280,6 @@ class Simulation:
         salt="",
         top_k=100,
         optimizer_time_limit_minutes=1,
-        optimizer_backend="open",
     ):
         """Simulation initializer
 
@@ -161,11 +332,6 @@ class Simulation:
                 Used when fallow_tx_allocation_strategy = "file", contains a path to a file that explicitly states the number of fallow transponders per node.
 
             salt (str, optional): Used to generate unique file name for temp files when experiments with similar parameters are running simultaneously. Defaults to "".
-
-            optimizer_backend (str, optional): Solver backend. 'open' uses SciPy/HiGHS
-                (no Gurobi required). 'gurobi-legacy' uses the existing Gurobi implementation.
-                Defaults to 'open'. Individual method dispatch points may override via a
-                per-call backend keyword argument.
         """
         makedirs(".temp", exist_ok=True)
         self.nonce = (
@@ -234,9 +400,7 @@ class Simulation:
         self.scale_down_factor = scale_down_factor
         self.top_k = top_k
         self.optimizer_time_limit_minutes = optimizer_time_limit_minutes
-        self.optimizer_backend = optimizer_backend
         self.topo_solved = None
-        self.optimizer = None
         self.optimization_result = None
         self._applied_solution = None
         self.multi_sol_time = "NaN"
@@ -500,29 +664,6 @@ class Simulation:
         if end_iter is None:
             end_iter = self.iterations
 
-        return_data = self.return_data = {
-            "Iteration": [],
-            "Experiment": [],
-            "Strategy": [],
-            "Routing": [],
-            "Defense": [],
-            "ReconfigTime": [],
-            "Total Links Added": [],
-            "Links Added": [],
-            "Total Flux Links": [],
-            "Total Links Dropped": [],
-            "Links Dropped": [],
-            "Congestion": [],
-            "Loss": [],
-            "Throughput": [],
-            "Link Bandwidth Coefficient": [],
-            "Demand Factor": [],
-            "Total Solutions": [],
-            "Doppler Min MLU": [],
-            "Optimal Topology ID": [],
-            "Current Topology ID": [],
-            "Doppler Optimization Time": [],            
-        }
         return_data = self.return_data = defaultdict(list)
         self.circuits_added = False
 
@@ -625,6 +766,7 @@ class Simulation:
             reconfig_time = 0
             self.new_circuit = []
             self.chaff = []
+            self.flux_circuits = []
             self.optimization_result = None
             self._applied_solution = None
             self.multi_sol_time = "NaN"
@@ -652,74 +794,9 @@ class Simulation:
             #            name=initial_topo_img_file)
             # logger.debug(f"Drawing initial topology --- Complete: {initial_topo_img_file}")
 
-            if self.topology_programming_method == "cli":
-                client = self.wolf.cli()
-
-            elif (  # Heuristic method from very early testing.
-                self.topology_programming_method == "cache"
-                and self.sig_add_circuits
-                and not self.circuits_added
-            ):
-                self.cache_method()
-
-            # elif self.strategy == 'onset' and sig_add_circuits and not circuits_added:
-
-            elif (  # Method from TDSC-23 - Link-flood DDoS Defense
-                self.topology_programming_method == "onset"
-                and self.sig_add_circuits
-            ):
-                self.onset_method()
-
-            elif (  # Method from TDSC-23 - Link-flood DDoS Defense - Post Major Revision
-                self.topology_programming_method == "onset_v3"
-                and self.sig_add_circuits
-            ):
-                self.onset_v3_method()           
-
-            elif (  # Method from TDSC-23 - Link-flood DDoS Defense
-                self.topology_programming_method == "onset_v2"
-                and self.sig_add_circuits
-            ):
-                self.onset_v2_method()                
-
-            elif (  # Method from PDP+OTP HotNets-23
-                self.topology_programming_method == "OTP"
-                and self.sig_add_circuits
-            ):
-                self.OTP_method()
-
-            elif (  # Method from TNSM-23
-                self.topology_programming_method == "greylambda"
-                and self.sig_add_circuits
-            ):
-                self.greylambda_method()
-
-            elif (  # Bandwidth Variable Transceivers - Emulate RADWAN
-                self.topology_programming_method == "BVT"
-                and self.sig_add_circuits
-            ):
-                self.BVT_method()
-
-            elif (  # Temporary Bandwidth Expansion - i.e., Spiffy
-                self.topology_programming_method == "TBE"
-                # and sig_add_circuits
-            ):
-                self.TBE_method()
-
-            # Net Recon Defense Method
-            elif ( "doppler" in self.topology_programming_method 
-                #   and self.sig_add_circuits
-            ):
-                self.doppler_method(iter_i)
-                
-
-            # Template for new TP methods
-            else:
-                # find new circuits
-                # call self.wolf.add_circuit(a,b)
-                # update flux_circuits with circuits added
-                # set sig_add_circuits false.
-                pass
+            # Dispatch to the registered method handler
+            config = _resolve_method(self.topology_programming_method)
+            config.handler(self, config)
 
             # self.base_graph.G = Graph.copy(self.wolf.logical_graph)
 
@@ -827,7 +904,17 @@ class Simulation:
             return_data["Link Bandwidth Coefficient"].append(self.max_load)
             return_data["Demand Factor"].append(self.demand_factor)
             return_data["Optimization Time"].append(self.opt_time)
-            self.save_doppler_results()
+            write_optimization_reports(
+                result=self.optimization_result,
+                return_data=return_data,
+                iteration_abs_path=self.ITERATION_ABS_PATH,
+                iteration_id=ITERATION_ID,
+                te_method=self.te_method,
+                opt_time=self.opt_time if hasattr(self, 'opt_time') else "NaN",
+                multi_sol_time=getattr(self, 'multi_sol_time', "NaN"),
+                multi_sol_number_best_sol=getattr(self, 'multi_sol_number_best_sol', "NaN"),
+                multi_sol_best_mlu=getattr(self, 'multi_sol_best_mlu', "NaN"),
+            )
             if iter_congestion == "SIG_EXIT":
                 return
 
@@ -849,12 +936,9 @@ class Simulation:
 
             if self.sig_drop_circuits:
                 logger.info(f"Max link util, {iter_congestion}, below threshold, {self.congestion_threshold_lower_bound}. Reverting changes.")
-                if self.optimizer is None:
-                    self.revert_solution()
-                    self.new_circuit = []
-                    self.chaff = []
-                else:
-                    self.adapt_topology(reverse=True)
+                self.revert_solution()
+                self.new_circuit = []
+                self.chaff = []
                 # self.drop_circuits = self.flux_circuits[:]
                 # if len(self.drop_circuits) > 0:
                 #     for dc in self.drop_circuits:
@@ -1083,229 +1167,12 @@ class Simulation:
         verify_traffic()
         return
 
-    def cache_method(self): 
-        defender = Defender(
-            self.network_name,
-            self.circuits,
-            self.candidate_link_choice_method,
-            self.use_heuristic,
-            self.PREV_ITER_ABS_PATH,
-            self.attack_proportion,
-        )
-        # TODO: Pass get_strategic_circuit the paths file from the previous iteration.
-        self.new_circuit = defender.get_strategic_circuit()
-        if (
-            type(self.new_circuit) == tuple
-            and len(self.new_circuit) == 2
-        ):
-            logger.debug(
-                "Adding {} ({}, {}) circuits.".format(
-                    self.circuits
-                ),
-                *self.new_circuit,
-            )
-            for _ in range(self.circuits):
-                u, v = self.new_circuit
-                self.wolf.add_circuit(u, v)
-        return
-
-    def onset_method(self):
-        logger.info("TP Method: onset")
-        if self.optimizer_backend == "gurobi-legacy":
-            self._onset_method_legacy()
-            return
-
-        self.max_load = 0.9
-        result = self._run_topology_optimization(
-            objective_mode="mlu", top_k=1, method="onset"
-        )
-
-        if result.has_solutions:
-            self.apply_solution(result.selected_solution)
-        self.sig_add_circuits = False
-
-    def onset_v3_method(self):
-        logger.info("TP Method: onset_v3")
-        if self.optimizer_backend == "gurobi-legacy":
-            self._onset_v3_method_legacy()
-            return
-
-        self.max_load = 0.9
-
-        if "ecmp" not in self.te_method:
-            top_k = 1
-        else:
-            top_k = self.top_k
-
-        result = self._run_topology_optimization(objective_mode="mlu", top_k=top_k, method="onset_v3")
-
-        if not result.has_solutions:
-            self.sig_add_circuits = False
-            return
-
-        if "ecmp" not in self.te_method:
-            self.apply_solution(result.selected_solution)
-            self.sig_add_circuits = False
-            return
-
-        self._evaluate_candidate_topologies(result)
-        self.sig_add_circuits = False
-
-    def _onset_v3_method_legacy(self):
-        """Legacy gurobi-backed onset_v3 path."""
-        self.optimization_result = None  # prevent open-path leak from prior iteration
-        txp_count_dict = self.wolf.get_txp_count()
-        self.optimizer = optimizer = _get_optimizer_class("gurobi-legacy")(
-            G=self.wolf.logical_graph,
-            demand_matrix_file=self.temp_tm_i_file,
-            network=self.network_name,
-            core_G=self.wolf.base_graph.copy(as_view=True),
-            txp_count=txp_count_dict,
-            use_cache=True,
-            compute_paths=True,
-            candidate_set=self.candidate_link_choice_method,
-            scale_down_factor=self.scale_down_factor,
-            debug=True,
-            time_limit_minutes=self.optimizer_time_limit_minutes,
-            congestion_threshold_upper_bound=self.congestion_threshold_upper_bound,
-            dynamic_scale_down=True,
-            parallel_execution=True,
-        )
-
-        self.max_load = 0.9
-        self.opt_time = optimizer.onset_v3(self.te_method)
-
-        if "ecmp" not in self.te_method:
-            self.adapt_topology()
-            self.sig_add_circuits = False
-            return
-
-        solCount = optimizer.model.solCount
-        if solCount > 0:
-            dot_files = {}
-            sol_paths = {}
-            solution_set = set()
-            for sol in range(min(solCount, 32)):
-                optimizer.set_solution_number(sol)
-                self.optimizer.populate_changes()
-                topo_string = optimizer.get_topo_b64_xn()
-                if topo_string not in solution_set:
-                    sol_topo = self.ITERATION_ABS_PATH + f"_sol_{sol}.dot"
-                    sol_path = self.ITERATION_REL_PATH + f"_sol_{sol}"
-                    self.adapt_topology()
-                    Gml_to_dot(self.wolf.logical_graph, sol_topo, unit=self.unit)
-                    write_gml(self.wolf.logical_graph,
-                              self.ITERATION_ABS_PATH + f"_sol_{sol}.gml")
-                    self.adapt_topology(reverse=True)
-                    solution_set.add(topo_string)
-                    dot_files[sol] = sol_topo
-                    sol_paths[sol] = sol_path
-
-            sol_ids = sorted(dot_files.keys())
-            manager = Manager()
-            mlu_container = manager.dict({sid: "NaN" for sid in sol_ids})
-            work = [(dot_files[sid], self.hosts_file, self.te_method,
-                     sol_paths[sid], self.temp_tm_i_file, sid, mlu_container)
-                    for sid in sol_ids]
-            p = Pool(120)
-            start = time()
-            p.starmap(evaluate_te, work)
-            p.close()
-            p.join()
-            self.multi_sol_time = time() - start
-
-            valid = [(k, t, m) for (k, (t, m)) in mlu_container.items()
-                     if isinstance(m, Number)]
-            if valid:
-                (best_i, best_topo, best_mlu) = min(valid, key=lambda x: x[2])
-                self.multi_sol_number_best_sol = best_i
-                self.multi_sol_best_mlu = best_mlu
-                optimizer.set_solution_number(best_i)
-                optimizer.populate_changes()
-                self.adapt_topology()
-                self.topo_solved = best_topo
-
-        self.sig_add_circuits = False
 
 
 
-    def _onset_method_legacy(self):
-        """Legacy gurobi-backed onset path."""
-        self.optimization_result = None
-        optimizer = _get_optimizer_class("gurobi-legacy")(
-            G=self.wolf.logical_graph,
-            BUDGET=4,
-            demand_matrix_file=self.temp_tm_i_file,
-            network=self.network_name,
-        )
-        if self.te_method == "-ecmp":
-            self.max_load = 0.5
-            if self.shakeroute:
-                self.max_load = 10000.0
-        else:
-            self.max_load = 0.8
-
-        self.new_circuit = []
-        optimizer.LINK_CAPACITY *= self.max_load
-        optimizer.onset_v1()
-        self.new_circuit = optimizer.get_links_to_add()
-        if len(self.new_circuit) == 0:
-            optimizer.LINK_CAPACITY += optimizer.LINK_CAPACITY
-            optimizer.run_model_mixed_objective()
-            self.new_circuit = optimizer.get_links_to_add()
-
-        circuit_tag = ""
-        if type(self.new_circuit) == list and len(self.new_circuit) > 0:
-            for nc in self.new_circuit:
-                u, v = nc
-                for _ in range(self.circuits):
-                    self.wolf.add_circuit(u, v)
-            self.circuits_added = True
-            self.flux_circuits.extend(self.new_circuit)
-
-        self.sig_add_circuits = False
 
 
-    def _onset_v2_method_legacy(self):
-        """Legacy gurobi-backed onset_v2 path."""
-        self.optimization_result = None
-        txp_count_dict = self.wolf.get_txp_count()
-        self.optimizer = optimizer = _get_optimizer_class("gurobi-legacy")(
-            G=self.wolf.logical_graph,
-            demand_matrix_file=self.temp_tm_i_file,
-            network=self.network_name,
-            core_G=self.wolf.base_graph.copy(as_view=True),
-            txp_count=txp_count_dict,
-            use_cache=True,
-            compute_paths=True,
-            candidate_set=self.candidate_link_choice_method,
-        )
 
-        if self.te_method == "-ecmp":
-            self.max_load = 0.5
-        else:
-            self.max_load = 0.9
-
-        optimizer.LINK_CAPACITY = 2**64
-        self.opt_time = optimizer.onset_v1_1()
-        self.adapt_topology()
-        self.sig_add_circuits = False
-
-
-    def onset_v2_method(self):
-        logger.info("TP Method: onset_v2")
-        if self.optimizer_backend == "gurobi-legacy":
-            self._onset_v2_method_legacy()
-            return
-
-        self.max_load = 0.9
-        result = self._run_topology_optimization(
-            objective_mode="mlu", top_k=1, method="onset_v2"
-        )
-
-        if result.has_solutions:
-            self.apply_solution(result.selected_solution)
-        self.sig_add_circuits = False
 
 
     # ------------------------------------------------------------------
@@ -1342,8 +1209,8 @@ class Simulation:
     def _run_topology_optimization(
         self,
         objective_mode: str = "changes_plus_mlu",
+        solver: str = "doppler",
         top_k: Optional[int] = None,
-        method: str = "doppler",
     ) -> OptimizationResult:
         """Build a OptimizationProblem from AlpWolf state, solve, store result.
 
@@ -1351,11 +1218,11 @@ class Simulation:
         ----------
         objective_mode : str
             "changes_plus_mlu" (Doppler) or "mlu" (onset_v3/onset_v2/onset).
+        solver : str
+            Solver method: "doppler", "onset_v3", "onset_v2", "onset".
+            Controls solver selection and problem construction.
         top_k : int, optional
             Override self.top_k (e.g. 1 for MCF single-solve).
-        method : str
-            Optimization method: "doppler", "onset_v3", "onset_v2", "onset".
-            Controls solver selection and problem construction.
         """
         if top_k is None:
             top_k = self.top_k
@@ -1373,390 +1240,82 @@ class Simulation:
             optimizer_time_limit=self.optimizer_time_limit_minutes * 60.0,
             use_cache=True,
             parallel_execution=True,
-            method=method,
+            solver=solver,
         )
 
-        _SOLVER = {
-            "doppler": lambda p: solve_edge_flow_changes_mlu(
-                p, objective_mode=objective_mode
-            ),
-            "onset_v3": lambda p: solve_edge_flow_changes_mlu(
-                p, objective_mode="mlu"
-            ),
-            "onset_v2": solve_path_flow_core,
-            "onset": solve_path_flow_budget,
-        }
-        solver = _SOLVER.get(method)
-        if solver is None:
-            raise ValueError(
-                f"Unknown solver method: {method!r}. "
-                f"Valid: {sorted(_SOLVER.keys())}"
-            )
-
-        result = solver(problem)
+        from onset.method_registry import _METHOD_REGISTRY
+        method_config = _METHOD_REGISTRY.get(solver)
+        if method_config is None or method_config.solve_fn is None:
+            raise ValueError(f"No solver for method: {solver}")
+        solve_fn = method_config.solve_fn
+        result = solve_fn(problem)
         self.optimization_result = result
-        self.optimizer = None  # signal open backend in use
         self.opt_time = result.wall_time
         return result
 
-    # ------------------------------------------------------------------
-    # Shared ECMP multi-solution evaluation
-    # ------------------------------------------------------------------
 
-    def _evaluate_candidate_topologies(self, result: OptimizationResult):
-        """Apply, export, evaluate (ECMP), revert each solution; pick best MLU."""
-        solution_set = set()
-        dot_files = {}
-        sol_paths = {}
-        id_to_solution = {}
-
-        for i, sol in enumerate(result.solutions):
-            if i >= 32:
-                break
-            tid = sol.stable_topology_id
-            if tid not in solution_set:
-                self.apply_solution(sol)
-                sol_topo = self.ITERATION_ABS_PATH + f"_sol_{i}.dot"
-                Gml_to_dot(self.wolf.logical_graph, sol_topo, unit=self.unit)
-                write_gml(self.wolf.logical_graph,
-                          self.ITERATION_ABS_PATH + f"_sol_{i}.gml")
-                self.revert_solution()
-                solution_set.add(tid)
-                id_to_solution[i] = sol
-                dot_files[i] = sol_topo
-                sol_paths[i] = self.ITERATION_REL_PATH + f"_sol_{i}"
-
-        sol_ids = sorted(dot_files.keys())
-        manager = Manager()
-        mlu_container = manager.dict({sid: "NaN" for sid in sol_ids})
-        work = []
-        for sid in sol_ids:
-            work.append((dot_files[sid], self.hosts_file, self.te_method,
-                         sol_paths[sid], self.temp_tm_i_file, sid, mlu_container))
-
-        p = Pool(120)
-        start = time()
-        p.starmap(evaluate_te, work)
-        p.close()
-        p.join()
-        end = time()
-        self.multi_sol_time = end - start
-
-        valid_items = [(k, t, m) for (k, (t, m)) in mlu_container.items()
-                       if isinstance(m, Number)]
-        if valid_items:
-            (best_i, best_topo, best_mlu) = min(valid_items, key=lambda x: x[2])
-            self.multi_sol_number_best_sol = best_i
-            self.multi_sol_best_mlu = best_mlu
-            best_sol = id_to_solution.get(best_i)
-            if best_sol is not None:
-                self.apply_solution(best_sol)
-            self.topo_solved = best_topo
-
-    # ------------------------------------------------------------------
-    # Legacy adapt_topology (used by gurobi-legacy methods)
-    # ------------------------------------------------------------------
-
-    def adapt_topology(self, reverse=False): 
-        logger.info("Adapting topology")
-        optimizer = self.optimizer # 
-        if reverse: 
-            logger.info("Reversing previous changes")
-            optimizer.reverse_changes()
-        
-        self.new_circuit = optimizer.get_links_to_add()
-        self.chaff = optimizer.get_links_to_drop()
-        # if reverse: 
-        #     self.chaff = optimizer.get_links_to_add()
-        #     self.new_circuit = optimizer.get_links_to_drop()            
-        # else:
-        #     self.new_circuit = optimizer.get_links_to_add()
-        #     self.chaff = optimizer.get_links_to_drop()
-        
-        circuit_tag = ""
-        if type(self.chaff) == list and len(self.chaff) > 0:
-            for dc in self.chaff:
-                u, v = dc
-                if circuit_tag == "" or circuit_tag.startswith("add"):
-                    circuit_tag += f"drop-{u}-{v}"
-                else:
-                    circuit_tag += f".{u}-{v}"
-                for _ in range(self.circuits):
-                    self.wolf.drop_circuit(u, v)
-
-        if type(self.new_circuit) == list and len(self.new_circuit) > 0:
-            for nc in self.new_circuit:
-                u, v = nc
-                if circuit_tag == "" or circuit_tag.startswith("drop"):
-                    circuit_tag += f"add-{u}-{v}"
-                else:
-                    circuit_tag += f".{u}-{v}"
-
-                for _ in range(self.circuits):
-                    self.wolf.add_circuit(u, v)                
-
-            if reverse:
-                self.circuits_added = False                
-            else:
-                self.circuits_added = True            
-                
-
-        # elif new_circuit == []:
-        #     print("Could Not Add New Circuit")
-        #     self.exit_early = True
-
-    def OTP_method(self):
-        edge_congestion_file = os.path.join(
-            self.PREV_ITER_ABS_PATH,
-            "EdgeCongestionVsIterations.dat",
-        )
-        edge_congestion_d = read_link_congestion_to_dict(
-            edge_congestion_file
-        )
-        congested_edges = [
-            k
-            for k in edge_congestion_d
-            if edge_congestion_d[k] > 0.80
-        ]
-
-        def find_shortcut_link(congested_edges):
-            node_counter = Counter()
-            message = "Looking for a shortcut link among: "
-            congested_edges = [
-                e.strip("()").replace("s", "").split(",")
-                for e in congested_edges
-            ]
-            for e in congested_edges:
-                u, v = e
-                node_counter.update((u, v))
-                message += f"({u}, {v}) "
-            logger.info(message)
-            midpoint = max(node_counter, key=node_counter.get)
-            terminals = []
-            for c in congested_edges:
-                this = c[:]
-                if midpoint in this:
-                    this.remove(midpoint)
-                    terminals.append(this[0])
-            shortcuts = [
-                c
-                for c in combinations(terminals, 2)
-                if c[0] != c[1]
-                and c not in self.wolf.logical_graph.edges()
-            ]
-            logger.info(
-                f"Found the following shortcut: {shortcuts}"
-            )
-            return shortcuts
-
-        shortcuts = find_shortcut_link(congested_edges)
-        for edge in shortcuts:
-            u, v = edge
-            for _ in range(self.circuits):
-                self.wolf.add_circuit(u, v, 100)
-                self.flux_circuits.append((u, v))
-        # flux_circuits.extend(congested_edges)
-        self.sig_add_circuits = False        
-        return
-
-    def greylambda_method(self):
-        edge_congestion_file = os.path.join(
-            self.PREV_ITER_ABS_PATH,
-            "EdgeCongestionVsIterations.dat",
-        )
-        edge_congestion_d = read_link_congestion_to_dict(
-            edge_congestion_file
-        )
-        congested_edges = [
-            k
-            for k in edge_congestion_d
-            if edge_congestion_d[k] == 1
-        ]
-        for edge in congested_edges:
-            if isinstance(edge, str):
-                u, v = edge.strip("()").replace("s", "").split(",")
-            elif isinstance(edge, tuple) and len(edge) == 2:
-                u, v = edge
-            else:
-                logger.error(f"Error, unable to unpack edge: {edge} of type: {type(edge)}")
-                raise
-            for _ in range(self.circuits):
-                added = self.wolf.add_circuit(u, v)
-                if added == 0:
-                    self.circuits_added = True
-
-        self.flux_circuits.extend(congested_edges)
-        self.sig_add_circuits = False        
-        return
-
-    def BVT_method(self):
-        edge_congestion_file = os.path.join(
-            self.PREV_ITER_ABS_PATH,
-            "EdgeCongestionVsIterations.dat",
-        )
-        edge_congestion_d = read_link_congestion_to_dict(
-            edge_congestion_file
-        )
-        congested_edges = [
-            k
-            for k in edge_congestion_d
-            if edge_congestion_d[k] == 1
-        ]
-
-        # for edge in congested_edges:
-        #     u, v = edge.strip("()").replace("s", "").split(",")
-        #     u = int(u)
-        #     v = int(v)
-        #     for _ in range(circuits):
-        #         self.wolf.add_circuit(u, v)
-        # flux_circuits.extend(congested_edges)
-        self.sig_add_circuits = False
-        return
-    
-    def TBE_method(self):
-        if "flashcrowd" in self.traffic_file \
-            and self.demand_factor > 0.9:
-
-            self.wolf.relax_restricted_bandwidth()
-        # sig_add_circuits = False
-        return
-
-    def save_doppler_results(self):
-        result = self.optimization_result
-        legacy_opt = self.optimizer
-
-        # Open-backend path
-        if result is not None:
-            has_sol = result.has_solutions
-            if has_sol:
-                total = len(result.solutions)
-                sel = result.selected_solution
-                obj_best = result.objective_best
-                optimal_id = obj_best.stable_topology_id if obj_best else "NaN"
-                curr_id = sel.stable_topology_id if sel else "NaN"
-                min_mlu = floor(sel.validated_mlu * 1000) / 1000 if sel else "NaN"
-                mlu_dict = {str(i): sol.validated_mlu for i, sol in enumerate(result.solutions)}
-            else:
-                total = "NaN"
-                optimal_id = "NaN"
-                curr_id = "NaN"
-                min_mlu = "NaN"
-                mlu_dict = {}
-
-            write_result_val(os.path.join(self.ITERATION_ABS_PATH, "TotalSolutions.dat"),
-                             "Total Solutions", str(total) if total != "NaN" else "NaN",
-                             self.te_method, self.ITERATION_ID)
-            self.return_data["Doppler Optimization Time"].append(self.opt_time)
-            write_result_val(os.path.join(self.ITERATION_ABS_PATH, "OptTime.dat"),
-                             "Optimization Time", str(self.opt_time),
-                             self.te_method, self.ITERATION_ID)
-
-            self.return_data["Total Solutions"].append(total)
-            self.return_data["Optimal Topology ID"].append(optimal_id)
-            self.return_data["Current Topology ID"].append(curr_id)
-            self.return_data["Doppler Min MLU"].append(min_mlu)
-
-            write_result_val(os.path.join(self.ITERATION_ABS_PATH, "OptimalTopoID.dat"),
-                             "Optimal Topology ID", optimal_id, self.te_method, self.ITERATION_ID)
-            write_result_val(os.path.join(self.ITERATION_ABS_PATH, "CurrTopoID.dat"),
-                             "Current Topology ID", curr_id, self.te_method, self.ITERATION_ID)
-            write_result_val(os.path.join(self.ITERATION_ABS_PATH, "DopplerMinMLU.dat"),
-                             "Doppler Min MLU", min_mlu, self.te_method, self.ITERATION_ID)
-            if mlu_dict:
-                write_result_vals(os.path.join(self.ITERATION_ABS_PATH, "DopplerMLU.dat"),
-                                  "Solution ID", "Max Link Util", mlu_dict,
-                                  self.te_method, self.ITERATION_ID)
-
-        # Legacy gurobi path (optimizer is set, result is None)
-        elif legacy_opt is not None:
-            write_result_val(os.path.join(self.ITERATION_ABS_PATH, "TotalSolutions.dat"),
-                             "Total Solutions", len(legacy_opt.unique_solutions()),
-                             self.te_method, self.ITERATION_ID)
-            self.return_data["Doppler Optimization Time"].append(self.opt_time)
-            write_result_val(os.path.join(self.ITERATION_ABS_PATH, "OptTime.dat"),
-                             "Optimization Time", self.opt_time,
-                             self.te_method, self.ITERATION_ID)
-
-            if legacy_opt.model.SolCount < 1:
-                self.return_data["Total Solutions"].append("NaN")
-                self.return_data["Optimal Topology ID"].append("NaN")
-                self.return_data["Current Topology ID"].append("NaN")
-                self.return_data["Doppler Min MLU"].append("NaN")
-            else:
-                self.return_data["Total Solutions"].append(len(legacy_opt.unique_solutions()))
-                optimal_topo_id = legacy_opt.get_topo_b64_optimal()
-                curr_topo_id = legacy_opt.get_topo_b64_xn()
-                doppler_min_mlu = floor(legacy_opt.maxLinkUtil.x * 1000) / 1000
-                self.return_data["Optimal Topology ID"].append(optimal_topo_id)
-                self.return_data["Current Topology ID"].append(curr_topo_id)
-                self.return_data["Doppler Min MLU"].append(doppler_min_mlu)
-                write_result_val(os.path.join(self.ITERATION_ABS_PATH, "OptimalTopoID.dat"),
-                                 "Optimal Topology ID", optimal_topo_id, self.te_method, self.ITERATION_ID)
-                write_result_val(os.path.join(self.ITERATION_ABS_PATH, "CurrTopoID.dat"),
-                                 "Current Topology ID", curr_topo_id, self.te_method, self.ITERATION_ID)
-                write_result_val(os.path.join(self.ITERATION_ABS_PATH, "DopplerMinMLU.dat"),
-                                 "Doppler Min MLU", doppler_min_mlu, self.te_method, self.ITERATION_ID)
-                mlu_dict = legacy_opt.get_max_link_util()
-                write_result_vals(os.path.join(self.ITERATION_ABS_PATH, "DopplerMLU.dat"),
-                                  "Solution ID", "Max Link Util", mlu_dict,
-                                  self.te_method, self.ITERATION_ID)
-
-        # Neither result nor legacy optimizer set
-        else:
-            self.opt_time = "NaN"
-            write_result_val(os.path.join(self.ITERATION_ABS_PATH, "TotalSolutions.dat"),
-                             "Total Solutions", "NaN", self.te_method, self.ITERATION_ID)
-            self.return_data["Doppler Optimization Time"].append(self.opt_time)
-            write_result_val(os.path.join(self.ITERATION_ABS_PATH, "OptTime.dat"),
-                             "Optimization Time", self.opt_time, self.te_method, self.ITERATION_ID)
-            self.return_data["Total Solutions"].append("NaN")
-            self.return_data["Optimal Topology ID"].append("NaN")
-            self.return_data["Current Topology ID"].append("NaN")
-            self.return_data["Doppler Min MLU"].append("NaN")
-
-        try:
-            self.return_data["Doppler Multi-Sol Time"].append(self.multi_sol_time)
-            self.return_data["Multi-sol Best Solution"].append(self.multi_sol_number_best_sol)
-            self.return_data["Multi-sol Min MLU"].append(self.multi_sol_best_mlu)
-        except Exception:
-            self.return_data["Doppler Multi-Sol Time"].append("NaN")
-            self.return_data["Multi-sol Best Solution"].append("NaN")
-            self.return_data["Multi-sol Min MLU"].append("NaN")
-
-    def doppler_method(self, iter="N/A"):
-        if self.optimizer_backend == "gurobi-legacy":
-            self._doppler_method_legacy()
-            return
-        logger.info("TP Method: doppler (open backend)")
-
-        result = self._run_topology_optimization(objective_mode="changes_plus_mlu")
-        if not result.has_solutions:
-            self.sig_add_circuits = False
-            return
-
-        self.apply_solution(result.selected_solution)
-        self.sig_add_circuits = False
-
-    def _doppler_method_legacy(self):
-        """Legacy gurobi-backed doppler path (preserved for compatibility)."""
-        self.optimization_result = None  # prevent open-path leak
-        txp_count_dict = self.wolf.get_txp_count()
-        self.optimizer = optimizer = _get_optimizer_class("gurobi-legacy")(
-            G=self.wolf.logical_graph,
-            demand_matrix_file=self.temp_tm_i_file,
-            network=self.network_name,
-            core_G=self.wolf.base_graph.copy(as_view=True),
-            txp_count=txp_count_dict,
-            use_cache=True,
-            compute_paths=True,
-            candidate_set=self.candidate_link_choice_method,
-            scale_down_factor=self.scale_down_factor,
-            debug=True,
-            time_limit_minutes=self.optimizer_time_limit_minutes,
-            congestion_threshold_upper_bound=self.congestion_threshold_upper_bound,
-            parallel_execution=True,
-        )
-        optimizer.doppler()
-        if optimizer.model.solCount > 0:
-            self.optimizer.set_solution_number(0)
-        self.sig_add_circuits = False
+# Wire handler callables into the method registry (avoids circular imports)
+_METHOD_REGISTRY["doppler"] = MethodConfig(
+    name="doppler", handler=_run_milp_method, is_milp=True,
+    objective_mode="changes_plus_mlu", solver_method="doppler",
+    solve_fn=_METHOD_REGISTRY["doppler"].solve_fn,
+    uses_ecmp_multisol=False,
+    description="Doppler reconnaissance defense (TNSM 2024)",
+)
+_METHOD_REGISTRY["onset_v3"] = MethodConfig(
+    name="onset_v3", handler=_run_milp_method, is_milp=True,
+    objective_mode="mlu", solver_method="onset_v3",
+    solve_fn=_METHOD_REGISTRY["onset_v3"].solve_fn,
+    uses_ecmp_multisol=True,
+    description="ONSET DDoS defense — post major revision (TDSC 2025)",
+)
+_METHOD_REGISTRY["onset_v2"] = MethodConfig(
+    name="onset_v2", handler=_run_milp_method, is_milp=True,
+    objective_mode="mlu", solver_method="onset_v2",
+    solve_fn=_METHOD_REGISTRY["onset_v2"].solve_fn,
+    uses_ecmp_multisol=False,
+    description="ONSET DDoS defense — path-based formulation (TDSC 2025)",
+)
+_METHOD_REGISTRY["onset"] = MethodConfig(
+    name="onset", handler=_run_milp_method, is_milp=True,
+    objective_mode="mlu", solver_method="onset",
+    solve_fn=_METHOD_REGISTRY["onset"].solve_fn,
+    uses_ecmp_multisol=False,
+    description="Original topology programming formulation (OptSys 2021)",
+)
+_METHOD_REGISTRY["OTP"] = MethodConfig(
+    name="OTP", handler=_run_otp, is_milp=False,
+    objective_mode=None, solver_method=None, solve_fn=None,
+    uses_ecmp_multisol=False,
+    description="Offline Traffic Provisioning — shortcut-link heuristic",
+)
+_METHOD_REGISTRY["greylambda"] = MethodConfig(
+    name="greylambda", handler=_run_greylambda, is_milp=False,
+    objective_mode=None, solver_method=None, solve_fn=None,
+    uses_ecmp_multisol=False,
+    description="Greylambda — add circuits on fully-congested edges",
+)
+_METHOD_REGISTRY["cache"] = MethodConfig(
+    name="cache", handler=_run_cache, is_milp=False,
+    objective_mode=None, solver_method=None, solve_fn=None,
+    uses_ecmp_multisol=False,
+    description="Cache-based defense (Defender module)",
+)
+_METHOD_REGISTRY["BVT"] = MethodConfig(
+    name="BVT", handler=_run_bvt, is_milp=False,
+    objective_mode=None, solver_method=None, solve_fn=None,
+    uses_ecmp_multisol=False,
+    description="Bandwidth-variable transceiver emulation",
+)
+_METHOD_REGISTRY["TBE"] = MethodConfig(
+    name="TBE", handler=_run_tbe, is_milp=False,
+    objective_mode=None, solver_method=None, solve_fn=None,
+    uses_ecmp_multisol=False,
+    description="Temporary bandwidth expansion during flashcrowd",
+)
+_METHOD_REGISTRY["cli"] = MethodConfig(
+    name="cli", handler=_run_cli, is_milp=False,
+    objective_mode=None, solver_method=None, solve_fn=None,
+    uses_ecmp_multisol=False,
+    description="Interactive CLI mode",
+)

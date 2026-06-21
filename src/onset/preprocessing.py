@@ -667,7 +667,7 @@ def build_optimization_problem(
     parallel_execution: bool = False,
     compute_paths: bool = True,
     retain_commodity_flows: bool = False,
-    method: str = "doppler",
+    solver: str = "doppler",
 ) -> OptimizationProblem:
     """Build a OptimizationProblem from AlpWolf / simulator state.
 
@@ -708,8 +708,8 @@ def build_optimization_problem(
         Whether to compute tunnel paths.
     retain_commodity_flows : bool
         If True, per-commodity flows are retained in solutions.
-    method : str
-        Optimization method: "doppler", "onset_v3", "onset_v2", "onset".
+    solver : str
+        Optimization solver: "doppler", "onset_v3", "onset_v2", "onset".
         Determines which solver and data structures are used.
 
     Returns
@@ -750,7 +750,7 @@ def build_optimization_problem(
 
     # Build path-based data for onset_v2 / onset formulations
     path_data = None
-    if method in ("onset", "onset_v2"):
+    if solver in ("onset", "onset_v2"):
         tunnel_list = data["tunnel_list"]
         tunnel_dict = data["tunnel_dict"]
         candidate_links = data["candidate_links"]
@@ -810,7 +810,7 @@ def build_optimization_problem(
         )
 
         # core_edge_set: undirected physical-graph edges (onset_v2 only)
-        if method == "onset_v2":
+        if solver == "onset_v2":
             core_edge_set: FrozenSet[Tuple[str, str]] = frozenset(
                 tuple(sorted(e)) for e in base_graph.edges
             )

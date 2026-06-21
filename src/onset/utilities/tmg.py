@@ -12,7 +12,6 @@ import sys
 from sys import argv, exit
 from os import makedirs
 
-from tmgen.models import spike_tm, gravity_tm, random_gravity_tm, modulated_gravity_tm
 
 def percent_diff(a, b):
     if a == b: 
@@ -100,6 +99,14 @@ def rand_gravity_matrix(hosts:int, epochs:int, expected_mean:float=0.1, name:str
         name (str, optional): [description]. Defaults to "".
     """    
     
+    try:
+        from tmgen.models import random_gravity_tm
+    except ImportError:
+        raise ImportError(
+            "TMgen is required for traffic matrix generation. "
+            "Install from vendored submodule: pip install -e vendor/TMgen"
+        )
+
     if name == "": name = str(size)
     tm = []
     for _ in range(epochs):
@@ -127,6 +134,14 @@ def modulated_gravity_matrix(hosts:int, epochs:int, expected_mean:float=0.1, nam
     # print(type(hosts), hosts)
     # print(type(epochs), epochs)
     # print(type(expected_mean), expected_mean)
+
+    try:
+        from tmgen.models import modulated_gravity_tm
+    except ImportError:
+        raise ImportError(
+            "TMgen is required for traffic matrix generation. "
+            "Install from vendored submodule: pip install -e vendor/TMgen"
+        )
 
     tm = modulated_gravity_tm(hosts, epochs, expected_mean * hosts)
     tm = tm.matrix.reshape(tm.num_epochs(), tm.num_nodes() ** 2 )

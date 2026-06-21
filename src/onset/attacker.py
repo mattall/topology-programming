@@ -42,8 +42,6 @@ from onset.utilities.flows import read_tm_to_tc
 from onset.utilities.graph_utils import (
     convert_paths_onset_to_json,
 )
-from tmgen.models import modulated_gravity_tm
-
 
 def save_mtrx_to_txt(matrix, name):
     print("Saving data to: {}".format(name))
@@ -541,6 +539,14 @@ class Attacker:
         attack_lower_bound = 100 * 10**9
         attack_upper_bound = 200 * 10**9
 
+        try:
+            from tmgen.models import modulated_gravity_tm
+        except ImportError:
+            raise ImportError(
+                "TMgen is required for attack traffic generation. "
+                "Install from vendored submodule: pip install -e vendor/TMgen"
+            )
+
         # tm = modulated_gravity_tm(11, 30, 100*10^9, diurnal_freq=f)
         tm = modulated_gravity_tm(11, epochs, avg_demand, diurnal_freq=f)
         tm = tm.matrix.reshape(tm.num_epochs(), tm.num_nodes() ** 2).astype(
@@ -620,6 +626,14 @@ class Attacker:
 
         cm5_tm = None
         cm5_links = None
+
+        try:
+            from tmgen.models import modulated_gravity_tm
+        except ImportError:
+            raise ImportError(
+                "TMgen is required for attack traffic generation. "
+                "Install from vendored submodule: pip install -e vendor/TMgen"
+            )
 
         # tm = modulated_gravity_tm(11, 30, 100*10^9, diurnal_freq=f)
         epochs = 12 * 60

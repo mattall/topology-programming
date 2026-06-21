@@ -4,7 +4,7 @@ import math
 import os
 import sys
 
-from numpy import Infinity
+Infinity = float("inf")
 
 from onset.utilities.plotters import plot_timeseries
 from onset.utilities.post_process import read_result_val

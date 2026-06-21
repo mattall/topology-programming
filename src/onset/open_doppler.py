@@ -301,6 +301,7 @@ def _build_edge_flow_milp(problem: OptimizationProblem, objective_mode: str = "c
         "change_offset": change_offset,
         "rf_vars": rf_vars,
         "n_con": n_con,
+        "objective_mode": objective_mode,
     }
     return lp, index_maps
 
@@ -315,7 +316,6 @@ def _extract_solution(
     index_maps: dict,
     solution: np.ndarray,
     proven_optimal: bool,
-    objective_mode: str = "changes_plus_mlu",
 ) -> TopologySolution:
     """Extract and validate a HiGHS solution into a TopologySolution."""
     im = index_maps
@@ -369,7 +369,7 @@ def _extract_solution(
     )
 
     # Objective
-    if objective_mode == "mlu":
+    if im["objective_mode"] == "mlu":
         obj = solver_mlu
     else:
         obj = 2.0 * change_count + solver_mlu
@@ -445,79 +445,11 @@ def solve_edge_flow_changes_mlu_single(
     -------
     (solution, status, wall_time) where solution is None if no incumbent.
     """
-    import highspy
-
-    t_start = perf_counter()
-
-    # Build model
     lp, im = _build_edge_flow_milp(problem, objective_mode=objective_mode)
-
-    h = highspy.Highs()
-    h.setOptionValue("time_limit", time_limit)
-    h.setOptionValue("output_flag", False)
-    h.setOptionValue("mip_rel_gap", 0.0)  # prove optimality
-    h.passModel(lp)
-
-    # Add any additional cuts (no-good cuts)
-    if additional_cuts:
-        for cut in additional_cuts:
-            cols = []
-            coeffs = []
-            for col, coeff in cut.items():
-                if col < im["n_vars_rf"]:
-                    cols.append(int(col))
-                    coeffs.append(float(coeff))
-            if cols:
-                indices = np.array(cols, dtype=np.int32)
-                values_arr = np.array(coeffs, dtype=np.float64)
-                h.addRow(1.0, 1e10, len(indices), indices, values_arr)
-
-    h.run()
-    elapsed = perf_counter() - t_start
-
-    status_code = h.getModelStatus()
-    has_solution = h.getSolution().col_value is not None and len(
-        h.getSolution().col_value
-    ) > 0
-
-    # Map HiGHS status to our status
-    if status_code == highspy.HighsModelStatus.kOptimal:
-        if not has_solution:
-            return None, OptimizerStatus.SOLVER_ERROR, elapsed
-        solution = np.array(h.getSolution().col_value)
-        try:
-            ts = _extract_solution(problem, im, solution, proven_optimal=True,
-                                   objective_mode=objective_mode)
-            return ts, OptimizerStatus.TOP_K_REACHED, elapsed
-        except Exception:
-            logger.exception("Solution extraction failed")
-            return None, OptimizerStatus.VALIDATION_FAILED, elapsed
-
-    elif status_code in (
-        highspy.HighsModelStatus.kTimeLimit,
-        highspy.HighsModelStatus.kIterationLimit,
-    ):
-        if has_solution:
-            solution = np.array(h.getSolution().col_value)
-            try:
-                ts = _extract_solution(
-                    problem, im, solution, proven_optimal=False,
-                    objective_mode=objective_mode,
-                )
-                return ts, OptimizerStatus.TIME_LIMIT_WITH_SOLUTION, elapsed
-            except Exception:
-                logger.exception("Timed-out solution extraction failed")
-                return None, OptimizerStatus.VALIDATION_FAILED, elapsed
-        return None, OptimizerStatus.TIME_LIMIT_WITHOUT_SOLUTION, elapsed
-
-    elif status_code == highspy.HighsModelStatus.kInfeasible:
-        return None, OptimizerStatus.INFEASIBLE, elapsed
-
-    elif status_code == highspy.HighsModelStatus.kUnbounded:
-        return None, OptimizerStatus.UNBOUNDED, elapsed
-
-    else:
-        return None, OptimizerStatus.SOLVER_ERROR, elapsed
+    result = _solve_single_milp(problem, lp, im, _extract_solution)
+    if result.solutions:
+        return result.solutions[0], result.status, result.wall_time
+    return None, result.status, result.wall_time
 
 
 # ---------------------------------------------------------------------------
@@ -768,8 +700,7 @@ def solve_edge_flow_changes_mlu(
                 break
             solution = np.array(h.getSolution().col_value)
             try:
-                ts = _extract_solution(problem, im, solution, proven_optimal=True,
-                                       objective_mode=objective_mode)
+                ts = _extract_solution(problem, im, solution, proven_optimal=True)
             except Exception:
                 logger.exception("Solution extraction failed at solve %d", solve_count)
                 return OptimizationResult(
@@ -816,7 +747,6 @@ def solve_edge_flow_changes_mlu(
                 try:
                     ts = _extract_solution(
                         problem, im, solution, proven_optimal=False,
-                        objective_mode=objective_mode,
                     )
                 except Exception:
                     logger.exception("Timed-out solution extraction failed")
