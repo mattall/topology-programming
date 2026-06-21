@@ -1,6 +1,7 @@
 """Tests for the method registry module."""
 
 import pytest
+import onset.simulator  # noqa: F401 — ensures handler wiring runs before tests
 from onset.method_registry import (
     MethodConfig,
     _METHOD_REGISTRY,
