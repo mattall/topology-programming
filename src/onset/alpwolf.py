@@ -5,23 +5,29 @@
 #
 # .
 
-from cmath import log
 from collections import defaultdict
 from copy import copy
 from itertools import combinations
 from math import ceil
-from typing import cast
-from networkx import is_strongly_connected
-from networkx import Graph, read_gml, set_node_attributes, relabel_nodes
+from typing import Any, cast
+
+from networkx import (
+    Graph,
+    is_strongly_connected,
+    read_gml,
+    relabel_nodes,
+    set_node_attributes,
+)
 from networkx.algorithms.centrality.betweenness import (
+    betweenness_centrality,
     edge_betweenness_centrality,
 )
-from networkx.algorithms.centrality.betweenness import betweenness_centrality
+
+from onset.utilities.graph_utils import read_json_graph
 
 # from onset.utilities.logger import NewLogger
 # logger = NewLogger().get_logger()
 from onset.utilities.logger import logger
-from onset.utilities.graph_utils import read_json_graph
 
 # from pprint import pprint
 
@@ -42,7 +48,7 @@ class AlpWolf:
         fallow_transponders=0,
         fallow_tx_allocation_strategy="static",
         fallow_tx_allocation_file="",
-        top_k = None
+        top_k=None,
     ) -> None:
         """Base fiber topology used for simulation. Tracks lambda allocations between node pairs with from transponders.
         Args:
@@ -66,10 +72,12 @@ class AlpWolf:
         self.fallow_transponders = fallow_transponders
         self.fallow_tx_allocation_strategy = fallow_tx_allocation_strategy
         self.fallow_tx_allocation_file = fallow_tx_allocation_file
-        self.txp_count: dict[str, int] = {}        
-        self.top_k = top_k        
+        self.txp_count: dict[str, int] = {}
+        self.top_k = top_k
         # self.n_super_nodes = ceil(self.n_nodes * 0.1)
-        self.initial_bandwidth_dict: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+        self.initial_bandwidth_dict: dict[str, dict[str, float]] = defaultdict(
+            lambda: defaultdict(float)
+        )
         self.import_capacity = False
         self.bandwidth_restricted = False
         self.commands = {
@@ -88,9 +96,9 @@ class AlpWolf:
         assert is_strongly_connected(self.logical_graph.to_directed())
 
     def __init_logical_graph(self, G: Graph):
-        loggical_graph = Graph()
-        [loggical_graph.add_node(n) for n in G]
-        [loggical_graph.add_edge(u, v) for u, v in G.edges]
+        loggical_graph: Graph[Any] = Graph()
+        loggical_graph.add_nodes_from(G)
+        loggical_graph.add_edges_from(G.edges)
         return loggical_graph
 
     def import_graph(self, path):
@@ -132,9 +140,7 @@ class AlpWolf:
                 )
                 long, lat = [int(x) for x in random(2) * 100]
                 logger.debug(
-                    "Setting (Longitude, Latitude) of Node, {}, to ({}, {})".format(
-                        node, long, lat
-                    )
+                    f"Setting (Longitude, Latitude) of Node, {node}, to ({long}, {lat})"
                 )
                 (
                     self.G.nodes()[node]["Longitude"],
@@ -181,9 +187,7 @@ class AlpWolf:
                 )
                 long, lat = [int(x) for x in random(2) * 100]
                 logger.debug(
-                    "Setting (Longitude, Latitude) of Node, {}, to ({}, {})".format(
-                        node, long, lat
-                    )
+                    f"Setting (Longitude, Latitude) of Node, {node}, to ({long}, {lat})"
                 )
                 (
                     G.nodes()[node]["Longitude"],
@@ -235,18 +239,18 @@ class AlpWolf:
             top_k = self.top_k
             btwness = betweenness_centrality(self.base_graph)
             sorted_btwness = sorted(btwness, key=btwness.get, reverse=True)
-            if type(top_k) == int:
+            if isinstance(top_k, int):
                 self.n_super_nodes = ceil(self.n_nodes * (top_k / 100))
-            
-            # Need at least 2 to be useful. 
-            if self.n_super_nodes == 1: 
+
+            # Need at least 2 to be useful.
+            if self.n_super_nodes == 1:
                 self.n_super_nodes = 2
-            
+
             super_nodes = sorted_btwness[: self.n_super_nodes]
             for node_n in self.base_graph.nodes:
                 self.base_graph.nodes[node_n]["transponder"] = {}
                 if node_n in super_nodes:
-                    logger.info("Node {} is a super node.".format(node_n))
+                    logger.info(f"Node {node_n} is a super node.")
                     transponder_count = int(
                         self.transponders_per_degree * self.base_graph.degree(node_n)
                         + self.fallow_transponders
@@ -263,18 +267,18 @@ class AlpWolf:
             top_k = self.top_k
             btwness = betweenness_centrality(self.base_graph)
             sorted_btwness = sorted(btwness, key=btwness.get, reverse=True)
-            if type(top_k) == int:
+            if isinstance(top_k, int):
                 self.n_super_nodes = ceil(self.n_nodes * (top_k / 100))
-            
-            # Need at least 2 to be useful. 
-            if self.n_super_nodes == 1: 
+
+            # Need at least 2 to be useful.
+            if self.n_super_nodes == 1:
                 self.n_super_nodes = 2
-            
+
             super_nodes = sorted_btwness[: self.n_super_nodes]
             for node_n in self.base_graph.nodes:
                 self.base_graph.nodes[node_n]["transponder"] = {}
                 if node_n in super_nodes:
-                    logger.info("Node {} is a super node.".format(node_n))
+                    logger.info(f"Node {node_n} is a super node.")
                     transponder_count = int(
                         self.transponders_per_degree * self.base_graph.degree(node_n)
                         + self.fallow_transponders
@@ -290,7 +294,7 @@ class AlpWolf:
             ftx_alloc_dict = defaultdict(int)
 
             # read number of fallow fallow transponders for each node from the file
-            with open(self.fallow_tx_allocation_file, "r") as fob:
+            with open(self.fallow_tx_allocation_file) as fob:
                 for line in fob:
                     node_n, num_ftx = line.strip().split(",")
                     ftx_alloc_dict[node_n] = int(num_ftx)
@@ -322,10 +326,10 @@ class AlpWolf:
                     self.base_graph.nodes[node_n]["transponder"][i] = -1
 
         else:
-            raise ("Undefined")
+            raise ValueError("Undefined")
 
         for u, v in self.base_graph.edges:
-            for i in range(self.transponders_per_degree):
+            for _i in range(self.transponders_per_degree):
                 trans_u = self.get_available_transponder(
                     self.base_graph.nodes[u]["transponder"]
                 )
@@ -363,10 +367,13 @@ class AlpWolf:
 
     def get_transponders(self, node=None) -> dict:
         if node is None:
-            return cast(dict, {
-                node: self.base_graph.nodes[node]["transponder"]
-                for node in self.base_graph.nodes
-            })
+            return cast(
+                dict,
+                {
+                    node: self.base_graph.nodes[node]["transponder"]
+                    for node in self.base_graph.nodes
+                },
+            )
         elif node in self.base_graph:
             return cast(dict, self.base_graph.nodes[node]["transponder"])
         else:
@@ -428,8 +435,8 @@ class AlpWolf:
         transponder_u: int | None = None,
         transponder_v: int | None = None,
     ) -> bool:
-        logger.debug("Testing if we can add circuit {} {}.".format(u, v))
-        if transponder_u == None or transponder_v == None:
+        logger.debug(f"Testing if we can add circuit {u} {v}.")
+        if transponder_u is None or transponder_v is None:
             transponder_u = self.get_available_transponder(
                 self.base_graph.nodes[u]["transponder"]
             )
@@ -438,7 +445,7 @@ class AlpWolf:
                 self.base_graph.nodes[v]["transponder"]
             )
 
-        if transponder_u == -1 or transponder_v == -1:            
+        if transponder_u == -1 or transponder_v == -1:
             logger.error("Cannot add circuit. Transponder pair unavailable")
             raise Exception
         return True
@@ -473,12 +480,12 @@ class AlpWolf:
             0 on success.
             -1 of failure.
         """
-        logger.info("Adding circuit {} {}.".format(u, v))
+        logger.info(f"Adding circuit {u} {v}.")
         if capacity is None:
             capacity = self.circuit_bandwidth
 
         # logger.info("Adding circuit {} {}.".format(u, v))
-        if transponder_u == None or transponder_v == None:
+        if transponder_u is None or transponder_v is None:
             transponder_u = self.get_available_transponder(
                 self.base_graph.nodes[u]["transponder"]
             )
@@ -490,7 +497,7 @@ class AlpWolf:
         if transponder_u == -1 or transponder_v == -1:
             logger.error(
                 f"Couldn't add circuit ({u}, {v}). Transponder pair unavailable"
-            )            
+            )
 
         # Make sure transponders are currently unassigned.
         assert self.base_graph.nodes[u]["transponder"][transponder_u] == -1
@@ -506,12 +513,10 @@ class AlpWolf:
 
         # update logical graph
         if (u, v) in self.logical_graph.edges:
-            logger.debug(f"edge {(u,v)} is present in self.logical_graph")
-            
+            logger.debug(f"edge {(u, v)} is present in self.logical_graph")
+
         else:
-            logger.debug(
-                f"edge {(u,v)} was not found in self.logical_graph.edges."
-            )
+            logger.debug(f"edge {(u, v)} was not found in self.logical_graph.edges.")
             self.logical_graph.add_edge(u, v)
 
         if "capacity" in self.logical_graph[u][v]:
@@ -522,7 +527,7 @@ class AlpWolf:
             )
             self.logical_graph[u][v]["capacity"] = capacity
 
-        logger.debug("Successfully added circuit {} {}.".format(u, v))
+        logger.debug(f"Successfully added circuit {u} {v}.")
         logger.debug(
             f"Total Circuits: {self.circuits[(u, v)]}\t Total Capacity: {self.logical_graph[u][v]['capacity']}"
         )
@@ -549,12 +554,12 @@ class AlpWolf:
             transponder_u (int, optional): transponder index in u that maps to v. Defaults to None.
             transponder_v (int, optional): transponder index in v that maps to u. Defaults to None.
         """
-        logger.info("Dropping circuit {} {}.".format(u, v))
+        logger.info(f"Dropping circuit {u} {v}.")
         if self.circuits[(u, v)] == 0:
-            logger.debug("Cannot drop Circuit {} {} - does not exist.".format(u, v))
+            logger.debug(f"Cannot drop Circuit {u} {v} - does not exist.")
             raise Exception
 
-        if transponder_u == None or transponder_v == None:
+        if transponder_u is None or transponder_v is None:
             transponder_v = self.get_peer_transponder(
                 self.base_graph.nodes[v]["transponder"], u
             )
@@ -573,9 +578,7 @@ class AlpWolf:
         ), "While dropping circuit, node {}'s transponder did not map to {}. Instead it mapped to {}".format(
             u, v, self.base_graph.nodes[u]["transponder"][transponder_u]
         )
-        assert self.circuits[(u, v)] > 0, "No circuit to drop between {} and {}".format(
-            u, v
-        )
+        assert self.circuits[(u, v)] > 0, f"No circuit to drop between {u} and {v}"
 
         # Drop assignments, reassigning transponder to -1.
         self.base_graph.nodes[v]["transponder"][transponder_v] = -1
@@ -595,7 +598,7 @@ class AlpWolf:
             del self.circuits[(u, v)]
             del self.circuits[(v, u)]
 
-        logger.debug("Successfully dropped circuit {} {}.".format(u, v))
+        logger.debug(f"Successfully dropped circuit {u} {v}.")
         return 0
 
     def cli_help(self):
@@ -619,7 +622,7 @@ class AlpWolf:
         """Return the physical links in the base graph."""
         return self.base_graph.edges()
 
-    def get_candidate_circuits(self, candid_set="all", k=0, l=0) -> list:
+    def get_candidate_circuits(self, candid_set="all", k=0, limit=0) -> list:
         """Returns the node pairs that can currently establish a circuit
 
         Args:
@@ -646,16 +649,15 @@ class AlpWolf:
             logger.info("getting list of candidate circuits.")
             candidates = []
             for u, v in combinations(self.get_nodes(), 2):
-                if (u, v) not in self.circuits:
-                    if self.can_add_circuit(u, v):
-                        candidates.append((u, v))
+                if (u, v) not in self.circuits and self.can_add_circuit(u, v):
+                    candidates.append((u, v))
             return candidates
         elif candid_set == "ranked":
 
             def choose_candidates(
                 adjacent_links: list,
                 target_link: tuple,
-                l: int,
+                limit: int,
                 candidate_link_set: set,
                 current_link_set: set,
             ) -> list:
@@ -669,7 +671,7 @@ class AlpWolf:
                                     ('Stockton', 'New York (Pennsauken)', 0.08181818181818182)
                                     ('Stockton', 'Chicago', 0.07121212121212121)]
                     target_link = ('Cheyenne', 'Stockton')
-                    l = 5
+                    limit = 5
                     Returns: [('Stockton', 'Boulder')
                             ('Cheyenne', 'Washington, DC'),
                             ('Stockton', 'Kansas City'),
@@ -683,7 +685,7 @@ class AlpWolf:
                                         is ignored by this function.
                     target_link (tuple): (u:str, v:str). Target link is assumed adjacent to
                                         each adjacent link.
-                    l (int): Max number of candidate links to return.
+                    limit (int): Max number of candidate links to return.
                 Returns:
                     list: [(candidate_a:str, candidate_b:str)]. list of tuples for candidate links.
                         list tuples each have a node from adjacent links and a node
@@ -691,7 +693,7 @@ class AlpWolf:
                         NOT included with the original adjacent link.
                 """
                 candidates = []
-                for s, t, btwness in adjacent_links:
+                for s, t, _btwness in adjacent_links:
                     if s in target_link:
                         candidate_a = (
                             target_link[0] if s == target_link[1] else target_link[1]
@@ -704,29 +706,28 @@ class AlpWolf:
                         candidate_b = s
                     else:
                         raise Exception(
-                            "Error. Got a list of 'adjacent links' where ({}, {}) was not adjacent to {}.".format(
-                                s, t, target_link
-                            )
+                            f"Error. Got a list of 'adjacent links' where ({s}, {t}) was not adjacent to {target_link}."
                         )
                     if (candidate_a, candidate_b) not in (
                         candidate_link_set | current_link_set
-                    ):  # ONLY ADD NEW LINKS
-                        if (candidate_b, candidate_a) not in (
-                            candidate_link_set | current_link_set
-                        ):
-                            candidates.append((candidate_a, candidate_b))
-                    if len(candidates) == l:
+                    ) and (candidate_b, candidate_a) not in (
+                        candidate_link_set | current_link_set
+                    ):
+                        candidates.append((candidate_a, candidate_b))
+                    if len(candidates) == limit:
                         return candidates
                 return candidates
 
             candidates = []
             assert (
-                k > 0 and l > 0
-            ), "Error: candidate_set 'ranked' requires 'k' and 'l' > 0"
+                k > 0 and limit > 0
+            ), "Error: candidate_set 'ranked' requires 'k' and 'limit' > 0"
             btwness = edge_betweenness_centrality(self.base_graph)
             btwness_popable = copy(btwness)
             for _ in range(k):
-                most_central = max(btwness_popable, key=btwness_popable.get)
+                most_central = max(
+                    btwness_popable, key=lambda edge: btwness_popable[edge]
+                )
                 btwness_popable.pop(most_central)
                 adjacent_links = []
                 for node in most_central:
@@ -747,7 +748,7 @@ class AlpWolf:
                     choose_candidates(
                         adjacent_links,
                         most_central,
-                        l,
+                        limit,
                         set(candidates),
                         set(self.logical_graph.edges),
                     )
@@ -762,7 +763,7 @@ class AlpWolf:
     def list_circuits(self):
         """Lists all circuits and their bandwidth in Gb/s"""
         for c in sorted(self.circuits):
-            logger.info("{}: {}  Gb/s".format(c, self.circuits[c]))
+            logger.info(f"{c}: {self.circuits[c]}  Gb/s")
 
     def get_bandwidth(self, u, v) -> int:
         """Returns the bandwidth between a pair of hosts
@@ -794,7 +795,6 @@ class AlpWolf:
             return
         else:
             self.bandwidth_restricted = True
-            self.initial_bandwidth_dict
             for u, v in self.logical_graph.edges:
                 self.initial_bandwidth_dict[u][v] = self.logical_graph[u][v]["capacity"]
                 self.logical_graph[u][v]["capacity"] *= fraction
@@ -836,7 +836,7 @@ class AlpWolf:
                         if node_n in self.base_graph.nodes():
                             self.list_transponders(node_n)
                         else:
-                            logger.error("Node  {} not found.".format(node_n))
+                            logger.error(f"Node  {node_n} not found.")
                     else:
                         logger.error("Invalid command.")
 
@@ -846,12 +846,10 @@ class AlpWolf:
                         u, v = comm_args[2], comm_args[3]
                         if (u, v) in self.logical_graph.edges():
                             logger.info(
-                                "{} {} bandwidth: {} Gb/s".format(
-                                    u, v, self.get_bandwidth(u, v)
-                                )
+                                f"{u} {v} bandwidth: {self.get_bandwidth(u, v)} Gb/s"
                             )
                         else:
-                            logger.error("Edge {} not found.".format((u, v)))
+                            logger.error(f"Edge {(u, v)} not found.")
                     else:
                         logger.error("Invalid command.")
 
@@ -861,9 +859,9 @@ class AlpWolf:
                     if len(comm_args) == 4:
                         u, v = comm_args[2], comm_args[3]
                         if u not in self.base_graph.nodes():
-                            logger.error("Node  {} not found.".format(u))
+                            logger.error(f"Node  {u} not found.")
                         elif v not in self.base_graph.nodes():
-                            logger.error("Node  {} not found.".format(v))
+                            logger.error(f"Node  {v} not found.")
                         else:
                             self.add_circuit(u, v)
 
@@ -877,7 +875,7 @@ class AlpWolf:
                         if (u, v) in self.circuits:
                             self.drop_circuit(u, v)
                         else:
-                            logger.error("Circuit {} not found.".format((u, v)))
+                            logger.error(f"Circuit {(u, v)} not found.")
                     else:
                         logger.error("Invalid command.")
 

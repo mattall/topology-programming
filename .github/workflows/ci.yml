@@ -5,15 +5,16 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: true
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - run: pip install -e ".[testing,dev]"
-      - run: ruff check src/onset/ tests/ scripts/
-      - run: mypy src/onset/
+      - run: ruff check
+      - run: ruff format --check
+      - run: mypy
       - run: pytest
+      - run: scripts/check-env.sh
+      - run: python scripts/smoke_ans_ecmp.py

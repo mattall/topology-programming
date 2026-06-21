@@ -66,13 +66,19 @@ printf "Checking topology-programming environment...\n"
 if command -v "$python_bin" >/dev/null 2>&1 || [ -x "$python_bin" ]; then
     printf "ok: python -> %s\n" "$("$python_bin" -c 'import sys; print(sys.executable)')"
 else
-    printf "missing: python -> %s\n  Install Python 3.8+ and activate the project environment.\n" "$python_bin"
+    printf "missing: python -> %s\n  Install Python 3.11, 3.12, or 3.13 and activate the project environment.\n" "$python_bin"
+    status=1
+fi
+
+if ! "$python_bin" -c 'import sys; raise SystemExit(not ((3, 11) <= sys.version_info[:2] < (3, 14)))'; then
+    printf "unsupported: %s\n  Use Python 3.11, 3.12, or 3.13.\n" "$python_bin"
     status=1
 fi
 
 check_optional_cmd gurobi_cl "Required for Gurobi-backed topology optimization."
 check_optional_python_import gurobipy "Required for Gurobi-backed topology optimization."
 check_python_import highspy "Install highspy with pip install highspy."
+check_python_import onset "Install the project and its dependencies with pip install -e ."
 check_python_import networkx "Install project Python dependencies with pip install ."
 check_python_import numpy "Install project Python dependencies with pip install ."
 check_python_import scipy "Install project Python dependencies with pip install ."

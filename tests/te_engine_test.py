@@ -91,7 +91,7 @@ s1 -> h1 [cost=1, capacity="100Gbps"];
 
         self.assertEqual(
             routes[("h1", "h2")],
-            [(('h1', 's1', 's2', 's4', 'h2'), 1.0)],
+            [(("h1", "s1", "s2", "s4", "h2"), 1.0)],
         )
 
 

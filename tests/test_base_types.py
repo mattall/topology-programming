@@ -1,19 +1,18 @@
 """Unit tests for canonical types (base_types.py)."""
 
+from dataclasses import FrozenInstanceError
+
 import pytest
-import numpy as np
 
 from onset.base_types import (
-    compute_stable_topology_id,
-    compute_legacy_topology_id,
+    BackendProvenance,
     OptimizationProblem,
-    TopologySolution,
     OptimizationResult,
     OptimizerStatus,
-    BackendProvenance,
+    TopologySolution,
+    compute_legacy_topology_id,
+    compute_stable_topology_id,
     map_milp_status,
-    BINARY_TOLERANCE,
-    FLOW_TOLERANCE_ABSOLUTE,
 )
 
 
@@ -56,9 +55,7 @@ class TestOptimizationProblem:
             current_edges=frozenset([("a", "b")]),
             txp_count={"a": 2, "b": 2, "c": 1},
             demand={("a", "c"): 50.0},
-            tunnel_edge_sets={
-                ("a", "c"): frozenset([("a", "b"), ("b", "c")])
-            },
+            tunnel_edge_sets={("a", "c"): frozenset([("a", "b"), ("b", "c")])},
             link_capacity=100.0,
             scale_factor=10.0,
             congestion_threshold_upper_bound=1.0,
@@ -202,7 +199,7 @@ class TestOptimizationProblem:
             top_k=1,
             optimizer_time_limit=60.0,
         )
-        with pytest.raises(Exception):
+        with pytest.raises(FrozenInstanceError):
             p.top_k = 5  # frozen dataclass
 
 
@@ -261,21 +258,33 @@ class TestOptimizationResult:
     def test_selection_rule(self):
         sol1 = TopologySolution(
             selected_edges=frozenset([("a", "b")]),
-            added=frozenset(), dropped=frozenset(),
-            commodity_flows=None, aggregate_edge_loads={},
-            solver_mlu=0.3, validated_mlu=0.3,
-            change_count=1, objective_value=2.3,
-            stable_topology_id="a", legacy_topology_id="x",
-            provenance=BackendProvenance.OPEN, proven_optimal=True,
+            added=frozenset(),
+            dropped=frozenset(),
+            commodity_flows=None,
+            aggregate_edge_loads={},
+            solver_mlu=0.3,
+            validated_mlu=0.3,
+            change_count=1,
+            objective_value=2.3,
+            stable_topology_id="a",
+            legacy_topology_id="x",
+            provenance=BackendProvenance.OPEN,
+            proven_optimal=True,
         )
         sol2 = TopologySolution(
             selected_edges=frozenset([("a", "b"), ("b", "c")]),
-            added=frozenset([("b", "c")]), dropped=frozenset(),
-            commodity_flows=None, aggregate_edge_loads={},
-            solver_mlu=0.2, validated_mlu=0.2,
-            change_count=2, objective_value=4.2,
-            stable_topology_id="b", legacy_topology_id="y",
-            provenance=BackendProvenance.OPEN, proven_optimal=True,
+            added=frozenset([("b", "c")]),
+            dropped=frozenset(),
+            commodity_flows=None,
+            aggregate_edge_loads={},
+            solver_mlu=0.2,
+            validated_mlu=0.2,
+            change_count=2,
+            objective_value=4.2,
+            stable_topology_id="b",
+            legacy_topology_id="y",
+            provenance=BackendProvenance.OPEN,
+            proven_optimal=True,
         )
         r = OptimizationResult(
             solutions=(sol1, sol2),
@@ -292,8 +301,11 @@ class TestOptimizationResult:
     def test_rejects_negative_wall_time(self):
         with pytest.raises(ValueError):
             OptimizationResult(
-                solutions=(), status=OptimizerStatus.INFEASIBLE,
-                wall_time=-1.0, backend=BackendProvenance.OPEN, solve_count=0,
+                solutions=(),
+                status=OptimizerStatus.INFEASIBLE,
+                wall_time=-1.0,
+                backend=BackendProvenance.OPEN,
+                solve_count=0,
             )
 
 

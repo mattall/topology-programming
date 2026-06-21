@@ -1,23 +1,39 @@
-import unittest
+"""Self-contained JSON import coverage for ``Simulation``."""
+
+import json
+from pathlib import Path
+
+import networkx as nx
+import pytest
+
+import onset.simulator as simulator_module
+import onset.validation as validation
 from onset.simulator import Simulation
 
 
-class sim_import_json_test(unittest.TestCase):
-    def setUp(self) -> None:
-        self.my_sim = Simulation(
-            "sndlib_abilene",
-            12,
-            "py_test",
-            start_clean=True,
-            iterations=1,
-            fallow_tx_allocation_strategy="read_capacity",
-        )
+def test_simulation_imports_json_topology(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    for module in (simulator_module, validation):
+        monkeypatch.setattr(module, "SCRIPT_HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
 
-    def test_import(self):
-        self.my_sim = Simulation(
-            "sndlib_abilene", 12, "py_test", start_clean=True
-        )
-        self.assertIsNotNone(self.my_sim)
+    graph_dir = tmp_path / "data" / "graphs" / "json"
+    graph_dir.mkdir(parents=True)
+    (graph_dir / "tiny.json").write_text(
+        json.dumps(nx.adjacency_data(nx.path_graph(["1", "2"]))),
+        encoding="utf-8",
+    )
+    traffic = tmp_path / "tiny.tm"
+    traffic.write_text("0 1 1 0\n", encoding="utf-8")
 
-    def test_run_sim(self):
-        self.my_sim.perform_sim(demand_factor=100)
+    simulation = Simulation(
+        "tiny",
+        2,
+        "json_import",
+        iterations=1,
+        traffic_file=str(traffic),
+        topology_programming_method="baseline",
+    )
+
+    assert set(simulation.wolf.logical_graph) == {"1", "2"}

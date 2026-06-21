@@ -10,13 +10,12 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass, field
+from collections.abc import Sequence
+from dataclasses import dataclass
 from enum import Enum, auto
 from struct import pack
-from collections.abc import Sequence
 
 import numpy as np
-
 
 # ---------------------------------------------------------------------------
 # Enums
@@ -78,9 +77,7 @@ def compute_stable_topology_id(
     Both arrays in canonical UTF-8 byte order, edges with lower endpoint first.
     """
     ordered_nodes = _canonical_node_order(nodes)
-    ordered_edges = sorted(
-        _canonical_edge_tuple(u, v) for (u, v) in edges
-    )
+    ordered_edges = sorted(_canonical_edge_tuple(u, v) for (u, v) in edges)
     payload = json.dumps(
         {"nodes": ordered_nodes, "edges": ordered_edges},
         separators=(",", ":"),
@@ -148,9 +145,7 @@ class OptimizationProblem:
     current_edges: frozenset[tuple[str, str]]
     txp_count: dict[str, int]
     demand: dict[tuple[str, str], float]
-    tunnel_edge_sets: dict[
-        tuple[str, str], frozenset[tuple[str, str]]
-    ]
+    tunnel_edge_sets: dict[tuple[str, str], frozenset[tuple[str, str]]]
     link_capacity: float
     scale_factor: float
     congestion_threshold_upper_bound: float
@@ -171,24 +166,18 @@ class OptimizationProblem:
             raise ValueError("All node IDs must be strings")
 
         # Edge consistency
-        for (u, v) in self.canonical_candidate_edges:
+        for u, v in self.canonical_candidate_edges:
             if u not in nodes or v not in nodes:
-                raise ValueError(
-                    f"Candidate edge ({u},{v}) references unknown node"
-                )
+                raise ValueError(f"Candidate edge ({u},{v}) references unknown node")
             if u != _canonical_edge_tuple(u, v)[0]:
-                raise ValueError(
-                    f"Candidate edge ({u},{v}) not in canonical order"
-                )
+                raise ValueError(f"Candidate edge ({u},{v}) not in canonical order")
 
         # Current edges are subset of candidates
         candidate_set = set(self.canonical_candidate_edges)
-        for (u, v) in self.current_edges:
+        for u, v in self.current_edges:
             canon = _canonical_edge_tuple(u, v)
             if canon not in candidate_set:
-                raise ValueError(
-                    f"Current edge ({u},{v}) is not a candidate edge"
-                )
+                raise ValueError(f"Current edge ({u},{v}) is not a candidate edge")
 
         # Transponder keys cover all nodes
         for n in nodes:
@@ -214,9 +203,7 @@ class OptimizationProblem:
 
         # Congestion bound
         if not (0.0 <= self.congestion_threshold_upper_bound <= 1.0):
-            raise ValueError(
-                "congestion_threshold_upper_bound must be in [0, 1]"
-            )
+            raise ValueError("congestion_threshold_upper_bound must be in [0, 1]")
 
         # Top-K and time
         if self.top_k < 1:
@@ -226,7 +213,7 @@ class OptimizationProblem:
 
         # Tunnel edge consistency: every tunnel edge is a candidate
         for (s, t), allowed in self.tunnel_edge_sets.items():
-            for (u, v) in allowed:
+            for u, v in allowed:
                 canon = _canonical_edge_tuple(u, v)
                 if canon not in candidate_set:
                     raise ValueError(
@@ -254,18 +241,15 @@ class OptimizationProblem:
                 )
             for (s, t), idxs in pd.commodity_to_paths.items():
                 if (s, t) not in self.demand:
-                    raise ValueError(
-                        f"commodity_to_paths key ({s},{t}) not in demand"
-                    )
+                    raise ValueError(f"commodity_to_paths key ({s},{t}) not in demand")
                 for pi in idxs:
                     if pi >= len(pd.path_list) or pi < 0:
-                        raise ValueError(
-                            f"Path index {pi} for ({s},{t}) out of range"
-                        )
+                        raise ValueError(f"Path index {pi} for ({s},{t}) out of range")
 
         # Warning: legacy ID precision limit
         if len(self.legacy_candidate_edge_order) > 53:
             import logging
+
             logging.getLogger(__name__).warning(
                 "Legacy topology ID has >53 candidate edges (%d); "
                 "float-precision ID is unreliable.",
@@ -326,7 +310,7 @@ class TopologySolution:
             raise ValueError("validated_mlu out of range")
 
     @classmethod
-    def empty(cls, provenance: BackendProvenance) -> "TopologySolution":
+    def empty(cls, provenance: BackendProvenance) -> TopologySolution:
         """Create a placeholder (used when no solutions are found)."""
         return cls(
             selected_edges=frozenset(),
@@ -401,7 +385,7 @@ class OptimizationResult:
         backend: BackendProvenance,
         solve_count: int,
         diagnostics: str | None = None,
-    ) -> "OptimizationResult":
+    ) -> OptimizationResult:
         return cls(
             solutions=(),
             status=status,

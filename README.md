@@ -5,7 +5,7 @@ Programming (OTP).
 
 ## Installation
 
-Python 3.11 or newer is required.  All commands assume they are run from
+Python 3.11 through 3.13 is supported. All commands assume they are run from
 the repository root.
 
 ```bash
@@ -13,7 +13,7 @@ git clone --recurse-submodules https://github.com/mattall/topology-programming.g
 cd topology-programming
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e .
+pip install -e ".[testing,dev]"
 ```
 
 `TMgen` (traffic-matrix generation) is vendored as a git submodule at
@@ -37,6 +37,7 @@ installation is needed.
 
 | Method string | Description |
 |---|---|
+| `baseline`    | Evaluate ECMP/MCF without changing the input topology |
 | `doppler`     | Doppler reconnaissance defense (TNSM 2024) |
 | `onset_v3`    | ONSET DDoS defense — edge-flow formulation (TDSC 2025) |
 | `onset_v2`    | ONSET DDoS defense — path-flow formulation (TDSC 2025) |
@@ -56,7 +57,33 @@ scripts/check-env.sh
 python scripts/smoke_ans_ecmp.py
 ```
 
-The expected smoke result: MLU `0.804324`, loss `0.0`, throughput `1.0`.
+The smoke test creates its topology and traffic matrix in a temporary directory;
+it does not require repository experiment data.
+
+The same checks used by CI are:
+
+```bash
+ruff check
+ruff format --check
+mypy
+pytest
+scripts/check-env.sh
+python scripts/smoke_ans_ecmp.py
+```
+
+## Maintained and historical code
+
+The maintained Python surface is the `Simulation.perform_sim` pipeline, method
+registry and handlers, internal ECMP/MCF engine, HiGHS topology solvers,
+preprocessing, reporting, and their small runtime helpers. The exact lint and
+type-check paths are listed in `pyproject.toml`, so local, pre-commit, tox, and
+CI runs agree.
+
+Historical campaign launchers under `scripts/Doppler`, `scripts/TDSC`, and
+`scripts/TNSM`, plotting/analysis utilities, vendored code, and the legacy
+Gurobi modules are retained for reproducibility but are not part of the
+maintained static-analysis surface. Gurobi remains optional and is not used by
+the maintained pipeline.
 
 ## Running experiments
 

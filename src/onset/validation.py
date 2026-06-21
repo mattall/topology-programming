@@ -1,31 +1,26 @@
 from __future__ import annotations
 
 import os
+from copy import deepcopy
 from os import makedirs, system
 from os.path import dirname, isfile
-from copy import deepcopy
+
+from networkx.relabel import relabel_nodes
 
 from onset.constants import SCRIPT_HOME
+from onset.te import evaluate
+from onset.utilities.diff_compare import diff_compare
+from onset.utilities.gml_to_dot import Gml_to_dot
+from onset.utilities.graph_utils import write_gml
 from onset.utilities.logger import logger
 from onset.utilities.sysUtils import count_lines
 from onset.utilities.tmg import rand_gravity_matrix
-from onset.te import evaluate
-from onset.utilities.gml_to_dot import Gml_to_dot
-from onset.utilities.diff_compare import diff_compare
-from onset.utilities.plotters import (
-    cdf_average_congestion,
-    cdf_churn,
-    draw_graph,
-    plot_points,
-)
-from onset.utilities.graph_utils import write_gml
-from networkx.relabel import relabel_nodes
 
 DRAW = False
 
 
 def _system(command: str):
-    logger.info("Calling system command: {}".format(command))
+    logger.info(f"Calling system command: {command}")
     return system(command)
 
 
@@ -38,7 +33,7 @@ def _evaluate_te(
     te_method,
     exit_early,
     network_name,
-):
+) -> float | str:
     if shakeroute:
         result_path = os.path.join(network_name, result_path)
     result = evaluate(
@@ -50,7 +45,7 @@ def _evaluate_te(
         budget=3,
     )
     max_congestion = result.max_congestion
-    logger.info("Max congestion: {}".format(max_congestion))
+    logger.info(f"Max congestion: {max_congestion}")
     if exit_early and float(max_congestion) == 1.0:
         logger.info("Max Congestion has reached 1. Ending simulation.")
         return "SIG_EXIT"
@@ -58,7 +53,7 @@ def _evaluate_te(
 
 
 def export_logical_topo_to_gml(name, G):
-    te_to_ripple_map = {node: ("s{}".format(node)) for (node) in G}
+    te_to_ripple_map = {node: (f"s{node}") for (node) in G}
     gml_view = relabel_nodes(G, te_to_ripple_map, copy=True)
     write_gml(gml_view, name)
     del gml_view
@@ -77,6 +72,13 @@ def evaluate_performance_from_adding_link(
     exit_early,
     circuits_to_add=1,
 ):
+    from onset.utilities.plotters import (
+        cdf_average_congestion,
+        cdf_churn,
+        draw_graph,
+        plot_points,
+    )
+
     path_churn = []
     congestion_change = []
 
@@ -86,9 +88,7 @@ def evaluate_performance_from_adding_link(
 
     # prep initial file
     initial_graph = wolf.logical_graph
-    INITIAL_GRAPH_PATH = os.path.join(
-        GRAPHS_PATH, network_name + "_0.dot"
-    )
+    INITIAL_GRAPH_PATH = os.path.join(GRAPHS_PATH, network_name + "_0.dot")
     INITIAL_RESULTS_REL_PATH = os.path.join(experiment_id, "__0")
 
     # Write Graphs to files
@@ -99,19 +99,21 @@ def evaluate_performance_from_adding_link(
 
     if (
         _evaluate_te(
-            INITIAL_GRAPH_PATH, INITIAL_RESULTS_REL_PATH,
-            traffic_file, shakeroute, hosts_file, te_method, exit_early, network_name,
+            INITIAL_GRAPH_PATH,
+            INITIAL_RESULTS_REL_PATH,
+            traffic_file,
+            shakeroute,
+            hosts_file,
+            te_method,
+            exit_early,
+            network_name,
         )
         == "SIG_EXIT"
     ):
         return
 
-    PATH_DIFF_FOLDER = os.path.join(
-        experiment_absolute_path, "path_diff"
-    )
-    CONGESTION_DIFF_FOLDER = os.path.join(
-        experiment_absolute_path, "congestion_diff"
-    )
+    PATH_DIFF_FOLDER = os.path.join(experiment_absolute_path, "path_diff")
+    CONGESTION_DIFF_FOLDER = os.path.join(experiment_absolute_path, "congestion_diff")
     makedirs(PATH_DIFF_FOLDER, exist_ok=True)
     makedirs(CONGESTION_DIFF_FOLDER, exist_ok=True)
 
@@ -130,25 +132,17 @@ def evaluate_performance_from_adding_link(
     if use_heuristic != "":
         # FIXME CHANGE BACK TO `candid_set='ranked'`
         # candidate_circuits = wolf.get_candidate_circuits(candid_set='ranked', k=5, l=5)
-        candidate_circuits = wolf.get_candidate_circuits(
-            candid_set="all"
-        )
+        candidate_circuits = wolf.get_candidate_circuits(candid_set="all")
     else:
-        candidate_circuits = wolf.get_candidate_circuits(
-            candid_set="all"
-        )
+        candidate_circuits = wolf.get_candidate_circuits(candid_set="all")
 
     for u, v in candidate_circuits:
-        TEST_RESULTS_REL_PATH = os.path.join(
-            experiment_id, "{}_{}".format(u, v)
-        )
+        TEST_RESULTS_REL_PATH = os.path.join(experiment_id, f"{u}_{v}")
         test_alpwolf = deepcopy(wolf)
         for _ in range(circuits_to_add):
             test_alpwolf.add_circuit(u, v)
 
-        TEST_GRAPH_PATH = os.path.join(
-            GRAPHS_PATH, network_name + "_{}_{}.dot".format(u, v)
-        )
+        TEST_GRAPH_PATH = os.path.join(GRAPHS_PATH, network_name + f"_{u}_{v}.dot")
 
         # Write Graphs to files
         Gml_to_dot(test_alpwolf.logical_graph, TEST_GRAPH_PATH)
@@ -159,8 +153,14 @@ def evaluate_performance_from_adding_link(
 
         if (
             _evaluate_te(
-                TEST_GRAPH_PATH, TEST_RESULTS_REL_PATH,
-                traffic_file, shakeroute, hosts_file, te_method, exit_early, network_name,
+                TEST_GRAPH_PATH,
+                TEST_RESULTS_REL_PATH,
+                traffic_file,
+                shakeroute,
+                hosts_file,
+                te_method,
+                exit_early,
+                network_name,
             )
             == "SIG_EXIT"
         ):
@@ -168,45 +168,39 @@ def evaluate_performance_from_adding_link(
 
         TEST_PATHS = os.path.join(
             experiment_absolute_path,
-            "{}_{}".format(u, v),
+            f"{u}_{v}",
             "paths",
             te_method.strip("-") + "_0",
         )
         TEST_CONGESTION = os.path.join(
             experiment_absolute_path,
-            "{}_{}".format(u, v),
+            f"{u}_{v}",
             "MaxExpCongestionVsIterations.dat",
         )
 
         PATH_DIFF = os.path.join(
             experiment_absolute_path,
             "path_diff",
-            "{}_{}.txt".format(u, v),
+            f"{u}_{v}.txt",
         )
         CONGESTION_DIFF = os.path.join(
             experiment_absolute_path,
             "congestion_diff",
-            "{}_{}.txt".format(u, v),
+            f"{u}_{v}.txt",
         )
 
-        _system(
-            "diff {} {} > {}".format(INITIAL_PATHS, TEST_PATHS, PATH_DIFF)
-        )
-        _system(
-            "diff {} {} > {}".format(
-                INITIAL_CONGESTION, TEST_CONGESTION, CONGESTION_DIFF
-            )
-        )
+        _system(f"diff {INITIAL_PATHS} {TEST_PATHS} > {PATH_DIFF}")
+        _system(f"diff {INITIAL_CONGESTION} {TEST_CONGESTION} > {CONGESTION_DIFF}")
         path_churn.append(diff_compare(PATH_DIFF, "path"))
         congestion_change.append(diff_compare(CONGESTION_DIFF))
-        if DRAW: 
-            draw_graph(test_alpwolf.logical_graph, os.path.join(
-                    GRAPHS_PATH, network_name + "_{}_{}".format(u, v)))
+        if DRAW:
+            draw_graph(
+                test_alpwolf.logical_graph,
+                os.path.join(GRAPHS_PATH, network_name + f"_{u}_{v}"),
+            )
 
     PLOT_DIR = os.path.join(experiment_absolute_path, "plot_dir")
-    CONGESTION_VS_PATHCHURN = os.path.join(
-        PLOT_DIR, "congestion_vs_pathChurn"
-    )
+    CONGESTION_VS_PATHCHURN = os.path.join(PLOT_DIR, "congestion_vs_pathChurn")
     makedirs(PLOT_DIR, exist_ok=True)
     plot_points(
         path_churn,
@@ -231,10 +225,7 @@ def verify_topo(network_name, shakeroute, topology_programming_method):
     json_handle = os.path.join(
         SCRIPT_HOME, "data", "graphs", "json", network_name + ".json"
     )
-    if (
-        shakeroute
-        and topology_programming_method != "baseline"
-    ):
+    if shakeroute and topology_programming_method != "baseline":
         base_topo_file = os.path.join(
             SCRIPT_HOME,
             "data",
@@ -255,7 +246,9 @@ def verify_topo(network_name, shakeroute, topology_programming_method):
             exc_info=1,
         )
         exit(-1)
-    logger.info(f"topology file check passed with base topology file: {base_topo_file}.")
+    logger.info(
+        f"topology file check passed with base topology file: {base_topo_file}."
+    )
     return base_topo_file
 
 
@@ -271,75 +264,62 @@ def create_host_file(hosts_file, num_hosts):
 def verify_hosts(network_name, shakeroute, num_hosts):
     logger.debug("verifying hosts file.")
     if shakeroute:
-        hosts_file = os.path.join(
-            SCRIPT_HOME, "data", "hosts", shakeroute + ".hosts"
-        )
+        hosts_file = os.path.join(SCRIPT_HOME, "data", "hosts", shakeroute + ".hosts")
     else:
-        hosts_file = os.path.join(
-            SCRIPT_HOME, "data", "hosts", network_name + ".hosts"
-        )
-    hosts_folder = os.path.join(SCRIPT_HOME, "data", "hosts")
+        hosts_file = os.path.join(SCRIPT_HOME, "data", "hosts", network_name + ".hosts")
+    os.path.join(SCRIPT_HOME, "data", "hosts")
     try:  # sets num_hosts and checks file exists.
-        assert isfile(
-            hosts_file
-        ), "Error topology file not found: {}".format(hosts_file)
+        assert isfile(hosts_file), f"Error topology file not found: {hosts_file}"
         logger.debug("Host file successfully located.")
         lines = count_lines(hosts_file)
         assert (
             lines == num_hosts
-        ), "Host file has wrong number of lines. expected: {} got: {}".format(
-            num_hosts, lines
-        )
+        ), f"Host file has wrong number of lines. expected: {num_hosts} got: {lines}"
 
     except AssertionError:  # Create the hosts file
-
         create_host_file(hosts_file, num_hosts)
     logger.debug("Host file check passed.")
     return hosts_file
 
 
-def verify_traffic(network_name, traffic_file, start_clean, num_hosts, iterations, magnitude):
+def verify_traffic(
+    network_name, traffic_file, start_clean, num_hosts, iterations, magnitude
+):
     logger.debug("verifying traffic file.")
     if traffic_file == "":
-        logger.debug(
-            "no file stated. Generating common traffic file string"
-        )
+        logger.debug("no file stated. Generating common traffic file string")
         traffic_file = os.path.join(
             SCRIPT_HOME, "data", "traffic", network_name + ".txt"
         )
     else:
-        logger.debug(
-            "Attempting to use traffic file provided by user."
-        )
-        logger.debug("file: {}".format(traffic_file))
+        logger.debug("Attempting to use traffic file provided by user.")
+        logger.debug(f"file: {traffic_file}")
         # traffic_file already set from parameter
 
     try:
         if start_clean:  # start_clean
-            _system("rm {}".format(traffic_file))
-        assert isfile(
-            traffic_file
-        ), "Error traffic file not found: {}".format(traffic_file)
+            _system(f"rm {traffic_file}")
+        assert isfile(traffic_file), f"Error traffic file not found: {traffic_file}"
         logger.debug("traffic file found.")
         line_count = count_lines(traffic_file)
         if line_count < iterations:
             logger.error(
-                "traffic file found, but has too few lines. expected: {} got: {}".format(
-                    iterations, line_count
-                )
+                f"traffic file found, but has too few lines. expected: {iterations} got: {line_count}"
             )
-            assert False
+            raise AssertionError()
         logger.debug("traffic file line-count passed.")
         # check total entries on each line is correct.
-        with open(traffic_file, 'r') as tm_fob:
+        with open(traffic_file) as tm_fob:
             lines = tm_fob.readlines()
-            last_line = lines.pop()
-            num_expected_entries = num_hosts ** 2
-            for l in lines:
-                num_entries = len(l.strip().split())
-                if num_entries != num_expected_entries:                           
-                    logger.error(f"Traffic matrix (TM): {traffic_file}. Network hosts (n): {num_hosts}. Line in TM should have n^2 entries ({num_expected_entries}). Got {num_entries}.")
-                    assert False
+            lines.pop()
+            num_expected_entries = num_hosts**2
+            for line in lines:
+                num_entries = len(line.strip().split())
+                if num_entries != num_expected_entries:
+                    logger.error(
+                        f"Traffic matrix (TM): {traffic_file}. Network hosts (n): {num_hosts}. Line in TM should have n^2 entries ({num_expected_entries}). Got {num_entries}."
+                    )
+                    raise AssertionError()
 
     except AssertionError:
         if start_clean:
@@ -364,9 +344,7 @@ def verify_traffic(network_name, traffic_file, start_clean, num_hosts, iteration
         lines = count_lines(traffic_file)
         assert (
             lines >= iterations
-        ), "traffic file created, but has too few lines. expected: {} got: {}".format(
-            iterations, lines
-        )
+        ), f"traffic file created, but has too few lines. expected: {iterations} got: {lines}"
 
     logger.debug("Host file check passed.")
     return traffic_file

@@ -1,21 +1,24 @@
-import unittest
+"""Self-contained tests for the modeled network graph."""
+
+import json
+from pathlib import Path
+
+import networkx as nx
+
 from onset.network_model import Network
 
 
-class network_model_test(unittest.TestCase):
-    def test(self):
-        topology_file = "data/graphs/json/campus/campus_ground_truth.json"
+def test_network_adds_router_and_client_metadata(tmp_path: Path) -> None:
+    topology = tmp_path / "topology.json"
+    topology.write_text(
+        json.dumps(nx.adjacency_data(nx.path_graph(["1", "2"]))),
+        encoding="utf-8",
+    )
 
-        net = Network(topology_file)
+    graph = Network(str(topology)).graph
 
-        G = net.graph
-
-        for node in G.nodes():                        
-            if G.nodes[node]["node_type"] == "Router":
-                self.assertEqual(G.nodes[node]["router_id"], f"router_{node}")
-                self.assertEqual(G.nodes[node]["client_id"], f"client_{node}")
-
-            if G.nodes[node]["node_type"] == "Client":
-                self.assertEqual(
-                    G.nodes[node]["router_id"], node.replace("client", "router")
-                )
+    for node in ("1", "2"):
+        assert graph.nodes[node]["node_type"] == "Router"
+        assert graph.nodes[node]["router_id"] == f"router_{node}"
+        assert graph.nodes[node]["client_id"] == f"client_{node}"
+        assert graph.nodes[f"client_{node}"]["router_id"] == f"router_{node}"

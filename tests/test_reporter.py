@@ -2,14 +2,14 @@
 
 import os
 import tempfile
-import pytest
-from onset.reporter import write_optimization_reports
+
 from onset.base_types import (
-    OptimizationResult,
-    TopologySolution,
     BackendProvenance,
+    OptimizationResult,
     OptimizerStatus,
+    TopologySolution,
 )
+from onset.reporter import write_optimization_reports
 
 
 class TestWriteOptimizationReports:
@@ -58,14 +58,18 @@ class TestWriteOptimizationReports:
                 multi_sol_best_mlu="NaN",
             )
             expected_files = [
-                "TotalSolutions.dat", "OptTime.dat", "OptimalTopoID.dat",
-                "CurrTopoID.dat", "DopplerMinMLU.dat", "DopplerMLU.dat",
+                "TotalSolutions.dat",
+                "OptTime.dat",
+                "OptimalTopoID.dat",
+                "CurrTopoID.dat",
+                "DopplerMinMLU.dat",
+                "DopplerMLU.dat",
             ]
             for fname in expected_files:
                 fpath = os.path.join(tmpdir, fname)
                 assert os.path.exists(fpath), f"Missing: {fname}"
 
-    def test_none_result_writes_nan(self):
+    def test_none_result_is_noop(self):
         return_data = {}
         with tempfile.TemporaryDirectory() as tmpdir:
             write_optimization_reports(
@@ -79,12 +83,8 @@ class TestWriteOptimizationReports:
                 multi_sol_number_best_sol="NaN",
                 multi_sol_best_mlu="NaN",
             )
-            # TotalSolutions.dat should contain 0
-            ts_path = os.path.join(tmpdir, "TotalSolutions.dat")
-            assert os.path.exists(ts_path)
-            with open(ts_path) as f:
-                content = f.read()
-                assert "0" in content
+            assert os.listdir(tmpdir) == []
+            assert return_data == {}
 
     def test_no_solutions_writes_nan(self):
         result = OptimizationResult(

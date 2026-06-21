@@ -17,22 +17,19 @@ from __future__ import annotations
 import logging
 from time import perf_counter
 
-
 import numpy as np
-from scipy.sparse import csr_matrix, eye
+from scipy.sparse import csr_matrix
 
 from onset.base_types import (
-    BackendProvenance,
-    OptimizationProblem,
-    OptimizerStatus,
-    TopologySolution,
-    OptimizationResult,
     BINARY_TOLERANCE,
     FLOW_TOLERANCE_ABSOLUTE,
-    FLOW_TOLERANCE_RELATIVE,
-    compute_stable_topology_id,
+    BackendProvenance,
+    OptimizationProblem,
+    OptimizationResult,
+    OptimizerStatus,
+    TopologySolution,
     compute_legacy_topology_id,
-    map_milp_status,
+    compute_stable_topology_id,
 )
 
 logger = logging.getLogger(__name__)
@@ -43,7 +40,9 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-def _build_edge_flow_milp(problem: OptimizationProblem, objective_mode: str = "changes_plus_mlu"):
+def _build_edge_flow_milp(
+    problem: OptimizationProblem, objective_mode: str = "changes_plus_mlu"
+):
     """Build a HiGHS-compatible LP model for the corrected Doppler formulation.
 
     Parameters
@@ -67,15 +66,13 @@ def _build_edge_flow_milp(problem: OptimizationProblem, objective_mode: str = "c
     edge_to_idx = {e: i for i, e in enumerate(undirected_edges)}
 
     # Directed edges: both directions for each undirected edge
-    directed_edges = [(u, v) for (u, v) in undirected_edges] + [
-        (v, u) for (u, v) in undirected_edges
-    ]
-    n_directed = len(directed_edges)
+    directed_edges = list(undirected_edges) + [(v, u) for (u, v) in undirected_edges]
+    len(directed_edges)
     dir_to_idx = {e: i for i, e in enumerate(directed_edges)}
 
     # Commodities: demands with tunnel-allowed directed edge sets
     commodities = list(problem.demand.keys())
-    n_commodities = len(commodities)
+    len(commodities)
     comm_to_idx = {c: i for i, c in enumerate(commodities)}
 
     # Normalized demand
@@ -84,8 +81,7 @@ def _build_edge_flow_milp(problem: OptimizationProblem, objective_mode: str = "c
 
     # Current edges (for change count)
     current_set = problem.current_edges
-    current_idx = {e: i for i, e in enumerate(undirected_edges)
-                   if e in current_set}
+    {e: i for i, e in enumerate(undirected_edges) if e in current_set}
 
     # Variable layout (deterministic order):
     #   x[0..E-1]: binary edge vars (undirected, canonical order)
@@ -98,7 +94,7 @@ def _build_edge_flow_milp(problem: OptimizationProblem, objective_mode: str = "c
     f_idx = f_offset
     for ci, comm in enumerate(commodities):
         allowed = problem.tunnel_edge_sets.get(comm, frozenset())
-        for (u, v) in sorted(allowed):
+        for u, v in sorted(allowed):
             flow_var_index[(ci, u, v)] = f_idx
             f_idx += 1
     n_flow = f_idx - f_offset
@@ -136,7 +132,7 @@ def _build_edge_flow_milp(problem: OptimizationProblem, objective_mode: str = "c
         for node in nodes:
             inflow = {}
             outflow = {}
-            for (u, v) in sorted(allowed):
+            for u, v in sorted(allowed):
                 fcol = flow_var_index.get((ci, u, v))
                 if fcol is None:
                     continue
@@ -153,14 +149,14 @@ def _build_edge_flow_milp(problem: OptimizationProblem, objective_mode: str = "c
                 if node == s:
                     add_row(-d, -d, combined)  # in - out = -d at source
                 elif node == t:
-                    add_row(d, d, combined)    # in - out = +d at target
+                    add_row(d, d, combined)  # in - out = +d at target
                 else:
                     add_row(0.0, 0.0, combined)  # flow conservation
 
     # 3. Activation / capacity: f <= x for each commodity+edge pair
     for ci, (s, t) in enumerate(commodities):
         allowed = problem.tunnel_edge_sets.get((s, t), frozenset())
-        for (u, v) in sorted(allowed):
+        for u, v in sorted(allowed):
             fcol = flow_var_index.get((ci, u, v))
             if fcol is None:
                 continue
@@ -172,9 +168,9 @@ def _build_edge_flow_milp(problem: OptimizationProblem, objective_mode: str = "c
             add_row(-np.inf, 0.0, entries)
 
     # 4. MLU: sum of normalized flows per directed edge <= mlu
-    for de, (u, v) in enumerate(directed_edges):
+    for _de, (u, v) in enumerate(directed_edges):
         entries = {mlu_idx: -1.0}
-        for ci, (s, t) in enumerate(commodities):
+        for ci, (_s, _t) in enumerate(commodities):
             fcol = flow_var_index.get((ci, u, v))
             if fcol is not None:
                 entries[fcol] = 1.0
@@ -186,7 +182,7 @@ def _build_edge_flow_milp(problem: OptimizationProblem, objective_mode: str = "c
     root_flow_offset = n_vars
     # Add artificial root-flow variables (one per directed edge)
     rf_vars: dict[tuple[str, str], int] = {}
-    for (u, v) in directed_edges:
+    for u, v in directed_edges:
         rf_vars[(u, v)] = root_flow_offset
         root_flow_offset += 1
     n_vars_with_rf = root_flow_offset
@@ -230,8 +226,7 @@ def _build_edge_flow_milp(problem: OptimizationProblem, objective_mode: str = "c
             col_indices.append(col)
             values.append(val)
 
-    A = csr_matrix((values, (row_indices, col_indices)),
-                   shape=(n_con, n_vars_with_rf))
+    A = csr_matrix((values, (row_indices, col_indices)), shape=(n_con, n_vars_with_rf))
 
     # Objective
     obj = np.zeros(n_vars_with_rf, dtype=np.float64)
@@ -252,8 +247,8 @@ def _build_edge_flow_milp(problem: OptimizationProblem, objective_mode: str = "c
     # Variable bounds
     lb = np.zeros(n_vars_with_rf, dtype=np.float64)
     ub = np.full(n_vars_with_rf, np.inf, dtype=np.float64)
-    ub[:x_count] = 1.0      # binary
-    ub[mlu_idx] = 1.0        # MLU in [0, 1]
+    ub[:x_count] = 1.0  # binary
+    ub[mlu_idx] = 1.0  # MLU in [0, 1]
     ub[mlu_idx] = min(ub[mlu_idx], problem.congestion_threshold_upper_bound)
     # Root-flow variables: lower bound is 0 (already set), upper is supply (handled by constraints)
 
@@ -271,7 +266,8 @@ def _build_edge_flow_milp(problem: OptimizationProblem, objective_mode: str = "c
     lp.row_lower_ = np.array(row_lower, dtype=np.float64)
     lp.row_upper_ = np.array(row_upper, dtype=np.float64)
     lp.integrality_ = [
-        highspy.HighsVarType.kInteger if i < x_count
+        highspy.HighsVarType.kInteger
+        if i < x_count
         else highspy.HighsVarType.kContinuous
         for i in range(n_vars_with_rf)
     ]
@@ -322,10 +318,9 @@ def _extract_solution(
     edges = im["undirected_edges"]
 
     # Round binary variables
-    x_vals = solution[:im["x_count"]]
+    x_vals = solution[: im["x_count"]]
     selected = frozenset(
-        edges[i] for i in range(im["x_count"])
-        if x_vals[i] > 0.5 - BINARY_TOLERANCE
+        edges[i] for i in range(im["x_count"]) if x_vals[i] > 0.5 - BINARY_TOLERANCE
     )
 
     # Derived changes
@@ -337,7 +332,7 @@ def _extract_solution(
     # Aggregate flows per directed edge
     agg_loads: dict[tuple[str, str], float] = {}
     total_flow_on_directed: dict[tuple[str, str], float] = {}
-    for (ci, u, v), fcol in im["flow_var_index"].items():
+    for (_ci, u, v), fcol in im["flow_var_index"].items():
         val = solution[fcol]
         if val > FLOW_TOLERANCE_ABSOLUTE:
             total_flow_on_directed[(u, v)] = (
@@ -356,17 +351,15 @@ def _extract_solution(
         for (ci, u, v), fcol in im["flow_var_index"].items():
             val = solution[fcol]
             if val > FLOW_TOLERANCE_ABSOLUTE:
-                commodity_flows[(im["commodities"][ci][0],
-                                im["commodities"][ci][1],
-                                u, v)] = val * sc
+                commodity_flows[
+                    (im["commodities"][ci][0], im["commodities"][ci][1], u, v)
+                ] = val * sc
 
     # MLU
     solver_mlu = float(solution[im["mlu_idx"]])
 
     # Independent validation
-    validated_mlu = _validate_mlu_independently(
-        problem, selected, agg_loads
-    )
+    validated_mlu = _validate_mlu_independently(problem, selected, agg_loads)
 
     # Objective
     if im["objective_mode"] == "mlu":
@@ -476,7 +469,7 @@ def make_no_good_cut(
         if e in selected_set:
             coeffs[ei] = -1.0  # -x_e for selected edges
         else:
-            coeffs[ei] = 1.0   # +x_e for unselected edges
+            coeffs[ei] = 1.0  # +x_e for unselected edges
     lower = 1.0 - len(selected_set)
     upper = np.inf
     return coeffs, lower, upper
@@ -498,13 +491,11 @@ def solve_baseline(
     from scipy.sparse import csr_matrix as csr
 
     nodes = list(problem.canonical_node_order)
-    n_nodes = len(nodes)
+    len(nodes)
     undirected_edges = list(problem.canonical_candidate_edges)
     edge_to_idx = {e: i for i, e in enumerate(undirected_edges)}
     current_set = problem.current_edges
-    directed_edges = [(u, v) for (u, v) in undirected_edges] + [
-        (v, u) for (u, v) in undirected_edges
-    ]
+    directed_edges = list(undirected_edges) + [(v, u) for (u, v) in undirected_edges]
     commodities = list(problem.demand.keys())
     sc = problem.scaled_capacity
     norm_demand = {c: problem.demand[c] / sc for c in commodities}
@@ -513,10 +504,9 @@ def solve_baseline(
     f_idx = 0
     for ci, comm in enumerate(commodities):
         allowed = problem.tunnel_edge_sets.get(comm, frozenset())
-        for (u, v) in sorted(allowed):
+        for u, v in sorted(allowed):
             flow_var_index[(ci, u, v)] = f_idx
             f_idx += 1
-    n_flow = f_idx
     mlu_idx = f_idx
     n_vars = mlu_idx + 1
 
@@ -539,7 +529,7 @@ def solve_baseline(
         allowed = problem.tunnel_edge_sets.get((s, t), frozenset())
         for node in nodes:
             entries: dict[int, float] = {}
-            for (u, v) in sorted(allowed):
+            for u, v in sorted(allowed):
                 fcol = flow_var_index.get((ci, u, v))
                 if fcol is None:
                     continue
@@ -563,7 +553,7 @@ def solve_baseline(
 
     for ci, (s, t) in enumerate(commodities):
         allowed = problem.tunnel_edge_sets.get((s, t), frozenset())
-        for (u, v) in sorted(allowed):
+        for u, v in sorted(allowed):
             fcol = flow_var_index.get((ci, u, v))
             if fcol is None:
                 continue
@@ -574,9 +564,9 @@ def solve_baseline(
                 row_lb.append(0.0)
                 row_ub.append(0.0)
 
-    for de, (u, v) in enumerate(directed_edges):
+    for _de, (u, v) in enumerate(directed_edges):
         entries = {mlu_idx: -1.0}
-        for ci, (s, t) in enumerate(commodities):
+        for ci, (_s, _t) in enumerate(commodities):
             fcol = flow_var_index.get((ci, u, v))
             if fcol is not None:
                 entries[fcol] = 1.0
@@ -589,7 +579,9 @@ def solve_baseline(
     ri, cj, vi = [], [], []
     for i, r in enumerate(rows):
         for col, val in r.items():
-            ri.append(i); cj.append(col); vi.append(val)
+            ri.append(i)
+            cj.append(col)
+            vi.append(val)
     A = csr((vi, (ri, cj)), shape=(n_con, n_vars))
 
     lp = highspy.HighsLp()
@@ -673,13 +665,13 @@ def solve_edge_flow_changes_mlu(
         # Add no-good cuts to exclude previously found topologies
         for sol in solutions:
             coeffs, lower, upper = make_no_good_cut(
-                sol.selected_edges, undirected_edges, edge_to_idx,
-                im["n_vars_rf"]
+                sol.selected_edges, undirected_edges, edge_to_idx, im["n_vars_rf"]
             )
             nz = np.nonzero(coeffs)[0]
             if nz.size > 0:
                 h.addRow(
-                    lower, upper,
+                    lower,
+                    upper,
                     nz.size,
                     nz.astype(np.int32),
                     coeffs[nz].astype(np.float64),
@@ -691,8 +683,7 @@ def solve_edge_flow_changes_mlu(
         elapsed = perf_counter() - t_start
 
         has_sol = (
-            h.getSolution().col_value is not None
-            and len(h.getSolution().col_value) > 0
+            h.getSolution().col_value is not None and len(h.getSolution().col_value) > 0
         )
 
         if status_code == highspy.HighsModelStatus.kOptimal:
@@ -719,15 +710,17 @@ def solve_edge_flow_changes_mlu(
                 solutions.append(ts)
 
                 if len(solutions) >= problem.top_k:
-                    sorted_sols = tuple(sorted(
-                        solutions,
-                        key=lambda s: (
-                            s.objective_value,
-                            s.change_count,
-                            s.validated_mlu,
-                            s.stable_topology_id,
-                        ),
-                    ))
+                    sorted_sols = tuple(
+                        sorted(
+                            solutions,
+                            key=lambda s: (
+                                s.objective_value,
+                                s.change_count,
+                                s.validated_mlu,
+                                s.stable_topology_id,
+                            ),
+                        )
+                    )
                     return OptimizationResult(
                         solutions=sorted_sols,
                         status=OptimizerStatus.TOP_K_REACHED,
@@ -746,7 +739,10 @@ def solve_edge_flow_changes_mlu(
                 solution = np.array(h.getSolution().col_value)
                 try:
                     ts = _extract_solution(
-                        problem, im, solution, proven_optimal=False,
+                        problem,
+                        im,
+                        solution,
+                        proven_optimal=False,
                     )
                 except Exception:
                     logger.exception("Timed-out solution extraction failed")
@@ -758,15 +754,17 @@ def solve_edge_flow_changes_mlu(
                     solutions.append(ts)
 
                 if solutions:
-                    sorted_sols = tuple(sorted(
-                        solutions,
-                        key=lambda s: (
-                            s.objective_value,
-                            s.change_count,
-                            s.validated_mlu,
-                            s.stable_topology_id,
-                        ),
-                    ))
+                    sorted_sols = tuple(
+                        sorted(
+                            solutions,
+                            key=lambda s: (
+                                s.objective_value,
+                                s.change_count,
+                                s.validated_mlu,
+                                s.stable_topology_id,
+                            ),
+                        )
+                    )
                     return OptimizationResult(
                         solutions=sorted_sols,
                         status=OptimizerStatus.TIME_LIMIT_WITH_SOLUTION,
@@ -799,15 +797,17 @@ def solve_edge_flow_changes_mlu(
                     baseline_mlu=baseline_mlu,
                 )
             else:
-                sorted_sols = tuple(sorted(
-                    solutions,
-                    key=lambda s: (
-                        s.objective_value,
-                        s.change_count,
-                        s.validated_mlu,
-                        s.stable_topology_id,
-                    ),
-                ))
+                sorted_sols = tuple(
+                    sorted(
+                        solutions,
+                        key=lambda s: (
+                            s.objective_value,
+                            s.change_count,
+                            s.validated_mlu,
+                            s.stable_topology_id,
+                        ),
+                    )
+                )
                 return OptimizationResult(
                     solutions=sorted_sols,
                     status=OptimizerStatus.EXHAUSTED,
@@ -842,15 +842,17 @@ def solve_edge_flow_changes_mlu(
 
     # Budget exhausted
     if solutions:
-        sorted_sols = tuple(sorted(
-            solutions,
-            key=lambda s: (
-                s.objective_value,
-                s.change_count,
-                s.validated_mlu,
-                s.stable_topology_id,
-            ),
-        ))
+        sorted_sols = tuple(
+            sorted(
+                solutions,
+                key=lambda s: (
+                    s.objective_value,
+                    s.change_count,
+                    s.validated_mlu,
+                    s.stable_topology_id,
+                ),
+            )
+        )
         return OptimizationResult(
             solutions=sorted_sols,
             status=OptimizerStatus.TIME_LIMIT_WITH_SOLUTION,
@@ -961,7 +963,9 @@ def _solve_single_milp(
     if status == highspy.HighsModelStatus.kOptimal:
         sol = h.getSolution()
         solution = extract_fn(
-            problem, index_maps, np.array(sol.col_value),
+            problem,
+            index_maps,
+            np.array(sol.col_value),
             proven_optimal=True,
         )
         return OptimizationResult(
@@ -995,7 +999,9 @@ def _solve_single_milp(
             sol = h.getSolution()
             try:
                 solution = extract_fn(
-                    problem, index_maps, np.array(sol.col_value),
+                    problem,
+                    index_maps,
+                    np.array(sol.col_value),
                     proven_optimal=False,
                 )
                 return OptimizationResult(
@@ -1085,7 +1091,9 @@ def _build_path_flow_budget_milp(problem: OptimizationProblem):
         cand_indices = list(pd.path_candidate_map[pi])
         if cand_indices:
             _add_and_constraints(
-                rows, rlb, rub,
+                rows,
+                rlb,
+                rub,
                 x_path_start + pi,
                 [x_cand_start + ci for ci in cand_indices],
             )
@@ -1094,10 +1102,14 @@ def _build_path_flow_budget_milp(problem: OptimizationProblem):
 
     # 3. Flow activation: flow[p] <= x_path[p]
     for pi in range(n_paths):
-        add_row(-np.inf, 0.0, {
-            flow_start + pi: 1.0,
-            x_path_start + pi: -1.0,
-        })
+        add_row(
+            -np.inf,
+            0.0,
+            {
+                flow_start + pi: 1.0,
+                x_path_start + pi: -1.0,
+            },
+        )
 
     # 4. Demand satisfaction per commodity
     for (s, t), path_idxs in pd.commodity_to_paths.items():
@@ -1122,17 +1134,23 @@ def _build_path_flow_budget_milp(problem: OptimizationProblem):
 
     # 7. MLU: mlu >= util[ei] for all ei
     for ei in range(n_dir):
-        add_row(-np.inf, 0.0, {
-            mlu_idx: -1.0,
-            util_start + ei: 1.0,
-        })
+        add_row(
+            -np.inf,
+            0.0,
+            {
+                mlu_idx: -1.0,
+                util_start + ei: 1.0,
+            },
+        )
 
     # Assemble CSR
     n_con = len(rows)
     ri, ci, vi = [], [], []
     for i, r in enumerate(rows):
         for col, val in r.items():
-            ri.append(i); ci.append(col); vi.append(val)
+            ri.append(i)
+            ci.append(col)
+            vi.append(val)
     A = csr_matrix((vi, (ri, ci)), shape=(n_con, n_vars))
 
     # Objective: sum(x_cand) / n_cand + mlu (mlu is tiebreaker, edge count primary)
@@ -1145,9 +1163,9 @@ def _build_path_flow_budget_milp(problem: OptimizationProblem):
     # Bounds
     lb = np.zeros(n_vars, dtype=np.float64)
     ub = np.full(n_vars, np.inf, dtype=np.float64)
-    ub[x_cand_start:x_cand_start + n_cand] = 1.0
-    ub[x_path_start:x_path_start + n_paths] = 1.0
-    ub[util_start:util_start + n_dir] = 1.0
+    ub[x_cand_start : x_cand_start + n_cand] = 1.0
+    ub[x_path_start : x_path_start + n_paths] = 1.0
+    ub[util_start : util_start + n_dir] = 1.0
     ub[mlu_idx] = min(1.0, problem.congestion_threshold_upper_bound)
 
     # Integrality
@@ -1284,15 +1302,19 @@ def _build_path_flow_core_milp(problem: OptimizationProblem):
         rev = (v, u)
         if rev in dir_to_idx:
             rev_ei = dir_to_idx[rev]
-            add_row(0.0, 0.0, {
-                x_edge_start + ei: 1.0,
-                x_edge_start + rev_ei: -1.0,
-            })
+            add_row(
+                0.0,
+                0.0,
+                {
+                    x_edge_start + ei: 1.0,
+                    x_edge_start + rev_ei: -1.0,
+                },
+            )
 
     # 2. Transponder degree constraints
     for ni, node in enumerate(nodes):
         entries = {node_deg_start + ni: 1.0}
-        for ei, (u, v) in enumerate(pd.supergraph_directed_edges):
+        for ei, (u, _v) in enumerate(pd.supergraph_directed_edges):
             if u == node:
                 entries[x_edge_start + ei] = -1.0
         add_row(0.0, 0.0, entries)
@@ -1301,7 +1323,7 @@ def _build_path_flow_core_milp(problem: OptimizationProblem):
         add_row(-np.inf, float(txp), {node_deg_start + ni: 1.0})
 
     # 3. Core edge mandate
-    for (u, v) in pd.core_edge_set:
+    for u, v in pd.core_edge_set:
         if (u, v) in dir_to_idx:
             add_row(1.0, 1.0, {x_edge_start + dir_to_idx[(u, v)]: 1.0})
         if (v, u) in dir_to_idx:
@@ -1312,7 +1334,9 @@ def _build_path_flow_core_milp(problem: OptimizationProblem):
         edge_cols = path_idx_to_edge_cols.get(pi, [])
         if edge_cols:
             _add_and_constraints(
-                rows, rlb, rub,
+                rows,
+                rlb,
+                rub,
                 x_path_start + pi,
                 [x_edge_start + ei for ei in edge_cols],
             )
@@ -1321,10 +1345,14 @@ def _build_path_flow_core_milp(problem: OptimizationProblem):
 
     # 5. Flow activation: flow[p] <= x_path[p]
     for pi in range(n_path_vars):
-        add_row(-np.inf, 0.0, {
-            flow_start + pi: 1.0,
-            x_path_start + pi: -1.0,
-        })
+        add_row(
+            -np.inf,
+            0.0,
+            {
+                flow_start + pi: 1.0,
+                x_path_start + pi: -1.0,
+            },
+        )
 
     # 6. Demand satisfaction per commodity
     for (s, t), path_idxs in pd.commodity_to_paths.items():
@@ -1332,7 +1360,7 @@ def _build_path_flow_core_milp(problem: OptimizationProblem):
         if d <= 0 or not path_idxs:
             continue
         entries = {}
-        for li, pi in enumerate(path_idxs):
+        for li, _pi in enumerate(path_idxs):
             key = (s, t, li)
             if key in path_vars:
                 entries[flow_start + path_vars[key]] = 1.0
@@ -1360,17 +1388,23 @@ def _build_path_flow_core_milp(problem: OptimizationProblem):
 
     # 9. MLU: mlu >= util[ei] for all ei
     for ei in range(n_dir):
-        add_row(-np.inf, 0.0, {
-            mlu_idx: -1.0,
-            util_start + ei: 1.0,
-        })
+        add_row(
+            -np.inf,
+            0.0,
+            {
+                mlu_idx: -1.0,
+                util_start + ei: 1.0,
+            },
+        )
 
     # Assemble CSR
     n_con = len(rows)
     ri, ci, vi = [], [], []
     for i, r in enumerate(rows):
         for col, val in r.items():
-            ri.append(i); ci.append(col); vi.append(val)
+            ri.append(i)
+            ci.append(col)
+            vi.append(val)
     A = csr_matrix((vi, (ri, ci)), shape=(n_con, n_vars))
 
     # Objective: sum(x_edge) + epsilon * mlu
@@ -1383,9 +1417,9 @@ def _build_path_flow_core_milp(problem: OptimizationProblem):
     # Bounds
     lb = np.zeros(n_vars, dtype=np.float64)
     ub = np.full(n_vars, np.inf, dtype=np.float64)
-    ub[x_edge_start:x_edge_start + n_dir] = 1.0
-    ub[x_path_start:x_path_start + n_path_vars] = 1.0
-    ub[util_start:util_start + n_dir] = 1.0
+    ub[x_edge_start : x_edge_start + n_dir] = 1.0
+    ub[x_path_start : x_path_start + n_path_vars] = 1.0
+    ub[util_start : util_start + n_dir] = 1.0
     ub[mlu_idx] = min(1.0, problem.congestion_threshold_upper_bound)
 
     # Integrality
@@ -1460,7 +1494,7 @@ def _extract_path_flow_budget(
     cand_indices = im["candidate_edge_indices"]
     undirected_edges = im["undirected_edges"]
 
-    x_cand = solution[im["x_cand_start"]:im["x_cand_start"] + n_cand]
+    x_cand = solution[im["x_cand_start"] : im["x_cand_start"] + n_cand]
     selected = set(problem.current_edges)
     for ci in range(n_cand):
         if x_cand[ci] > 0.5 - BINARY_TOLERANCE:
@@ -1489,9 +1523,7 @@ def _extract_path_flow_budget(
             u, v = pd.supergraph_directed_edges[ei]
             agg_loads[(u, v)] = total * sc
 
-    validated_mlu = _validate_mlu_independently(
-        problem, selected_frozen, agg_loads
-    )
+    validated_mlu = _validate_mlu_independently(problem, selected_frozen, agg_loads)
 
     obj = solver_mlu + change_count
 
@@ -1529,7 +1561,7 @@ def _extract_path_flow_core(
     n_dir = im["n_dir"]
     directed_edges = im["supergraph_directed_edges"]
 
-    x_edge = solution[im["x_edge_start"]:im["x_edge_start"] + n_dir]
+    x_edge = solution[im["x_edge_start"] : im["x_edge_start"] + n_dir]
     selected_undir: set[tuple[str, str]] = set()
     for ei in range(n_dir):
         if x_edge[ei] > 0.5 - BINARY_TOLERANCE:
@@ -1555,9 +1587,7 @@ def _extract_path_flow_core(
             u, v = directed_edges[ei]
             agg_loads[(u, v)] = total * sc
 
-    validated_mlu = _validate_mlu_independently(
-        problem, selected_frozen, agg_loads
-    )
+    validated_mlu = _validate_mlu_independently(problem, selected_frozen, agg_loads)
 
     obj = solver_mlu + change_count
 

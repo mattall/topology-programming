@@ -1,27 +1,25 @@
 """Tests for open_doppler.py — correctness via exhaustive oracle and smoke."""
 
 import itertools
-import pytest
+
 import numpy as np
+import pytest
 
 from onset.base_types import (
     OptimizationProblem,
-    TopologySolution,
-    OptimizationResult,
     OptimizerStatus,
-    BackendProvenance,
-    compute_stable_topology_id,
     _PathProblemData,
+    compute_stable_topology_id,
 )
 from onset.open_doppler import (
-    solve_edge_flow_changes_mlu,
-    solve_baseline,
-    make_no_good_cut,
-    solve_path_flow_budget,
-    solve_path_flow_core,
     _add_and_constraints,
     _build_path_flow_budget_milp,
     _build_path_flow_core_milp,
+    make_no_good_cut,
+    solve_baseline,
+    solve_edge_flow_changes_mlu,
+    solve_path_flow_budget,
+    solve_path_flow_core,
 )
 
 
@@ -36,9 +34,7 @@ def _build_triangle_problem():
         current_edges=frozenset({("a", "b")}),
         txp_count={"a": 2, "b": 2, "c": 1},
         demand={("a", "c"): 50.0},
-        tunnel_edge_sets={
-            ("a", "c"): frozenset({("a", "b"), ("b", "c"), ("a", "c")})
-        },
+        tunnel_edge_sets={("a", "c"): frozenset({("a", "b"), ("b", "c"), ("a", "c")})},
         link_capacity=100.0,
         scale_factor=1.0,
         congestion_threshold_upper_bound=1.0,
@@ -83,9 +79,7 @@ class TestBaselineEvaluation:
             current_edges=frozenset({("a", "b"), ("b", "c")}),
             txp_count={"a": 2, "b": 2, "c": 2},
             demand={("a", "c"): 50.0},
-            tunnel_edge_sets={
-                ("a", "c"): frozenset({("a", "b"), ("b", "c")})
-            },
+            tunnel_edge_sets={("a", "c"): frozenset({("a", "b"), ("b", "c")})},
             link_capacity=100.0,
             scale_factor=1.0,
             congestion_threshold_upper_bound=1.0,
@@ -108,9 +102,7 @@ class TestBaselineEvaluation:
             current_edges=frozenset(),
             txp_count={"a": 1, "b": 1, "c": 1},
             demand={("a", "c"): 50.0},
-            tunnel_edge_sets={
-                ("a", "c"): frozenset({("a", "b")})
-            },
+            tunnel_edge_sets={("a", "c"): frozenset({("a", "b")})},
             link_capacity=100.0,
             scale_factor=1.0,
             congestion_threshold_upper_bound=1.0,
@@ -164,6 +156,7 @@ class TestSingleSolve:
             edges = list(sol.selected_edges)
             # Build undirected graph from selected edges
             import networkx as nx
+
             g = nx.Graph()
             g.add_nodes_from(prob.canonical_node_order)
             g.add_edges_from(edges)
@@ -186,9 +179,7 @@ class TestExhaustiveOracle:
 
         feasible_topologies = []
         for bits in itertools.product([0, 1], repeat=len(candidates)):
-            selected = frozenset(
-                candidates[i] for i, b in enumerate(bits) if b
-            )
+            selected = frozenset(candidates[i] for i, b in enumerate(bits) if b)
             # Transponder check
             ok = True
             for node in nodes:
@@ -219,7 +210,7 @@ class TestExhaustiveOracle:
                 if d <= 0:
                     continue
                 allowed = prob.tunnel_edge_sets.get((s, t), frozenset())
-                for (u, v) in sorted(allowed):
+                for u, v in sorted(allowed):
                     flow_map[(s, t, u, v)] = n_flow
                     n_flow += 1
             mlu_idx = n_flow
@@ -241,7 +232,7 @@ class TestExhaustiveOracle:
                 allowed = prob.tunnel_edge_sets.get((s, t), frozenset())
                 for node in node_list:
                     entries = {}
-                    for (u, v) in sorted(allowed):
+                    for u, v in sorted(allowed):
                         fcol = flow_map.get((s, t, u, v))
                         if fcol is None:
                             continue
@@ -251,42 +242,54 @@ class TestExhaustiveOracle:
                             entries[fcol] = entries.get(fcol, 0.0) - 1.0
                     if entries:
                         if node == s:
-                            rows.append(dict(entries)); row_lb.append(-d); row_ub.append(-d)
+                            rows.append(dict(entries))
+                            row_lb.append(-d)
+                            row_ub.append(-d)
                         elif node == t:
-                            rows.append(dict(entries)); row_lb.append(d); row_ub.append(d)
+                            rows.append(dict(entries))
+                            row_lb.append(d)
+                            row_ub.append(d)
                         else:
-                            rows.append(dict(entries)); row_lb.append(0.0); row_ub.append(0.0)
+                            rows.append(dict(entries))
+                            row_lb.append(0.0)
+                            row_ub.append(0.0)
 
             for (s, t), d in nd.items():
                 if d <= 0:
                     continue
                 allowed = prob.tunnel_edge_sets.get((s, t), frozenset())
-                for (u, v) in sorted(allowed):
+                for u, v in sorted(allowed):
                     fcol = flow_map.get((s, t, u, v))
                     if fcol is None:
                         continue
                     undir = (u, v) if (u, v) in set(candidates) else (v, u)
                     if undir not in selected:
                         entries = {fcol: 1.0}
-                        rows.append(entries); row_lb.append(-np.inf); row_ub.append(0.0)
+                        rows.append(entries)
+                        row_lb.append(-np.inf)
+                        row_ub.append(0.0)
                     else:
                         # Active edge: flow <= capacity
                         pass
 
-            for de in [(u, v) for (u, v) in candidates] + [(v, u) for (u, v) in candidates]:
+            for de in list(candidates) + [(v, u) for (u, v) in candidates]:
                 entries = {mlu_idx: -1.0}
-                for (s, t) in prob.demand:
+                for s, t in prob.demand:
                     fcol = flow_map.get((s, t, de[0], de[1]))
                     if fcol is not None:
                         entries[fcol] = 1.0
                 if len(entries) > 1:
-                    rows.append(entries); row_lb.append(-np.inf); row_ub.append(0.0)
+                    rows.append(entries)
+                    row_lb.append(-np.inf)
+                    row_ub.append(0.0)
 
             n_con = len(rows)
             ri, ci, vi = [], [], []
             for i, r in enumerate(rows):
                 for col, val in r.items():
-                    ri.append(i); ci.append(col); vi.append(val)
+                    ri.append(i)
+                    ci.append(col)
+                    vi.append(val)
             A = csr((vi, (ri, ci)), shape=(n_con, n_vars))
 
             lp = highspy.HighsLp()
@@ -327,10 +330,12 @@ class TestExhaustiveOracle:
 
         # MILP's best objective should match exhaustive best objective
         milp_best_obj = result.objective_best.objective_value
-        exhausive_best_obj = feasible_topologies[0][0] if feasible_topologies else float("inf")
-        assert abs(milp_best_obj - exhausive_best_obj) < 1e-6, (
-            f"MILP best obj {milp_best_obj} != exhaustive best obj {exhausive_best_obj}"
+        exhausive_best_obj = (
+            feasible_topologies[0][0] if feasible_topologies else float("inf")
         )
+        assert (
+            abs(milp_best_obj - exhausive_best_obj) < 1e-6
+        ), f"MILP best obj {milp_best_obj} != exhaustive best obj {exhausive_best_obj}"
 
         # MILP's best MLU should be within tolerance
         milp_best_mlu = result.objective_best.validated_mlu
@@ -342,13 +347,11 @@ class TestNoGoodCut:
     def test_basic(self):
         edges = [("a", "b"), ("b", "c"), ("a", "c")]
         idx = {e: i for i, e in enumerate(edges)}
-        coeffs, lower, upper = make_no_good_cut(
-            frozenset({("a", "b")}), edges, idx, 3
-        )
+        coeffs, lower, upper = make_no_good_cut(frozenset({("a", "b")}), edges, idx, 3)
         assert lower == 0.0  # 1 - |S| = 1 - 1 = 0
         assert coeffs[0] == -1.0  # selected: -x
-        assert coeffs[1] == 1.0   # unselected: +x
-        assert coeffs[2] == 1.0   # unselected: +x
+        assert coeffs[1] == 1.0  # unselected: +x
+        assert coeffs[2] == 1.0  # unselected: +x
 
     def test_all_selected(self):
         edges = [("a", "b"), ("b", "c")]
@@ -385,7 +388,10 @@ class TestOnsetV3Objective:
         result = solve_edge_flow_changes_mlu(prob, objective_mode="changes_plus_mlu")
         assert result.has_solutions
         sol = result.solutions[0]
-        assert abs(sol.objective_value - (2.0 * sol.change_count + sol.validated_mlu)) < 1e-6
+        assert (
+            abs(sol.objective_value - (2.0 * sol.change_count + sol.validated_mlu))
+            < 1e-6
+        )
 
     def test_mlu_mode_objective_ordering(self):
         """With MLU-only, solutions sort by MLU first."""
@@ -473,9 +479,9 @@ def _build_path_problem_budget():
     path_cand_map = ((), (0,))  # path 1 uses candidate idx 0 (which is ("a","c"))
     commodity_to_paths = {("a", "c"): (0, 1)}
 
-    supergraph_dir = tuple(
-        (u, v) for (u, v) in candidates
-    ) + tuple((v, u) for (u, v) in candidates)
+    supergraph_dir = tuple((u, v) for (u, v) in candidates) + tuple(
+        (v, u) for (u, v) in candidates
+    )
 
     # link_path_map: per supergraph directed edge, which paths traverse it
     link_path_map = []
@@ -504,9 +510,7 @@ def _build_path_problem_budget():
         current_edges=current,
         txp_count={"a": 2, "b": 2, "c": 2, "d": 2},
         demand={("a", "c"): 50.0},
-        tunnel_edge_sets={
-            ("a", "c"): frozenset({("a", "b"), ("b", "c"), ("a", "c")})
-        },
+        tunnel_edge_sets={("a", "c"): frozenset({("a", "b"), ("b", "c"), ("a", "c")})},
         link_capacity=100.0,
         scale_factor=1.0,
         congestion_threshold_upper_bound=1.0,
@@ -531,9 +535,9 @@ def _build_path_problem_core():
     path_list = (("a", "b", "c"), ("a", "c"))
     commodity_to_paths = {("a", "c"): (0, 1)}
 
-    supergraph_dir = tuple(
-        (u, v) for (u, v) in candidates
-    ) + tuple((v, u) for (u, v) in candidates)
+    supergraph_dir = tuple((u, v) for (u, v) in candidates) + tuple(
+        (v, u) for (u, v) in candidates
+    )
 
     link_path_map = []
     for de in supergraph_dir:
@@ -561,9 +565,7 @@ def _build_path_problem_core():
         current_edges=current,
         txp_count={"a": 2, "b": 3, "c": 3, "d": 2},
         demand={("a", "c"): 50.0},
-        tunnel_edge_sets={
-            ("a", "c"): frozenset({("a", "b"), ("b", "c"), ("a", "c")})
-        },
+        tunnel_edge_sets={("a", "c"): frozenset({("a", "b"), ("b", "c"), ("a", "c")})},
         link_capacity=100.0,
         scale_factor=1.0,
         congestion_threshold_upper_bound=1.0,
@@ -607,9 +609,7 @@ class TestPathFlowBudgetBuilder:
         prob = _build_path_problem_budget()
         result = solve_path_flow_budget(prob)
         sol = result.selected_solution
-        assert sol.selected_edges == (
-            prob.current_edges | sol.added
-        ) - sol.dropped
+        assert sol.selected_edges == (prob.current_edges | sol.added) - sol.dropped
         assert not (sol.added & sol.dropped)
         assert sol.change_count == len(sol.added) + len(sol.dropped)
 
@@ -643,9 +643,7 @@ class TestPathFlowCoreBuilder:
         prob = _build_path_problem_core()
         result = solve_path_flow_core(prob)
         sol = result.selected_solution
-        assert sol.selected_edges == (
-            prob.current_edges | sol.added
-        ) - sol.dropped
+        assert sol.selected_edges == (prob.current_edges | sol.added) - sol.dropped
         assert not (sol.added & sol.dropped)
         assert sol.change_count == len(sol.added) + len(sol.dropped)
 

@@ -1,12 +1,12 @@
 """Tests for the method registry module."""
 
 import pytest
+
 import onset.simulator  # noqa: F401 — ensures handler wiring runs before tests
 from onset.method_registry import (
-    MethodConfig,
     _METHOD_REGISTRY,
-    _resolve_method,
     _SOLVER_CALLABLES,
+    _resolve_method,
 )
 
 
@@ -16,8 +16,9 @@ class TestMethodRegistry:
     def test_all_keys_have_handler_field(self):
         """Every entry has a handler field (set directly in method_registry.py)."""
         for name, config in _METHOD_REGISTRY.items():
-            assert isinstance(config.handler, str) or callable(config.handler), \
-                f"{name}: handler should be str or callable"
+            assert isinstance(config.handler, str) or callable(
+                config.handler
+            ), f"{name}: handler should be str or callable"
 
     def test_milp_configs_have_solver_callable(self):
         """MILP configs have non-None solve_fn and solver_method."""
@@ -30,15 +31,15 @@ class TestMethodRegistry:
 
     def test_heuristic_configs_have_no_milp_fields(self):
         """Non-MILP configs have None for MILP-specific fields."""
-        for name in ("OTP", "greylambda", "cache", "BVT", "TBE", "cli"):
+        for name in ("baseline", "OTP", "greylambda", "cache", "BVT", "TBE", "cli"):
             config = _METHOD_REGISTRY[name]
             assert not config.is_milp
             assert config.solve_fn is None
             assert config.objective_mode is None
 
-    def test_ten_entries(self):
-        """Registry has exactly 10 entries."""
-        assert len(_METHOD_REGISTRY) == 10
+    def test_eleven_entries(self):
+        """Registry has the supported optimization methods plus baseline."""
+        assert len(_METHOD_REGISTRY) == 11
 
 
 class TestResolveMethod:
@@ -72,7 +73,12 @@ class TestSolverCallables:
     """Tests for _SOLVER_CALLABLES."""
 
     def test_all_four_solver_entries(self):
-        assert set(_SOLVER_CALLABLES.keys()) == {"doppler", "onset_v3", "onset_v2", "onset"}
+        assert set(_SOLVER_CALLABLES.keys()) == {
+            "doppler",
+            "onset_v3",
+            "onset_v2",
+            "onset",
+        }
 
     def test_callables_are_callable(self):
         for name, fn in _SOLVER_CALLABLES.items():

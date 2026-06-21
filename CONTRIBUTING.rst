@@ -106,6 +106,26 @@ and use Python's built-in web server for a preview in your web browser
 Code Contributions
 ==================
 
+Supported surface and checks
+----------------------------
+
+The actively maintained surface is the simulator pipeline, method registry and
+handlers, internal ECMP/MCF engine, HiGHS topology solvers, preprocessing,
+reporting, and the runtime helpers named in ``pyproject.toml``. Historical
+campaign scripts, plotting/analysis utilities, vendored code, and legacy
+Gurobi modules are kept for research reproducibility but are not static-analysis
+targets.
+
+Use Python 3.11, 3.12, or 3.13 and install ``.[testing,dev]``. Before submitting
+a change, run the same commands as CI::
+
+    ruff check
+    ruff format --check
+    mypy
+    pytest
+    scripts/check-env.sh
+    python scripts/smoke_ans_ecmp.py
+
 .. todo:: Please include a reference or explanation about the internals of the project.
 
    An architecture description, design principles or at least a summary of the

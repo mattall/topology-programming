@@ -7,7 +7,7 @@ name = "topology-programming"
 description = "Simulator for optical topology programming research"
 authors = [{name = "mattall", email = "mhhall92@gmail.com"}]
 license = {text = "MIT"}
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.14"
 readme = "README.md"
 version = "0.1.0"
 
@@ -27,9 +27,13 @@ testing = [
     "pytest-cov",
 ]
 dev = [
-    "ruff>=0.8.0",
-    "mypy>=1.13.0",
+    "ruff==0.8.0",
+    "mypy==1.13.0",
     "pre-commit>=3.7.0",
+    "types-networkx",
+    "pandas-stubs",
+    "types-seaborn",
+    "pydot",
 ]
 
 [project.urls]
@@ -44,15 +48,44 @@ include-package-data = true
 [tool.pytest.ini_options]
 addopts = "--cov onset --cov-report term-missing --verbose"
 testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
 norecursedirs = ["dist", "build", ".tox"]
 
 [tool.ruff]
 target-version = "py311"
 line-length = 88
+include = [
+    "src/onset/alpwolf.py",
+    "src/onset/base_types.py",
+    "src/onset/constants.py",
+    "src/onset/handlers.py",
+    "src/onset/method_registry.py",
+    "src/onset/network_model.py",
+    "src/onset/open_doppler.py",
+    "src/onset/preprocessing.py",
+    "src/onset/reporter.py",
+    "src/onset/utilities/reconfiguration.py",
+    "src/onset/utilities/result_io.py",
+    "src/onset/simulator.py",
+    "src/onset/te/**/*.py",
+    "src/onset/validation.py",
+    "tests/test_*.py",
+    "tests/*_test.py",
+    "scripts/smoke_ans_ecmp.py",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "RUF"]
 ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/onset/alpwolf.py" = ["N802", "N803", "N806"]
+"src/onset/network_model.py" = ["N802", "N803", "N806"]
+"src/onset/open_doppler.py" = ["N806"]
+"src/onset/preprocessing.py" = ["N803", "N806"]
+"src/onset/simulator.py" = ["N803", "N806"]
+"src/onset/validation.py" = ["N803", "N806"]
+"tests/test_open_doppler.py" = ["N806"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -64,5 +97,70 @@ strict = false
 warn_unused_ignores = true
 warn_return_any = true
 warn_unreachable = true
-exclude = "vendor/|build/|\\.tox/"
+files = [
+    "src/onset/alpwolf.py",
+    "src/onset/base_types.py",
+    "src/onset/constants.py",
+    "src/onset/handlers.py",
+    "src/onset/method_registry.py",
+    "src/onset/network_model.py",
+    "src/onset/open_doppler.py",
+    "src/onset/preprocessing.py",
+    "src/onset/reporter.py",
+    "src/onset/utilities/reconfiguration.py",
+    "src/onset/utilities/result_io.py",
+    "src/onset/simulator.py",
+    "src/onset/te",
+    "src/onset/validation.py",
+]
 
+# These optional packages do not publish type information. Imports are checked
+# everywhere else; only the package boundary is treated as dynamically typed.
+[[tool.mypy.overrides]]
+module = ["highspy", "highspy.*", "scipy", "scipy.*", "pydot", "pydot.*"]
+ignore_missing_imports = true
+
+# Non-maintained utility modules — imported by maintained files but not
+# themselves static-analysis targets.  Mypy follows imports through them
+# but must not report errors in them.
+[[tool.mypy.overrides]]
+module = [
+    "onset.utilities.sysUtils",
+    "onset.utilities.tmg",
+    "onset.utilities.diff_compare",
+    "onset.utilities.graph_utils",
+    "onset.utilities.graph",
+    "onset.utilities.recon_utils",
+    "onset.utilities.flow_distribution",
+    "onset.utilities.flows",
+    "onset.utilities.generate_flows",
+    "onset.utilities.gml_to_dot",
+    "onset.utilities.logger",
+    "onset.utilities.post_process",
+    "onset.utilities.plot_reconfig_time",
+    "onset.utilities.plotters",
+    "onset.utilities.config",
+    "onset.utilities.copy_files_to_ripple",
+    "onset.utilities.matrix_to_json_flows",
+    "onset.utilities.paths_to_json",
+    "onset.utilities.similarity_bar_plot",
+    "onset.utilities.netHide_metrics",
+    "onset.attacker",
+    "onset.defender",
+    "onset.graph_permutations",
+    "onset.hysteresis",
+    "onset.mcf_net_difference",
+    "onset.net_sim",
+    "onset.rank_aggregator",
+    "onset.rank_transponder_alloc",
+    "onset.similarity",
+    "onset.similarity_bars",
+    "onset.simple_topo_examples",
+    "onset.add_link_and_reroute",
+    "onset.gurobi_doppler",
+    "onset.gurobi_hotnets",
+    "onset.gurobi_optimization",
+    "onset.gurobi_optimization_v1",
+    "tmgen.models",
+]
+follow_imports = "skip"

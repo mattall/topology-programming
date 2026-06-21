@@ -1,16 +1,13 @@
-from onset.utilities.graph_utils import read_json_graph, write_json_graph
-from onset.utilities.sysUtils import postfix_str
-from onset.utilities.logger import logger
-
-from onset.constants import SEED
-from onset.constants import IPV4
-
-import matplotlib.pyplot as plt
-import networkx as nx
-
 import ipaddress
 import random
 from collections import defaultdict
+
+import networkx as nx
+
+from onset.constants import IPV4, SEED
+from onset.utilities.graph_utils import read_json_graph, write_json_graph
+from onset.utilities.logger import logger
+from onset.utilities.sysUtils import postfix_str
 
 
 class Network:
@@ -18,7 +15,9 @@ class Network:
     Network
     """
 
-    def __init__(self, graph_file: str, output_file="", prefix=24, enable_transponders=False):
+    def __init__(
+        self, graph_file: str, output_file="", prefix=24, enable_transponders=False
+    ):
         """
         graph_file (str): network topology file to build this network.
         output(str, optional): name of the graph file when the network topology is exported. Default is graph_file+"_netout".
@@ -66,8 +65,7 @@ class Network:
         self.graph = self.import_graph(self.graph_file)
 
         self.init_client_links()
-        
-    
+
     def init_client_links(self):
         G = self.graph
         for node in self.get_router_nodes():
@@ -100,7 +98,7 @@ class Network:
         Generates random IPV4 address space.
         """
         random.seed(SEED)
-        ip_addr = ipaddress.IPv4Address(random.randint(0, IPV4))
+        ip_addr = ipaddress.IPv4Address(random.randint(0, int(IPV4)))
         address_space = ipaddress.IPv4Network(
             f"{ip_addr}/{self.prefix}", strict=False
         )  # setting strict=False will mask with the given prefix.
@@ -126,7 +124,7 @@ class Network:
         try:
             self.available_ip_interfaces.remove(interface_addr)
             self.used_ip_interfaces.append(interface_addr)
-        except Exception as e:
+        except Exception:
             # sometimes it reaches here although the interface is in the available interfaces
             logger.error(
                 f"Unable to remove interface {interface_addr}. \
@@ -143,9 +141,9 @@ class Network:
                 If there aren't any interfaces available None is returned.
         """
         try:
-            interface = random.choice(self.get_available_interfaces())        
+            interface = random.choice(self.get_available_interfaces())
             return interface
-        except:
+        except (IndexError, KeyError):
             print("No interface(s) available.")
             return
 
@@ -176,9 +174,7 @@ class Network:
         #     copy=False,
         # )
         nx.relabel_nodes(G, lambda x: str(x), copy=False)
-        nodes_attr = (
-            {}
-        )  # attributes that will be added for each node. {node : {attribute : value, ...} }
+        nodes_attr = {}  # attributes that will be added for each node. {node : {attribute : value, ...} }
         nodes = G.nodes
         for node in nodes:
             # Assign ip address for this interface and
@@ -188,14 +184,14 @@ class Network:
             self.remove_available_interface(client_interface)
             node_attr = {
                 "node_type": self.node_types[3],
-                "router_id": f"router_{str(node)}",
+                "router_id": f"router_{node!s}",
                 "interface_map": {},
                 "virtual_router_list": [],
                 # "total_transponders": total_transponders,
                 # "transponder_list": [],
                 "client_interface": str(client_interface),
                 "fdN": 0,  # flow density for the node. Set when calculate_fdN is called.
-                "flows": set() 
+                "flows": set(),
             }
             nodes_attr[node] = node_attr
             self.router_count += 1
@@ -218,7 +214,7 @@ class Network:
                 "fdL": defaultdict(
                     float
                 ),  # Flow density of link {(src, dest): fd}. Set when calculate_fdL is called.
-                "flows": set()
+                "flows": set(),
             }
             links_attr[(u, v)] = link_attr
             self.layer3_link_count += 1
@@ -273,9 +269,7 @@ class Network:
                     "data_rate": 100,  # default 100 Gb/s
                 }
 
-                optical_links.append(
-                    (transponder_u, transponder_v, optical_link_attr)
-                )
+                optical_links.append((transponder_u, transponder_v, optical_link_attr))
                 self.optical_link_id += 1
                 self.transponder_id += 2
         nx.set_edge_attributes(G, links_attr)
@@ -308,7 +302,7 @@ class Network:
                 print(f"path flow: {path_tf}")
                 for i in range(1, path_len):
                     prev_node = path[i - 1]
-                    current_node = n_p_i = path[i]
+                    current_node = path[i]
                     link = (prev_node, current_node)
                     # if "client" in link[0] or "client" in link[1]: continue
                     G.nodes[current_node]["fdN"] += path_tf
@@ -324,7 +318,7 @@ class Network:
         G = self.graph
         nodes = G.nodes
         current_fdN = self.get_fdN()
-        for i in range(fixed):
+        for _i in range(fixed):
             for node in nodes:
                 if nodes[node]["node_type"] == "Router":
                     node_tf = current_fdN[node] // (
@@ -354,7 +348,7 @@ class Network:
         # pp.pprint(self.fdN)
 
         # add virtual links to clients
-        for vn, attrs in virtual_nodes:
+        for vn, _attrs in virtual_nodes:
             p_node = G.nodes[vn]["physical_id"]
 
             client_node = G.nodes[p_node]["client_id"]
@@ -453,12 +447,8 @@ class Network:
                     self.remove_available_interface(vn_v_interface)
 
                     # setup virtual node interface based on the nodes connected.
-                    virtual_node_u["interface_map"][vn_v_id] = str(
-                        vn_v_interface
-                    )
-                    virtual_node_v["interface_map"][vn_u_id] = str(
-                        vn_u_interface
-                    )
+                    virtual_node_u["interface_map"][vn_v_id] = str(vn_v_interface)
+                    virtual_node_v["interface_map"][vn_u_id] = str(vn_u_interface)
 
                     virtual_link_fdL = defaultdict(float)
                     u_v_fdL = str((vn_u_id, vn_v_id))
@@ -475,9 +465,7 @@ class Network:
                         "physcial_id": physical_link_id,
                         "fdL": virtual_link_fdL,  # Flow density of link {(src, dest): fd}
                     }
-                    G[u][v]["virtual_layer3_list"].append(
-                        self.virtual_link_count
-                    )
+                    G[u][v]["virtual_layer3_list"].append(self.virtual_link_count)
                     self.virtual_link_count += 1
                     virtual_links.append((vn_u_id, vn_v_id, virtual_link_attr))
                     G[u][v]["fdL"][u_v] -= link_u_v_tf
@@ -503,12 +491,8 @@ class Network:
         neighbor_vn_interface = self.get_available_interface()
         self.remove_available_interface(neighbor_vn_interface)
 
-        nodes[current_vn]["interface_map"][neighbor_vn] = str(
-            neighbor_vn_interface
-        )
-        nodes[neighbor_vn]["interface_map"][current_vn] = str(
-            current_vn_interface
-        )
+        nodes[current_vn]["interface_map"][neighbor_vn] = str(neighbor_vn_interface)
+        nodes[neighbor_vn]["interface_map"][current_vn] = str(current_vn_interface)
 
         physical_link_id = links[real_link]["layer3_id"]
         u, v = real_link
@@ -517,9 +501,7 @@ class Network:
             "virtual_id": self.virtual_link_count,
             "carrier": [],  # list of "Optical" link objects which carries the L3 link.
             "physcial_id": physical_link_id,
-            "fdL": defaultdict(
-                float
-            ),  # Flow density of link {(src, dest): fd}
+            "fdL": defaultdict(float),  # Flow density of link {(src, dest): fd}
         }
         G[u][v]["virtual_layer3_list"].append(self.virtual_link_count)
         G.add_edge(current_vn, neighbor_vn, **virtual_link_attr)
@@ -532,7 +514,7 @@ class Network:
         G = self.graph
         # nodes = G.nodes
         vn_ids = nx.get_node_attributes(G, "virtual_router_list")[physical_id]
-        virtual_nodes = [vn_id for vn_id in vn_ids]
+        virtual_nodes = list(vn_ids)
         return virtual_nodes
 
     def get_all_virtual_nodes(self):
@@ -542,12 +524,8 @@ class Network:
         """
         G = self.graph
         # nodes = G.nodes
-        nodes_vn_ids = nx.get_node_attributes(
-            G, "virtual_router_list"
-        ).values()
-        virtual_nodes = [
-            vn_id for node_vn_ids in nodes_vn_ids for vn_id in node_vn_ids
-        ]
+        nodes_vn_ids = nx.get_node_attributes(G, "virtual_router_list").values()
+        virtual_nodes = [vn_id for node_vn_ids in nodes_vn_ids for vn_id in node_vn_ids]
         return virtual_nodes
 
     def get_connected_virtual_node(self, real_node, virtual_node):
@@ -567,19 +545,11 @@ class Network:
 
     def get_router_nodes(self):
         G = self.graph
-        return [
-            n
-            for n in G.nodes()
-            if G.nodes[n]["node_type"] == self.node_types[3]
-        ]
+        return [n for n in G.nodes() if G.nodes[n]["node_type"] == self.node_types[3]]
 
     def get_client_nodes(self):
         G = self.graph
-        return [
-            n
-            for n in G.nodes()
-            if G.nodes[n]["node_type"] == self.node_types[5]
-        ]
+        return [n for n in G.nodes() if G.nodes[n]["node_type"] == self.node_types[5]]
 
     def get_fdN(self):
         """
@@ -608,7 +578,7 @@ class Network:
                 }
             )
             return router_fdN
-        except:
+        except (KeyError, TypeError):
             return router_fdN
 
     def get_virtual_fdN(self):
@@ -627,7 +597,7 @@ class Network:
                 }
             )
             return virtual_fdN
-        except:
+        except (KeyError, TypeError):
             return virtual_fdN
 
     def get_fdL(self):
@@ -657,7 +627,7 @@ class Network:
                 }
             )
             return l3_fdL
-        except:
+        except (KeyError, TypeError):
             return l3_fdL
 
     def get_virtual_fdL(self):
@@ -689,6 +659,8 @@ class Network:
         write_json_graph(self.graph, out_file)
 
     def export_network_plot(self, postfix=""):
+        import matplotlib.pyplot as plt
+
         # nx.draw(self.graph, with_labels=True, font_weight='bold')
         nx.draw_spectral(self.graph, with_labels=False, font_weight="bold")
         out_file = postfix_str(self.output_file, postfix)
@@ -697,9 +669,10 @@ class Network:
         plt.clf()
 
 
-def main():    
+def main():
     topology_file = "data/graphs/json/campus/campus_ground_truth.json"
     Network(topology_file)
-    
+
+
 if __name__ == "__main__":
     main()

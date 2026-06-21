@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
-from dataclasses import dataclass
-from pathlib import Path
+import itertools
 import re
 import time
+from collections import defaultdict
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
+from pathlib import Path
 
 import networkx as nx
 import numpy as np
@@ -55,11 +56,13 @@ def _magnitude(value: object) -> float:
 
 def _load_topology(path: str) -> nx.DiGraph:
     raw = nx.drawing.nx_pydot.read_dot(path)
-    graph = nx.DiGraph()
+    graph: nx.DiGraph[str] = nx.DiGraph()
     for node, attrs in raw.nodes(data=True):
         node = _unquote(node)
         if node not in {"", "\\n"}:
-            graph.add_node(node, **{key: _unquote(value) for key, value in attrs.items()})
+            graph.add_node(
+                node, **{key: _unquote(value) for key, value in attrs.items()}
+            )
     for source, target, attrs in raw.edges(data=True):
         source, target = _unquote(source), _unquote(target)
         capacity = _magnitude(attrs["capacity"])
@@ -142,7 +145,9 @@ def _mcf_routes(
         demand = demands[(source, target)]
         for edge_i, (u, v) in enumerate(edges):
             variable = k * edge_count + edge_i
-            eq_rows.extend((k * len(nodes) + node_index[u], k * len(nodes) + node_index[v]))
+            eq_rows.extend(
+                (k * len(nodes) + node_index[u], k * len(nodes) + node_index[v])
+            )
             eq_cols.extend((variable, variable))
             eq_data.extend((1.0, -1.0))
         b_eq[k * len(nodes) + node_index[source]] = demand
@@ -164,7 +169,9 @@ def _mcf_routes(
     bounds = []
     for source, target in commodities:
         for u, v in edges:
-            transit_host = (u in host_nodes and u != source) or (v in host_nodes and v != target)
+            transit_host = (u in host_nodes and u != source) or (
+                v in host_nodes and v != target
+            )
             bounds.append((0.0, 0.0) if transit_host else (0.0, None))
     bounds.append((0.0, None))
 
@@ -172,7 +179,9 @@ def _mcf_routes(
     objective[z_index] = 1.0
     solution = linprog(
         objective,
-        A_ub=coo_matrix((ub_data, (ub_rows, ub_cols)), shape=(len(edges), variable_count)),
+        A_ub=coo_matrix(
+            (ub_data, (ub_rows, ub_cols)), shape=(len(edges), variable_count)
+        ),
         b_ub=np.zeros(len(edges)),
         A_eq=coo_matrix(
             (eq_data, (eq_rows, eq_cols)),
@@ -197,12 +206,14 @@ def _mcf_routes(
         }
         paths: list[Route] = []
         while residual:
-            flow_graph = nx.DiGraph(edge for edge, flow in residual.items() if flow > tolerance)
+            flow_graph: nx.DiGraph[str] = nx.DiGraph(
+                edge for edge, flow in residual.items() if flow > tolerance
+            )
             try:
                 path = nx.shortest_path(flow_graph, *commodity)
             except (nx.NetworkXNoPath, nx.NodeNotFound):
                 break
-            path_edges = list(zip(path, path[1:]))
+            path_edges = list(itertools.pairwise(path))
             flow = min(residual[edge] for edge in path_edges)
             paths.append((tuple(path), flow / demands[commodity]))
             for edge in path_edges:
@@ -213,7 +224,9 @@ def _mcf_routes(
     return routes
 
 
-def _fair_share(capacity: float, flows: Sequence[tuple[int, float]]) -> dict[int, float]:
+def _fair_share(
+    capacity: float, flows: Sequence[tuple[int, float]]
+) -> dict[int, float]:
     remaining = capacity
     shares: dict[int, float] = {}
     ordered = sorted(flows, key=lambda item: (item[1], item[0]))
@@ -236,7 +249,7 @@ def _statistics(
         for path, probability in commodity_routes:
             demand = demands[commodity] * probability
             path_flows.append((path, demand))
-            for edge in zip(path, path[1:]):
+            for edge in itertools.pairwise(path):
                 expected_loads[edge] += demand
 
     current = {flow_id: demand for flow_id, (_, demand) in enumerate(path_flows)}
@@ -348,7 +361,9 @@ def _write_results(
         ("EdgeCongestionVsIterations.dat", "edge-congestion", actual),
     ):
         lines = [f"# solver\titer\t{header}", f"{solver}\t0\t"]
-        lines.extend(f"\t\t({u},{v}) : {value:.12g}" for (u, v), value in sorted(values.items()))
+        lines.extend(
+            f"\t\t({u},{v}) : {value:.12g}" for (u, v), value in sorted(values.items())
+        )
         (result_dir / filename).write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     paths_dir = result_dir / "paths"
@@ -357,9 +372,11 @@ def _write_results(
     for (source, target), commodity_routes in sorted(routes.items()):
         path_lines.append(f"{source} -> {target} :")
         for path, probability in commodity_routes:
-            edges = ", ".join(f"({u},{v})" for u, v in zip(path, path[1:]))
+            edges = ", ".join(f"({u},{v})" for u, v in itertools.pairwise(path))
             path_lines.append(f"[{edges}] @ {probability:.6f}")
-    (paths_dir / f"{solver}_0").write_text("\n".join(path_lines) + "\n", encoding="utf-8")
+    (paths_dir / f"{solver}_0").write_text(
+        "\n".join(path_lines) + "\n", encoding="utf-8"
+    )
     (result_dir / "LatencyDistributionVsIterations.dat").write_text(
         f"#solver\titer\tlatency-throughput\n{solver}\t0\t\n",
         encoding="utf-8",

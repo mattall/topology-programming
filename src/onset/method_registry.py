@@ -6,8 +6,8 @@ replacing the old if/elif dispatch chain in simulator.py.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from collections.abc import Callable
+from dataclasses import dataclass
 
 from onset.open_doppler import (
     solve_edge_flow_changes_mlu,
@@ -27,7 +27,9 @@ class MethodConfig:
     solve_fn: Callable | None  # solver callable for MILP methods
     uses_ecmp_multisol: bool
     description: str
-    handler: Callable[..., None] | None = None  # (Simulation, MethodConfig) -> None; resolved at import time
+    handler: Callable[..., None] | None = (
+        None  # (Simulation, MethodConfig) -> None; resolved at import time
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -46,17 +48,28 @@ _SOLVER_CALLABLES: dict[str, Callable] = {
 # Method registry
 # ---------------------------------------------------------------------------
 
-from onset.handlers import (
+from onset.handlers import (  # noqa: E402 -- imported after MethodConfig to break a cycle
+    _run_baseline,
+    _run_bvt,
+    _run_cache,
+    _run_cli,
+    _run_greylambda,
     _run_milp_method,
     _run_otp,
-    _run_greylambda,
-    _run_cache,
-    _run_bvt,
     _run_tbe,
-    _run_cli,
 )
 
 _METHOD_REGISTRY: dict[str, MethodConfig] = {
+    "baseline": MethodConfig(
+        name="baseline",
+        handler=_run_baseline,
+        is_milp=False,
+        objective_mode=None,
+        solver_method=None,
+        solve_fn=None,
+        uses_ecmp_multisol=False,
+        description="Evaluate the input topology without reconfiguration",
+    ),
     "doppler": MethodConfig(
         name="doppler",
         handler=_run_milp_method,

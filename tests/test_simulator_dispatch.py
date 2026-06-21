@@ -1,16 +1,18 @@
 """Tests for simulator method dispatch."""
 
 import pytest
-from onset.simulator import (
+
+from onset.handlers import (
+    _run_baseline,
+    _run_bvt,
+    _run_cache,
+    _run_cli,
+    _run_greylambda,
     _run_milp_method,
     _run_otp,
-    _run_greylambda,
-    _run_cache,
-    _run_bvt,
     _run_tbe,
-    _run_cli,
 )
-from onset.method_registry import _METHOD_REGISTRY, _resolve_method, MethodConfig
+from onset.method_registry import _METHOD_REGISTRY, _resolve_method
 
 
 class TestDispatchHandlers:
@@ -19,17 +21,20 @@ class TestDispatchHandlers:
     def test_all_handlers_are_callable(self):
         """After wiring in simulator.py, all handlers should be callables."""
         for name, config in _METHOD_REGISTRY.items():
-            assert callable(config.handler), \
-                f"Handler for '{name}' is not callable: {config.handler}"
+            assert callable(
+                config.handler
+            ), f"Handler for '{name}' is not callable: {config.handler}"
 
     def test_milp_methods_use_milp_handler(self):
         for name in ("doppler", "onset_v3", "onset_v2", "onset"):
             config = _METHOD_REGISTRY[name]
-            assert config.handler == _run_milp_method, \
-                f"{name} should use _run_milp_method"
+            assert (
+                config.handler == _run_milp_method
+            ), f"{name} should use _run_milp_method"
 
     def test_heuristic_methods_use_own_handlers(self):
         handler_map = {
+            "baseline": _run_baseline,
             "OTP": _run_otp,
             "greylambda": _run_greylambda,
             "cache": _run_cache,
@@ -39,8 +44,9 @@ class TestDispatchHandlers:
         }
         for name, expected_handler in handler_map.items():
             config = _METHOD_REGISTRY[name]
-            assert config.handler == expected_handler, \
-                f"{name} should use its dedicated handler"
+            assert (
+                config.handler == expected_handler
+            ), f"{name} should use its dedicated handler"
 
 
 class TestResolveMethodDispatch:

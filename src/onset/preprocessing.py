@@ -8,17 +8,14 @@ imports gurobipy and can be safely imported in any environment.
 
 from __future__ import annotations
 
-import json
 import os
 import pickle
 from collections import defaultdict
-from copy import deepcopy
 from itertools import permutations
 from math import floor, log10
 from multiprocessing import Manager, Pool
 from time import time
 from typing import Any, cast
-
 
 import networkx as nx
 import numpy as np
@@ -27,12 +24,9 @@ from onset.base_types import OptimizationProblem, _PathProblemData
 from onset.constants import SCRIPT_HOME
 from onset.utilities.graph import (
     astar_path_generator,
-    link_on_path,
 )
 from onset.utilities.logger import logger
-from onset.utilities.plot_reconfig_time import calc_haversine
-from onset.utilities.sysUtils import file_writer
-
+from onset.utilities.reconfiguration import calc_haversine
 
 # ---------------------------------------------------------------------------
 # Worker functions (multiprocessing-compatible, must be at module level)
@@ -124,24 +118,38 @@ def _astar_path_worker(
 
 def load_demand_from_file(
     demand_matrix_file: str,
+    nodes: tuple[str, ...] | None = None,
     scale_down_factor: float = 1.0,
     dynamic_scale_down: bool = False,
 ) -> dict[tuple[str, str], float]:
     """Load a demand matrix from a text file.
 
-    Returns a dict mapping (source, target) -> float demand value.
+    The file must contain a single line with n^2 space-separated values,
+    where n is the number of nodes.  Returns a dict mapping
+    ``(source, target)`` → float demand value.
+
+    When *nodes* is given it must have length n and is used to name the
+    rows / columns.  Otherwise ``str(i)`` is used for each index.
     """
-    matrix = np.loadtxt(demand_matrix_file)
-    n = len(matrix)
+    matrix = np.loadtxt(demand_matrix_file, ndmin=2)
+    n = int(np.sqrt(matrix.size))
+    if nodes is None:
+        node_names = tuple(str(i) for i in range(n))
+    else:
+        if len(nodes) != n:
+            raise ValueError(
+                f"Demand matrix has {n} nodes but {len(nodes)} node names provided"
+            )
+        node_names = tuple(nodes)
     demand: dict[tuple[str, str], float] = {}
     for i in range(n):
         for j in range(n):
             if i != j:
-                val = float(matrix[i][j]) / scale_down_factor
+                val = float(matrix.flat[i * n + j]) / scale_down_factor
                 if dynamic_scale_down:
                     # overridden below
                     pass
-                demand[(str(i), str(j))] = val
+                demand[(node_names[i], node_names[j])] = val
 
     if dynamic_scale_down:
         nonzero = [v for v in demand.values() if v > 0]
@@ -205,14 +213,12 @@ def compute_candidate_links(
             lon_t = G.nodes[target]["Longitude"]
             d = calc_haversine(lat_s, lon_s, lat_t, lon_t)
             if d <= max_distance:
-                candidates.append(
-                    tuple(sorted((source, target)))
-                )
+                candidates.append(tuple(sorted((source, target))))
 
     elif candidate_set == "liberal":
         bc = nx.edge_betweenness_centrality(G)
         if bc:
-            sorted_edges = sorted(bc, key=bc.get, reverse=True)
+            sorted_edges = sorted(bc, key=lambda edge: bc[edge], reverse=True)
             top_n = max(1, int(len(sorted_edges) * liberal_p))
             for u, v in sorted_edges[:top_n]:
                 u_neighbors = set(G.neighbors(u)) - {v}
@@ -227,7 +233,7 @@ def compute_candidate_links(
     elif candidate_set == "conservative":
         bc = nx.edge_betweenness_centrality(G)
         if bc:
-            sorted_edges = sorted(bc, key=bc.get, reverse=True)
+            sorted_edges = sorted(bc, key=lambda edge: bc[edge], reverse=True)
             top_n = max(1, int(len(sorted_edges) * liberal_p))
             for u, v in sorted_edges[:top_n]:
                 for n_u in set(G.neighbors(u)) - {v}:
@@ -255,7 +261,7 @@ def build_super_graph(
 
     Nodes retain 'Longitude' and 'Latitude' attributes from core_G.
     """
-    super_graph = nx.Graph()
+    super_graph: nx.Graph[str] = nx.Graph()
     for node in core_G.nodes:
         super_graph.add_node(
             node,
@@ -288,12 +294,10 @@ def find_original_tunnels(
     for s, t in ordered_node_pairs:
         try:
             gen = nx.shortest_simple_paths(G, s, t)
-            count = 0
-            for path in gen:
+            for count, path in enumerate(gen):
                 tunnel_list.append(path)
                 tunnel_dict[(s, t)].append(path)
-                count += 1
-                if count >= 6:
+                if count >= 5:
                     break
         except nx.NetworkXNoPath:
             pass
@@ -367,8 +371,7 @@ def compute_tunnels(
             flag = is_done_flags[(s, t)]
             if flag.value:
                 tunnel_dict[(s, t)] = [
-                    p for p in shared_list
-                    if p and p[0] == s and p[-1] == t
+                    p for p in shared_list if p and p[0] == s and p[-1] == t
                 ]
                 tunnel_list.extend(tunnel_dict[(s, t)])
 
@@ -410,31 +413,21 @@ def compute_tunnels(
 
     # Cache if requested
     if use_cache and network_name:
-        _save_cached_paths(
-            network_name, tunnel_list, tunnel_dict, tunnel_tuple_dict
-        )
+        _save_cached_paths(network_name, tunnel_list, tunnel_dict, tunnel_tuple_dict)
 
     return tunnel_list, tunnel_dict, tunnel_tuple_dict
 
 
 def _load_cached_paths(network_name: str):
     """Load cached tunnel data from disk. Returns None if not found."""
-    cache_dir = os.path.join(
-        SCRIPT_HOME, "data", "paths", "optimization"
-    )
-    tunnel_list_file = os.path.join(
-        cache_dir, f"{network_name}_tunnel_list.pickle"
-    )
-    tunnel_dict_file = os.path.join(
-        cache_dir, f"{network_name}_tunnel_dict.pickle"
-    )
+    cache_dir = os.path.join(SCRIPT_HOME, "data", "paths", "optimization")
+    tunnel_list_file = os.path.join(cache_dir, f"{network_name}_tunnel_list.pickle")
+    tunnel_dict_file = os.path.join(cache_dir, f"{network_name}_tunnel_dict.pickle")
     tunnel_tuple_file = os.path.join(
         cache_dir, f"{network_name}_tunnel_tuple_dict.pickle"
     )
 
-    if os.path.exists(tunnel_list_file) and os.path.exists(
-        tunnel_dict_file
-    ):
+    if os.path.exists(tunnel_list_file) and os.path.exists(tunnel_dict_file):
         with open(tunnel_list_file, "rb") as f:
             tunnel_list = pickle.load(f)
         with open(tunnel_dict_file, "rb") as f:
@@ -443,9 +436,7 @@ def _load_cached_paths(network_name: str):
             with open(tunnel_tuple_file, "rb") as f:
                 tunnel_tuple_dict = pickle.load(f)
         else:
-            tunnel_tuple_dict = {
-                k: v for k, v in tunnel_dict.items()
-            }
+            tunnel_tuple_dict = dict(tunnel_dict.items())
         logger.info("Loaded cached paths for %s", network_name)
         return tunnel_list, tunnel_dict, tunnel_tuple_dict
     return None
@@ -458,22 +449,14 @@ def _save_cached_paths(
     tunnel_tuple_dict: dict[tuple[str, str], list[list[str]]],
 ):
     """Save tunnel data to disk for future reuse."""
-    cache_dir = os.path.join(
-        SCRIPT_HOME, "data", "paths", "optimization"
-    )
+    cache_dir = os.path.join(SCRIPT_HOME, "data", "paths", "optimization")
     os.makedirs(cache_dir, exist_ok=True)
-    with open(
-        os.path.join(cache_dir, f"{network_name}_tunnel_list.pickle"), "wb"
-    ) as f:
+    with open(os.path.join(cache_dir, f"{network_name}_tunnel_list.pickle"), "wb") as f:
         pickle.dump(list(tunnel_list), f)
-    with open(
-        os.path.join(cache_dir, f"{network_name}_tunnel_dict.pickle"), "wb"
-    ) as f:
+    with open(os.path.join(cache_dir, f"{network_name}_tunnel_dict.pickle"), "wb") as f:
         pickle.dump(dict(tunnel_dict), f)
     with open(
-        os.path.join(
-            cache_dir, f"{network_name}_tunnel_tuple_dict.pickle"
-        ),
+        os.path.join(cache_dir, f"{network_name}_tunnel_tuple_dict.pickle"),
         "wb",
     ) as f:
         pickle.dump(dict(tunnel_tuple_dict), f)
@@ -488,17 +471,12 @@ def save_original_paths(
     """Save original (pre-candidate) tunnel data to JSON on disk."""
     import json as _json
 
-    cache_dir = os.path.join(
-        SCRIPT_HOME, "data", "paths", "optimization"
-    )
+    cache_dir = os.path.join(SCRIPT_HOME, "data", "paths", "optimization")
     os.makedirs(cache_dir, exist_ok=True)
 
-    serializable_list = [
-        list(p) for p in tunnel_list
-    ]
+    serializable_list = [list(p) for p in tunnel_list]
     serializable_dict = {
-        f"{s}->{t}": [list(p) for p in paths]
-        for (s, t), paths in tunnel_dict.items()
+        f"{s}->{t}": [list(p) for p in paths] for (s, t), paths in tunnel_dict.items()
     }
 
     list_file = os.path.join(cache_dir, f"{network}_original.json")
@@ -517,11 +495,17 @@ def load_original_paths(
     import json as _json
 
     list_file = os.path.join(
-        SCRIPT_HOME, "data", "paths", "optimization",
+        SCRIPT_HOME,
+        "data",
+        "paths",
+        "optimization",
         f"{network}_original.json",
     )
     dict_file = os.path.join(
-        SCRIPT_HOME, "data", "paths", "optimization",
+        SCRIPT_HOME,
+        "data",
+        "paths",
+        "optimization",
         f"{network}_original_dict.json",
     )
 
@@ -573,15 +557,14 @@ def preprocess_doppler(
     # Demand
     demand_dict = load_demand_from_file(
         demand_matrix_file,
+        nodes=tuple(base_graph.nodes),
         scale_down_factor=scale_down_factor,
         dynamic_scale_down=dynamic_scale_down,
     )
 
     # Node ordering
     all_pairs = list(permutations(base_graph.nodes, 2))
-    ordered_pairs = {
-        tuple(sorted((s, t))) for (s, t) in all_pairs
-    }
+    ordered_pairs = {tuple(sorted((s, t))) for (s, t) in all_pairs}
 
     # Transponder counts
     if txp_count is None:
@@ -591,9 +574,7 @@ def preprocess_doppler(
         }
 
     # Candidate links
-    candidate_links = compute_candidate_links(
-        base_graph, candidate_set=candidate_set
-    )
+    candidate_links = compute_candidate_links(base_graph, candidate_set=candidate_set)
 
     # Super graph
     super_graph = build_super_graph(base_graph, candidate_links)
@@ -622,10 +603,7 @@ def preprocess_doppler(
 
     # Build canonical edge order (undirected, sorted)
     all_undirected_edges = sorted(
-        set(
-            tuple(sorted(e))
-            for e in set(base_graph.edges) | set(candidate_links)
-        )
+        {tuple(sorted(e)) for e in set(base_graph.edges) | set(candidate_links)}
     )
 
     return {
@@ -633,9 +611,7 @@ def preprocess_doppler(
         "candidate_links": candidate_links,
         "canonical_edge_order": all_undirected_edges,
         "legacy_edge_order": all_undirected_edges,
-        "current_edges": frozenset(
-            tuple(sorted(e)) for e in logical_graph.edges
-        ),
+        "current_edges": frozenset(tuple(sorted(e)) for e in logical_graph.edges),
         "demand_dict": demand_dict,
         "txp_count": txp_count,
         "tunnel_tuple_dict": tunnel_tuple_dict,
@@ -733,12 +709,8 @@ def build_optimization_problem(
         compute_paths=compute_paths,
     )
 
-    nodes = tuple(sorted(
-        base_graph.nodes, key=lambda s: str(s).encode("utf-8")
-    ))
-    canonical_edges = tuple(
-        tuple(sorted(e)) for e in data["canonical_edge_order"]
-    )
+    nodes = tuple(sorted(base_graph.nodes, key=lambda s: str(s).encode("utf-8")))
+    canonical_edges = tuple(tuple(sorted(e)) for e in data["canonical_edge_order"])
 
     # Build tunnel_edge_sets: frozenset of directed edges per commodity
     tunnel_edge_sets = {}
@@ -757,8 +729,8 @@ def build_optimization_problem(
         tunnel_list = data["tunnel_list"]
         tunnel_dict = data["tunnel_dict"]
         candidate_links = data["candidate_links"]
-        current_edges = data["current_edges"]
-        super_graph = data["super_graph"]
+        data["current_edges"]
+        data["super_graph"]
 
         # path_list: tuple of paths, each path is a tuple of node IDs
         path_list = tuple(tuple(p) for p in tunnel_list)
@@ -798,16 +770,15 @@ def build_optimization_problem(
             (u, v) for (u, v) in canonical_edges
         ) + tuple((v, u) for (u, v) in canonical_edges)
 
-        dir_to_idx = {e: i for i, e in enumerate(supergraph_directed_edges)}
+        {e: i for i, e in enumerate(supergraph_directed_edges)}
 
         # link_path_map: per supergraph directed edge, which path indices traverse it
         link_path_map: tuple[tuple[int, ...], ...] = tuple(
             tuple(
-                pi for pi, path in enumerate(path_list)
-                if len(path) >= 2 and any(
-                    (path[j], path[j + 1]) == de
-                    for j in range(len(path) - 1)
-                )
+                pi
+                for pi, path in enumerate(path_list)
+                if len(path) >= 2
+                and any((path[j], path[j + 1]) == de for j in range(len(path) - 1))
             )
             for de in supergraph_directed_edges
         )

@@ -8,12 +8,10 @@ Extracted from ``Simulation.save_doppler_results`` and
 from __future__ import annotations
 
 import os
-from numbers import Number
 from time import time
-from typing import Any, cast
+from typing import Any
 
 from onset.base_types import OptimizationResult, TopologySolution
-
 
 # ── local file writers (simple fmt, no dependency on post_process) ──────────
 
@@ -74,21 +72,21 @@ def write_optimization_reports(
     multi_sol_best_mlu:
         MLU of the best solution found during multi-solution evaluation.
     """
-    has_sol: bool = result is not None and result.has_solutions
+    if result is None:
+        return
+
+    has_sol: bool = result.has_solutions
 
     if has_sol:
-        total: Any = len(result.solutions)  # type: ignore[union-attr]
-        sel: TopologySolution | None = result.selected_solution  # type: ignore[union-attr]
-        obj_best: TopologySolution | None = result.objective_best  # type: ignore[union-attr]
+        total: Any = len(result.solutions)
+        sel: TopologySolution | None = result.selected_solution
+        obj_best: TopologySolution | None = result.objective_best
 
         optimal_id: Any = obj_best.stable_topology_id if obj_best else "NaN"
         curr_id: Any = sel.stable_topology_id if sel else "NaN"
-        min_mlu: Any = (
-            round(sel.validated_mlu, 3) if sel else "NaN"
-        )
+        min_mlu: Any = round(sel.validated_mlu, 3) if sel else "NaN"
         mlu_dict: dict[str, float] = {
-            str(i): sol.validated_mlu
-            for i, sol in enumerate(result.solutions)  # type: ignore[union-attr]
+            str(i): sol.validated_mlu for i, sol in enumerate(result.solutions)
         }
     else:
         total = 0
@@ -259,7 +257,7 @@ def evaluate_candidate_topologies(
         pair: Any = v
         if isinstance(pair, tuple) and len(pair) == 2:
             m = pair[1]
-            if isinstance(m, (int, float)):
+            if isinstance(m, int | float):
                 valid_items.append((k, pair[0], float(m)))
 
     if valid_items:

@@ -1,27 +1,29 @@
 from __future__ import annotations
 
 import os
-import logging
-from itertools import combinations
 from collections import Counter
+from itertools import combinations
 
 from onset.method_registry import MethodConfig
 from onset.utilities.logger import logger
-from onset.utilities.post_process import read_link_congestion_to_dict
+
+
+def _read_link_congestion(file_path: str):
+    from onset.utilities.post_process import read_link_congestion_to_dict
+
+    return read_link_congestion_to_dict(file_path)
+
+
+def _run_baseline(sim, config: MethodConfig) -> None:
+    """Keep the input topology unchanged while running the TE pipeline."""
 
 
 def _run_milp_method(sim, config: MethodConfig) -> None:
     """Unified handler for all four MILP methods (doppler, onset_v3, onset_v2, onset)."""
-    import logging
-    logger = logging.getLogger(__name__)
-
     sim.max_load = 0.9
 
     # Determine top_k: 1 for MCF, configurable for ECMP
-    if sim.te_method == "-mcf":
-        top_k = 1
-    else:
-        top_k = getattr(sim, 'top_k', 100)
+    top_k = 1 if sim.te_method == "-mcf" else getattr(sim, "top_k", 100)
 
     result = sim._run_topology_optimization(
         objective_mode=config.objective_mode,
@@ -38,6 +40,7 @@ def _run_milp_method(sim, config: MethodConfig) -> None:
     elif sim.te_method == "-ecmp" and config.uses_ecmp_multisol:
         if result.has_solutions:
             from onset.reporter import evaluate_candidate_topologies
+
             best_sol, multi_time, best_idx, best_mlu = evaluate_candidate_topologies(
                 solutions=result.solutions,
                 wolf=sim.wolf,
@@ -62,8 +65,7 @@ def find_shortcut_link(congested_edges, existing_edges):
     node_counter = Counter()
     message = "Looking for a shortcut link among: "
     congested_edges = [
-        e.strip("()").replace("s", "").split(",")
-        for e in congested_edges
+        e.strip("()").replace("s", "").split(",") for e in congested_edges
     ]
     for e in congested_edges:
         u, v = e
@@ -80,12 +82,9 @@ def find_shortcut_link(congested_edges, existing_edges):
     shortcuts = [
         c
         for c in combinations(terminals, 2)
-        if c[0] != c[1]
-        and c not in existing_edges
+        if c[0] != c[1] and c not in existing_edges
     ]
-    logger.info(
-        f"Found the following shortcut: {shortcuts}"
-    )
+    logger.info(f"Found the following shortcut: {shortcuts}")
     return shortcuts
 
 
@@ -94,14 +93,8 @@ def _run_otp(sim, config: MethodConfig) -> None:
         sim.PREV_ITER_ABS_PATH,
         "EdgeCongestionVsIterations.dat",
     )
-    edge_congestion_d = read_link_congestion_to_dict(
-        edge_congestion_file
-    )
-    congested_edges = [
-        k
-        for k in edge_congestion_d
-        if edge_congestion_d[k] > 0.80
-    ]
+    edge_congestion_d = _read_link_congestion(edge_congestion_file)
+    congested_edges = [k for k in edge_congestion_d if edge_congestion_d[k] > 0.80]
 
     shortcuts = find_shortcut_link(congested_edges, sim.wolf.logical_graph.edges())
     for edge in shortcuts:
@@ -119,14 +112,8 @@ def _run_greylambda(sim, config: MethodConfig) -> None:
         sim.PREV_ITER_ABS_PATH,
         "EdgeCongestionVsIterations.dat",
     )
-    edge_congestion_d = read_link_congestion_to_dict(
-        edge_congestion_file
-    )
-    congested_edges = [
-        k
-        for k in edge_congestion_d
-        if edge_congestion_d[k] == 1
-    ]
+    edge_congestion_d = _read_link_congestion(edge_congestion_file)
+    congested_edges = [k for k in edge_congestion_d if edge_congestion_d[k] == 1]
     for edge in congested_edges:
         if isinstance(edge, str):
             u, v = edge.strip("()").replace("s", "").split(",")
@@ -146,6 +133,7 @@ def _run_greylambda(sim, config: MethodConfig) -> None:
 
 def _run_cache(sim, config: MethodConfig) -> None:
     from onset.defender import Defender
+
     defender = Defender(
         sim.network_name,
         sim.circuits,
@@ -156,14 +144,9 @@ def _run_cache(sim, config: MethodConfig) -> None:
     )
     # TODO: Pass get_strategic_circuit the paths file from the previous iteration.
     sim.new_circuit = defender.get_strategic_circuit()
-    if (
-        type(sim.new_circuit) == tuple
-        and len(sim.new_circuit) == 2
-    ):
+    if isinstance(sim.new_circuit, tuple) and len(sim.new_circuit) == 2:
         logger.debug(
-            "Adding {} ({}, {}) circuits.".format(
-                sim.circuits, *sim.new_circuit
-            )
+            "Adding {} ({}, {}) circuits.".format(sim.circuits, *sim.new_circuit)
         )
         for _ in range(sim.circuits):
             u, v = sim.new_circuit
@@ -176,23 +159,15 @@ def _run_bvt(sim, config: MethodConfig) -> None:
         sim.PREV_ITER_ABS_PATH,
         "EdgeCongestionVsIterations.dat",
     )
-    edge_congestion_d = read_link_congestion_to_dict(
-        edge_congestion_file
-    )
-    congested_edges = [
-        k
-        for k in edge_congestion_d
-        if edge_congestion_d[k] == 1
-    ]
+    edge_congestion_d = _read_link_congestion(edge_congestion_file)
+    [k for k in edge_congestion_d if edge_congestion_d[k] == 1]
 
     sim.sig_add_circuits = False
     return
 
 
 def _run_tbe(sim, config: MethodConfig) -> None:
-    if "flashcrowd" in sim.traffic_file \
-        and sim.demand_factor > 0.9:
-
+    if "flashcrowd" in sim.traffic_file and sim.demand_factor > 0.9:
         sim.wolf.relax_restricted_bandwidth()
     # sig_add_circuits = False
     return
