@@ -22,6 +22,7 @@ from typing import Dict, List, Optional, Set, Tuple
 import networkx as nx
 import numpy as np
 
+from onset.base_types import DopplerProblem
 from onset.constants import SCRIPT_HOME
 from onset.utilities.graph import (
     astar_path_generator,
@@ -642,3 +643,119 @@ def preprocess_doppler(
         "ordered_node_pairs": ordered_pairs,
         "all_node_pairs": all_pairs,
     }
+
+
+# ---------------------------------------------------------------------------
+# DopplerProblem factory
+# ---------------------------------------------------------------------------
+
+
+def build_doppler_problem(
+    logical_graph,
+    base_graph,
+    demand_matrix_file: str,
+    network_name: str,
+    txp_count: Optional[Dict[str, int]] = None,
+    *,
+    candidate_set: str = "max",
+    scale_down_factor: float = 1.0,
+    congestion_threshold_upper_bound: float = 0.8,
+    top_k: int = 100,
+    optimizer_time_limit: float = 60.0,
+    link_capacity: float = 100e9,
+    use_cache: bool = False,
+    parallel_execution: bool = False,
+    compute_paths: bool = True,
+    retain_commodity_flows: bool = False,
+) -> DopplerProblem:
+    """Build a DopplerProblem from AlpWolf / simulator state.
+
+    This is the single factory for constructing a fully-validated
+    DopplerProblem from the raw graph, demand, and transponder data
+    available at the simulation layer.  Used by both Doppler and
+    onset_v3 optimization paths.
+
+    Parameters
+    ----------
+    logical_graph : nx.Graph
+        The current logical (IP-layer) topology.
+    base_graph : nx.Graph
+        The physical fiber topology (super-graph source).
+    demand_matrix_file : str
+        Path to the demand matrix text file.
+    network_name : str
+        Network identifier (used for cache keys).
+    txp_count : dict, optional
+        Per-node transponder counts.  Computed from base_graph if None.
+    candidate_set : str
+        Candidate link selection strategy.
+    scale_down_factor : float
+        Demand/capacity scaling divisor.
+    congestion_threshold_upper_bound : float
+        Maximum allowed MLU.
+    top_k : int
+        Number of solutions to enumerate.
+    optimizer_time_limit : float
+        Solver time budget in seconds.
+    link_capacity : float
+        Raw link capacity (bps).
+    use_cache : bool
+        Load cached tunnel data if available.
+    parallel_execution : bool
+        Compute tunnels in parallel.
+    compute_paths : bool
+        Whether to compute tunnel paths.
+    retain_commodity_flows : bool
+        If True, per-commodity flows are retained in solutions.
+
+    Returns
+    -------
+    DopplerProblem
+        Fully validated, immutable problem description.
+    """
+    data = preprocess_doppler(
+        logical_graph=logical_graph,
+        base_graph=base_graph,
+        demand_matrix_file=demand_matrix_file,
+        network_name=network_name,
+        txp_count=txp_count,
+        candidate_set=candidate_set,
+        scale_down_factor=scale_down_factor,
+        use_cache=use_cache,
+        parallel_execution=parallel_execution,
+        compute_paths=compute_paths,
+    )
+
+    nodes = tuple(sorted(
+        base_graph.nodes, key=lambda s: str(s).encode("utf-8")
+    ))
+    canonical_edges = tuple(
+        tuple(sorted(e)) for e in data["canonical_edge_order"]
+    )
+
+    # Build tunnel_edge_sets: frozenset of directed edges per commodity
+    tunnel_edge_sets = {}
+    tunnel_tuple_dict = data.get("tunnel_tuple_dict", {})
+    for (s, t), paths in tunnel_tuple_dict.items():
+        directed_set = set()
+        for path in paths:
+            for i in range(len(path) - 1):
+                directed_set.add((path[i], path[i + 1]))
+        if directed_set:
+            tunnel_edge_sets[(s, t)] = frozenset(directed_set)
+
+    return DopplerProblem(
+        canonical_node_order=nodes,
+        canonical_candidate_edges=canonical_edges,
+        legacy_candidate_edge_order=canonical_edges,
+        current_edges=data["current_edges"],
+        txp_count=data["txp_count"],
+        demand=data["demand_dict"],
+        tunnel_edge_sets=tunnel_edge_sets,
+        link_capacity=link_capacity,
+        scale_factor=scale_down_factor,
+        congestion_threshold_upper_bound=congestion_threshold_upper_bound,
+        top_k=top_k,
+        optimizer_time_limit=optimizer_time_limit,
+        retain_commodity_flows=retain_commodity_flows,
+    )

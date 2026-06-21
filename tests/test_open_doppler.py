@@ -353,3 +353,91 @@ class TestNoGoodCut:
         assert lower == -1.0  # 1 - 2 = -1
         # All selected means all -x terms
         assert all(c == -1.0 for c in coeffs)
+
+
+# ---------------------------------------------------------------------------
+# M2: onset_v3 (MLU-only objective) tests
+# ---------------------------------------------------------------------------
+
+
+class TestOnsetV3Objective:
+    """Verify that objective_mode="mlu" produces MLU-only objective values."""
+
+    def test_mlu_objective_single_solve(self):
+        prob = _build_triangle_problem()
+        result = solve_doppler_with_enumeration(prob, objective_mode="mlu")
+        assert result.has_solutions
+        sol = result.solutions[0]
+        # With MLU-only objective, objective_value == validated_mlu
+        assert abs(sol.objective_value - sol.validated_mlu) < 1e-6
+        # Change count should NOT be in the objective
+        assert sol.change_count >= 0
+
+    def test_changes_plus_mlu_objective(self):
+        """Default mode still works: objective = 2*changes + mlu."""
+        prob = _build_triangle_problem()
+        result = solve_doppler_with_enumeration(prob, objective_mode="changes_plus_mlu")
+        assert result.has_solutions
+        sol = result.solutions[0]
+        assert abs(sol.objective_value - (2.0 * sol.change_count + sol.validated_mlu)) < 1e-6
+
+    def test_mlu_mode_objective_ordering(self):
+        """With MLU-only, solutions sort by MLU first."""
+        prob = _build_square_problem()
+        result = solve_doppler_with_enumeration(prob, objective_mode="mlu")
+        if len(result.solutions) >= 2:
+            for i in range(len(result.solutions) - 1):
+                a = result.solutions[i]
+                b = result.solutions[i + 1]
+                assert a.objective_value <= b.objective_value + 1e-9
+
+    def test_mlu_mode_feasible(self):
+        """MLU-only mode finds feasible solutions."""
+        prob = _build_triangle_problem()
+        result = solve_doppler_with_enumeration(prob, objective_mode="mlu")
+        assert result.has_solutions
+        assert result.solve_count >= 1
+        assert result.solutions[0].objective_value < float("inf")
+
+
+class TestSolutionApplyRevert:
+    """Verify TopologySolution.added/dropped consistency."""
+
+    def test_added_dropped_are_disjoint(self):
+        prob = _build_square_problem()
+        result = solve_doppler_with_enumeration(prob)
+        for sol in result.solutions:
+            assert sol.added.isdisjoint(sol.dropped)
+
+    def test_selected_equals_current_plus_added_minus_dropped(self):
+        prob = _build_square_problem()
+        result = solve_doppler_with_enumeration(prob)
+        for sol in result.solutions:
+            expected = (prob.current_edges | sol.added) - sol.dropped
+            assert sol.selected_edges == expected
+
+    def test_change_count_matches_derived(self):
+        prob = _build_square_problem()
+        result = solve_doppler_with_enumeration(prob)
+        for sol in result.solutions:
+            assert sol.change_count == len(sol.added) + len(sol.dropped)
+
+
+class TestSelectedSolution:
+    """Verify selected_solution picks lowest MLU."""
+
+    def test_selected_solution_lowest_mlu(self):
+        prob = _build_square_problem()
+        result = solve_doppler_with_enumeration(prob)
+        if result.has_solutions:
+            sel = result.selected_solution
+            assert sel is not None
+            # selected_solution should have the minimum validated_mlu
+            min_mlu = min(s.validated_mlu for s in result.solutions)
+            assert abs(sel.validated_mlu - min_mlu) < 1e-9
+
+    def test_objective_best_is_first(self):
+        prob = _build_square_problem()
+        result = solve_doppler_with_enumeration(prob)
+        if result.has_solutions:
+            assert result.objective_best is result.solutions[0]

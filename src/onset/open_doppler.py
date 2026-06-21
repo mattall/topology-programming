@@ -43,8 +43,14 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-def _build_milp(problem: DopplerProblem):
+def _build_milp(problem: DopplerProblem, objective_mode: str = "changes_plus_mlu"):
     """Build a HiGHS-compatible LP model for the corrected Doppler formulation.
+
+    Parameters
+    ----------
+    problem : DopplerProblem
+    objective_mode : str
+        "changes_plus_mlu" (Doppler) or "mlu" (onset_v3).
 
     Returns (lp, index_maps) where lp is a highspy.HighsLp and index_maps
     contains dictionaries mapping variable/index names to column indices.
@@ -227,18 +233,21 @@ def _build_milp(problem: DopplerProblem):
     A = csr_matrix((values, (row_indices, col_indices)),
                    shape=(n_con, n_vars_with_rf))
 
-    # Objective: 2 * change_count + MLU
-    # change_count = sum(1 - x[e] for e in current) + sum(x[e] for e not in current)
+    # Objective
     obj = np.zeros(n_vars_with_rf, dtype=np.float64)
-    obj[mlu_idx] = 1.0
-    for ei, e in enumerate(undirected_edges):
-        if e in current_set:
-            obj[ei] = -2.0  # coefficient for x[e]: removal contributes 1-x[e]
-        else:
-            obj[ei] = 2.0   # coefficient for x[e]: addition contributes x[e]
-
-    # Offset: 2 * |current_edges| for the constant part of removal counting
-    change_offset = 2.0 * len(current_set)
+    if objective_mode == "mlu":
+        obj[mlu_idx] = 1.0
+        change_offset = 0.0
+    else:
+        # changes_plus_mlu: 2 * change_count + MLU
+        # change_count = sum(1 - x[e] for e in current) + sum(x[e] for e not in current)
+        obj[mlu_idx] = 1.0
+        for ei, e in enumerate(undirected_edges):
+            if e in current_set:
+                obj[ei] = -2.0
+            else:
+                obj[ei] = 2.0
+        change_offset = 2.0 * len(current_set)
 
     # Variable bounds
     lb = np.zeros(n_vars_with_rf, dtype=np.float64)
@@ -306,6 +315,7 @@ def _extract_solution(
     index_maps: dict,
     solution: np.ndarray,
     proven_optimal: bool,
+    objective_mode: str = "changes_plus_mlu",
 ) -> TopologySolution:
     """Extract and validate a HiGHS solution into a TopologySolution."""
     im = index_maps
@@ -359,7 +369,10 @@ def _extract_solution(
     )
 
     # Objective
-    obj = 2.0 * change_count + solver_mlu
+    if objective_mode == "mlu":
+        obj = solver_mlu
+    else:
+        obj = 2.0 * change_count + solver_mlu
 
     # IDs
     nodes = list(problem.canonical_node_order)
@@ -413,6 +426,7 @@ def solve_doppler(
     time_limit: float,
     *,
     additional_cuts: Optional[List[Dict[int, float]]] = None,
+    objective_mode: str = "changes_plus_mlu",
 ) -> Tuple[Optional[TopologySolution], OptimizerStatus, float]:
     """Solve the corrected Doppler MILP once using HiGHS.
 
@@ -424,7 +438,8 @@ def solve_doppler(
         Solver time limit in seconds.
     additional_cuts : list of dict, optional
         Additional constraint rows to add (no-good cuts from prior solves).
-        Each dict maps column index -> coefficient.
+    objective_mode : str
+        "changes_plus_mlu" or "mlu".
 
     Returns
     -------
@@ -435,7 +450,7 @@ def solve_doppler(
     t_start = perf_counter()
 
     # Build model
-    lp, im = _build_milp(problem)
+    lp, im = _build_milp(problem, objective_mode=objective_mode)
 
     h = highspy.Highs()
     h.setOptionValue("time_limit", time_limit)
@@ -471,7 +486,8 @@ def solve_doppler(
             return None, OptimizerStatus.SOLVER_ERROR, elapsed
         solution = np.array(h.getSolution().col_value)
         try:
-            ts = _extract_solution(problem, im, solution, proven_optimal=True)
+            ts = _extract_solution(problem, im, solution, proven_optimal=True,
+                                   objective_mode=objective_mode)
             return ts, OptimizerStatus.TOP_K_REACHED, elapsed
         except Exception:
             logger.exception("Solution extraction failed")
@@ -485,7 +501,8 @@ def solve_doppler(
             solution = np.array(h.getSolution().col_value)
             try:
                 ts = _extract_solution(
-                    problem, im, solution, proven_optimal=False
+                    problem, im, solution, proven_optimal=False,
+                    objective_mode=objective_mode,
                 )
                 return ts, OptimizerStatus.TIME_LIMIT_WITH_SOLUTION, elapsed
             except Exception:
@@ -674,8 +691,15 @@ def solve_baseline(
 
 def solve_doppler_with_enumeration(
     problem: DopplerProblem,
+    objective_mode: str = "changes_plus_mlu",
 ) -> OptimizationResult:
-    """Run the full open-backend Doppler optimization with solution enumeration.
+    """Run the full open-backend optimization with solution enumeration.
+
+    Parameters
+    ----------
+    problem : DopplerProblem
+    objective_mode : str
+        "changes_plus_mlu" (Doppler) or "mlu" (onset_v3).
 
     This is the main entry point. It:
     1. Runs baseline LP evaluation (outside budget)
@@ -692,7 +716,7 @@ def solve_doppler_with_enumeration(
     baseline_feasible, baseline_mlu = solve_baseline(problem)
 
     # Build model once
-    lp, im = _build_milp(problem)
+    lp, im = _build_milp(problem, objective_mode=objective_mode)
     h = highspy.Highs()
     h.setOptionValue("output_flag", False)
     h.setOptionValue("mip_rel_gap", 0.0)
@@ -744,7 +768,8 @@ def solve_doppler_with_enumeration(
                 break
             solution = np.array(h.getSolution().col_value)
             try:
-                ts = _extract_solution(problem, im, solution, proven_optimal=True)
+                ts = _extract_solution(problem, im, solution, proven_optimal=True,
+                                       objective_mode=objective_mode)
             except Exception:
                 logger.exception("Solution extraction failed at solve %d", solve_count)
                 return OptimizationResult(
@@ -790,7 +815,8 @@ def solve_doppler_with_enumeration(
                 solution = np.array(h.getSolution().col_value)
                 try:
                     ts = _extract_solution(
-                        problem, im, solution, proven_optimal=False
+                        problem, im, solution, proven_optimal=False,
+                        objective_mode=objective_mode,
                     )
                 except Exception:
                     logger.exception("Timed-out solution extraction failed")
@@ -914,3 +940,13 @@ def solve_doppler_with_enumeration(
             baseline_feasible=baseline_feasible,
             baseline_mlu=baseline_mlu,
         )
+
+
+def solve_onset_v3(problem: DopplerProblem) -> OptimizationResult:
+    """Run onset_v3 open-backend optimization (MLU-only objective).
+
+    Convenience wrapper around solve_doppler_with_enumeration with
+    objective_mode="mlu".  The caller should set top_k on the problem
+    (top_k=1 for MCF single-solve, top_k=N for ECMP enumeration).
+    """
+    return solve_doppler_with_enumeration(problem, objective_mode="mlu")
