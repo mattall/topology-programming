@@ -13,7 +13,7 @@ from onset.alpwolf import AlpWolf
 from onset.constants import SCRIPT_HOME
 from onset.defender import Defender
 from onset.preprocessing import build_doppler_problem
-from onset.open_doppler import solve_doppler_with_enumeration, solve_onset_v3
+from onset.open_doppler import solve_doppler_with_enumeration, solve_onset_v3, solve_onset_v1, solve_onset_v1_1
 from onset.base_types import TopologySolution, OptimizationResult, BackendProvenance
 from onset.utilities.config import CROSSFIRE
 from multiprocessing import Pool, Manager
@@ -1109,59 +1109,20 @@ class Simulation:
                 self.wolf.add_circuit(u, v)
         return
 
-    def onset_method(self):        
-        optimizer = _get_optimizer_class("gurobi-legacy")(
-            G=self.wolf.logical_graph,
-            BUDGET=4,
-            demand_matrix_file=self.temp_tm_i_file,
-            network=self.network_name,
+    def onset_method(self):
+        logger.info("TP Method: onset")
+        if self.optimizer_backend == "gurobi-legacy":
+            self._onset_method_legacy()
+            return
+
+        self.max_load = 0.9
+        result = self._run_topology_optimization(
+            objective_mode="mlu", top_k=1, method="onset"
         )
-        # optimizer.run_model()
-        if self.te_method == "-ecmp":
-            self.max_load = 0.5
-            if self.shakeroute:
-                self.max_load = 10000.0
-        else:
-            self.max_load = 0.8
 
-        # optimizer.run_model_minimize_cost_v1(max_load)
-        # optimizer.run_model_minimize_cost()
-        self.new_circuit = []
-        optimizer.LINK_CAPACITY *= self.max_load
-        optimizer.onset_v1()
-        self.new_circuit = optimizer.get_links_to_add()
-        # while len(new_circuit) == 0 and max_load < 5:
-        #     optimizer.LINK_CAPACITY *= max_load
-        #     optimizer.run_model_mixed_objective()
-        #     new_circuit = optimizer.get_links_to_add()
-        #     max_load += 0.25
-        if len(self.new_circuit) == 0:
-            # optimizer.BUDGET = 20
-            optimizer.LINK_CAPACITY += optimizer.LINK_CAPACITY
-            optimizer.run_model_mixed_objective()
-            self.new_circuit = optimizer.get_links_to_add()
-
-        circuit_tag = ""
-        if type(self.new_circuit) == list and len(self.new_circuit) > 0:
-            for nc in self.new_circuit:
-                u, v = nc
-                if circuit_tag == "":
-                    circuit_tag += f"circuit-{u}-{v}"
-                else:
-                    circuit_tag += f".{u}-{v}"
-
-                for _ in range(self.circuits):
-                    self.wolf.add_circuit(u, v)
-
-            self.circuits_added = True
-            self.flux_circuits.extend(self.new_circuit)
-
-        # elif new_circuit == []:
-        #     print("Could Not Add New Circuit")
-        #     self.exit_early = True
-
+        if result.has_solutions:
+            self.apply_solution(result.selected_solution)
         self.sig_add_circuits = False
-        return
 
     def onset_v3_method(self):
         logger.info("TP Method: onset_v3")
@@ -1176,7 +1137,7 @@ class Simulation:
         else:
             top_k = self.top_k
 
-        result = self._run_topology_optimization(objective_mode="mlu", top_k=top_k)
+        result = self._run_topology_optimization(objective_mode="mlu", top_k=top_k, method="onset_v3")
 
         if not result.has_solutions:
             self.sig_add_circuits = False
@@ -1268,36 +1229,83 @@ class Simulation:
 
 
 
-    def onset_v2_method(self):
-        self.optimization_result = None  # prevent open-path leak
-        txp_count_dict = self.wolf.get_txp_count() # Maps node NAMES to their total transponders.
-        self.optimizer = optimizer = _get_optimizer_class("gurobi-legacy")(
-            G                   = self.wolf.logical_graph,
-            demand_matrix_file  = self.temp_tm_i_file,
-            network             = self.network_name,
-            core_G              = self.wolf.base_graph.copy(as_view=True),
-            txp_count           = txp_count_dict,
-            use_cache           = True,
-            compute_paths       = True,
-            candidate_set       = self.candidate_link_choice_method 
+    def _onset_method_legacy(self):
+        """Legacy gurobi-backed onset path."""
+        self.optimization_result = None
+        optimizer = _get_optimizer_class("gurobi-legacy")(
+            G=self.wolf.logical_graph,
+            BUDGET=4,
+            demand_matrix_file=self.temp_tm_i_file,
+            network=self.network_name,
         )
-        
+        if self.te_method == "-ecmp":
+            self.max_load = 0.5
+            if self.shakeroute:
+                self.max_load = 10000.0
+        else:
+            self.max_load = 0.8
+
+        self.new_circuit = []
+        optimizer.LINK_CAPACITY *= self.max_load
+        optimizer.onset_v1()
+        self.new_circuit = optimizer.get_links_to_add()
+        if len(self.new_circuit) == 0:
+            optimizer.LINK_CAPACITY += optimizer.LINK_CAPACITY
+            optimizer.run_model_mixed_objective()
+            self.new_circuit = optimizer.get_links_to_add()
+
+        circuit_tag = ""
+        if type(self.new_circuit) == list and len(self.new_circuit) > 0:
+            for nc in self.new_circuit:
+                u, v = nc
+                for _ in range(self.circuits):
+                    self.wolf.add_circuit(u, v)
+            self.circuits_added = True
+            self.flux_circuits.extend(self.new_circuit)
+
+        self.sig_add_circuits = False
+
+
+    def _onset_v2_method_legacy(self):
+        """Legacy gurobi-backed onset_v2 path."""
+        self.optimization_result = None
+        txp_count_dict = self.wolf.get_txp_count()
+        self.optimizer = optimizer = _get_optimizer_class("gurobi-legacy")(
+            G=self.wolf.logical_graph,
+            demand_matrix_file=self.temp_tm_i_file,
+            network=self.network_name,
+            core_G=self.wolf.base_graph.copy(as_view=True),
+            txp_count=txp_count_dict,
+            use_cache=True,
+            compute_paths=True,
+            candidate_set=self.candidate_link_choice_method,
+        )
+
         if self.te_method == "-ecmp":
             self.max_load = 0.5
         else:
-            # max_load = self.congestion_threshold_upper_bound
             self.max_load = 0.9
 
-        result_topo = []
-        add_links = []
-        drop_links = []
-        # optimizer.LINK_CAPACITY *= max_load
         optimizer.LINK_CAPACITY = 2**64
         self.opt_time = optimizer.onset_v1_1()
         self.adapt_topology()
-
         self.sig_add_circuits = False
-        return
+
+
+    def onset_v2_method(self):
+        logger.info("TP Method: onset_v2")
+        if self.optimizer_backend == "gurobi-legacy":
+            self._onset_v2_method_legacy()
+            return
+
+        self.max_load = 0.9
+        result = self._run_topology_optimization(
+            objective_mode="mlu", top_k=1, method="onset_v2"
+        )
+
+        if result.has_solutions:
+            self.apply_solution(result.selected_solution)
+        self.sig_add_circuits = False
 
 
     # ------------------------------------------------------------------
@@ -1335,15 +1343,19 @@ class Simulation:
         self,
         objective_mode: str = "changes_plus_mlu",
         top_k: Optional[int] = None,
+        method: str = "doppler",
     ) -> OptimizationResult:
         """Build a DopplerProblem from AlpWolf state, solve, store result.
 
         Parameters
         ----------
         objective_mode : str
-            "changes_plus_mlu" (Doppler) or "mlu" (onset_v3).
+            "changes_plus_mlu" (Doppler) or "mlu" (onset_v3/onset_v2/onset).
         top_k : int, optional
             Override self.top_k (e.g. 1 for MCF single-solve).
+        method : str
+            Optimization method: "doppler", "onset_v3", "onset_v2", "onset".
+            Controls solver selection and problem construction.
         """
         if top_k is None:
             top_k = self.top_k
@@ -1361,9 +1373,27 @@ class Simulation:
             optimizer_time_limit=self.optimizer_time_limit_minutes * 60.0,
             use_cache=True,
             parallel_execution=True,
+            method=method,
         )
 
-        result = solve_doppler_with_enumeration(problem, objective_mode=objective_mode)
+        _SOLVER = {
+            "doppler": lambda p: solve_doppler_with_enumeration(
+                p, objective_mode=objective_mode
+            ),
+            "onset_v3": lambda p: solve_doppler_with_enumeration(
+                p, objective_mode="mlu"
+            ),
+            "onset_v2": solve_onset_v1_1,
+            "onset": solve_onset_v1,
+        }
+        solver = _SOLVER.get(method)
+        if solver is None:
+            raise ValueError(
+                f"Unknown solver method: {method!r}. "
+                f"Valid: {sorted(_SOLVER.keys())}"
+            )
+
+        result = solver(problem)
         self.optimization_result = result
         self.optimizer = None  # signal open backend in use
         self.opt_time = result.wall_time

@@ -950,3 +950,727 @@ def solve_onset_v3(problem: DopplerProblem) -> OptimizationResult:
     (top_k=1 for MCF single-solve, top_k=N for ECMP enumeration).
     """
     return solve_doppler_with_enumeration(problem, objective_mode="mlu")
+
+
+# ---------------------------------------------------------------------------
+# Linearized min_() over binary variables (AND constraint)
+# ---------------------------------------------------------------------------
+
+
+def _add_and_constraints(
+    row_entries: List[Dict[int, float]],
+    row_lower: List[float],
+    row_upper: List[float],
+    path_var_col: int,
+    edge_var_cols: List[int],
+) -> None:
+    """Add linear constraints encoding path_var == min(edge_vars).
+
+    Linearized as (n = len(edge_var_cols)):
+      path_var <= edge_var_i     for all i
+      path_var >= sum(edge_vars) - (n - 1)
+      0 <= path_var <= 1
+
+    When all edge_vars are binary, this is exact AND logic.
+    """
+    n = len(edge_var_cols)
+    if n == 0:
+        return
+
+    for ei in edge_var_cols:
+        row_entries.append({path_var_col: 1.0, ei: -1.0})
+        row_lower.append(-np.inf)
+        row_upper.append(0.0)
+
+    entries = {path_var_col: 1.0}
+    for ei in edge_var_cols:
+        entries[ei] = -1.0
+    row_entries.append(entries)
+    row_lower.append(-(n - 1))
+    row_upper.append(np.inf)
+
+
+# ---------------------------------------------------------------------------
+# Single-solve helper (no enumeration)
+# ---------------------------------------------------------------------------
+
+
+def _solve_single_milp(
+    problem: DopplerProblem,
+    lp,
+    index_maps: dict,
+    extract_fn,
+) -> OptimizationResult:
+    """Solve a pre-built HiGHS LP once and extract the single solution.
+
+    Parameters
+    ----------
+    problem : DopplerProblem
+    lp : highspy.HighsLp
+    index_maps : dict
+    extract_fn : callable
+        Function(problem, index_maps, solution_array, proven_optimal) -> TopologySolution.
+        Must match the builder that produced index_maps.
+    """
+    import highspy
+
+    t_start = perf_counter()
+    budget = problem.optimizer_time_limit
+
+    h = highspy.Highs()
+    h.setOptionValue("output_flag", False)
+    h.setOptionValue("mip_rel_gap", 0.0)
+    h.setOptionValue("time_limit", budget)
+    h.passModel(lp)
+    h.run()
+
+    elapsed = perf_counter() - t_start
+    status = h.getModelStatus()
+    info = h.getInfo()
+
+    if status == highspy.HighsModelStatus.kOptimal:
+        sol = h.getSolution()
+        solution = extract_fn(
+            problem, index_maps, np.array(sol.col_value),
+            proven_optimal=True,
+        )
+        return OptimizationResult(
+            solutions=(solution,),
+            status=OptimizerStatus.TOP_K_REACHED,
+            wall_time=elapsed,
+            backend=BackendProvenance.OPEN,
+            solve_count=1,
+        )
+
+    if status == highspy.HighsModelStatus.kInfeasible:
+        return OptimizationResult(
+            solutions=(),
+            status=OptimizerStatus.INFEASIBLE,
+            wall_time=elapsed,
+            backend=BackendProvenance.OPEN,
+            solve_count=1,
+        )
+
+    if status == highspy.HighsModelStatus.kUnbounded:
+        return OptimizationResult(
+            solutions=(),
+            status=OptimizerStatus.UNBOUNDED,
+            wall_time=elapsed,
+            backend=BackendProvenance.OPEN,
+            solve_count=1,
+        )
+
+    if status == highspy.HighsModelStatus.kTimeLimit:
+        if info.primal_solution_status == 1:
+            sol = h.getSolution()
+            try:
+                solution = extract_fn(
+                    problem, index_maps, np.array(sol.col_value),
+                    proven_optimal=False,
+                )
+                return OptimizationResult(
+                    solutions=(solution,),
+                    status=OptimizerStatus.TIME_LIMIT_WITH_SOLUTION,
+                    wall_time=elapsed,
+                    backend=BackendProvenance.OPEN,
+                    solve_count=1,
+                )
+            except Exception:
+                pass
+        return OptimizationResult(
+            solutions=(),
+            status=OptimizerStatus.TIME_LIMIT_WITHOUT_SOLUTION,
+            wall_time=elapsed,
+            backend=BackendProvenance.OPEN,
+            solve_count=1,
+        )
+
+    return OptimizationResult(
+        solutions=(),
+        status=OptimizerStatus.SOLVER_ERROR,
+        wall_time=elapsed,
+        backend=BackendProvenance.OPEN,
+        solve_count=1,
+    )
+
+
+# ---------------------------------------------------------------------------
+# onset_v1 builder (edge-based path flow, budget, candidate-link penalty)
+# ---------------------------------------------------------------------------
+
+
+def _build_milp_onset_v1(problem: DopplerProblem):
+    """Build a HiGHS LP for the onset_v1 formulation.
+
+    Variables (deterministic order):
+      x_cand[0..C-1]: binary, per candidate (not-current) undirected edge
+      x_path[0..P-1]: binary, per path
+      flow[0..P-1]: continuous, normalized flow per path
+      util[0..E-1]: continuous, normalized utilization per directed edge
+      mlu: scalar [0, 1]
+
+    Returns (lp, index_maps).
+    """
+    import highspy
+
+    pd = problem.path_data
+    if pd is None:
+        raise ValueError("onset_v1 requires path_data on DopplerProblem")
+
+    n_cand = len(pd.candidate_edge_indices)
+    n_paths = len(pd.path_list)
+    n_dir = len(pd.supergraph_directed_edges)
+
+    sc = problem.scaled_capacity
+    norm_demand = {c: problem.demand[c] / sc for c in problem.demand}
+
+    var_idx = 0
+    x_cand_start = var_idx
+    var_idx += n_cand
+    x_path_start = var_idx
+    var_idx += n_paths
+    flow_start = var_idx
+    var_idx += n_paths
+    util_start = var_idx
+    var_idx += n_dir
+    mlu_idx = var_idx
+    n_vars = var_idx + 1
+
+    rows: List[Dict[int, float]] = []
+    rlb: List[float] = []
+    rub: List[float] = []
+
+    def add_row(lo, hi, entries):
+        rows.append(entries)
+        rlb.append(lo)
+        rub.append(hi)
+
+    # 1. Budget: sum(x_cand) <= n_cand (non-binding; matches legacy BUDGET=len(candidates))
+    if n_cand > 0:
+        entries = {x_cand_start + i: 1.0 for i in range(n_cand)}
+        add_row(-np.inf, float(n_cand), entries)
+
+    # 2. Path availability: x_path[p] == AND(x_cand[c] for c in path)
+    for pi in range(n_paths):
+        cand_indices = list(pd.path_candidate_map[pi])
+        if cand_indices:
+            _add_and_constraints(
+                rows, rlb, rub,
+                x_path_start + pi,
+                [x_cand_start + ci for ci in cand_indices],
+            )
+        else:
+            add_row(1.0, 1.0, {x_path_start + pi: 1.0})
+
+    # 3. Flow activation: flow[p] <= x_path[p]
+    for pi in range(n_paths):
+        add_row(-np.inf, 0.0, {
+            flow_start + pi: 1.0,
+            x_path_start + pi: -1.0,
+        })
+
+    # 4. Demand satisfaction per commodity
+    for (s, t), path_idxs in pd.commodity_to_paths.items():
+        d = norm_demand.get((s, t), 0.0)
+        if d <= 0 or not path_idxs:
+            continue
+        entries = {flow_start + pi: 1.0 for pi in path_idxs}
+        add_row(d, np.inf, entries)
+
+    # 5. Link utilization: util[ei] >= sum(flow[p] for p on edge)
+    for ei, path_idxs in enumerate(pd.link_path_map):
+        if not path_idxs:
+            continue
+        entries = {util_start + ei: 1.0}
+        for pi in path_idxs:
+            entries[flow_start + pi] = -1.0
+        add_row(0.0, 0.0, entries)
+
+    # 6. Capacity: util[ei] <= 1.0
+    for ei in range(n_dir):
+        add_row(-np.inf, 1.0, {util_start + ei: 1.0})
+
+    # 7. MLU: mlu >= util[ei] for all ei
+    for ei in range(n_dir):
+        add_row(-np.inf, 0.0, {
+            mlu_idx: -1.0,
+            util_start + ei: 1.0,
+        })
+
+    # Assemble CSR
+    n_con = len(rows)
+    ri, ci, vi = [], [], []
+    for i, r in enumerate(rows):
+        for col, val in r.items():
+            ri.append(i); ci.append(col); vi.append(val)
+    A = csr_matrix((vi, (ri, ci)), shape=(n_con, n_vars))
+
+    # Objective: sum(x_cand) / n_cand + mlu (mlu is tiebreaker, edge count primary)
+    obj = np.zeros(n_vars, dtype=np.float64)
+    if n_cand > 0:
+        for i in range(n_cand):
+            obj[x_cand_start + i] = 1.0 / float(n_cand)
+    obj[mlu_idx] = 0.01  # small MLU tiebreaker
+
+    # Bounds
+    lb = np.zeros(n_vars, dtype=np.float64)
+    ub = np.full(n_vars, np.inf, dtype=np.float64)
+    ub[x_cand_start:x_cand_start + n_cand] = 1.0
+    ub[x_path_start:x_path_start + n_paths] = 1.0
+    ub[util_start:util_start + n_dir] = 1.0
+    ub[mlu_idx] = min(1.0, problem.congestion_threshold_upper_bound)
+
+    # Integrality
+    integrality = [highspy.HighsVarType.kContinuous] * n_vars
+    for i in range(x_cand_start, x_cand_start + n_cand):
+        integrality[i] = highspy.HighsVarType.kInteger
+    for i in range(x_path_start, x_path_start + n_paths):
+        integrality[i] = highspy.HighsVarType.kInteger
+
+    lp = highspy.HighsLp()
+    lp.num_col_ = n_vars
+    lp.num_row_ = n_con
+    lp.col_cost_ = obj
+    lp.col_lower_ = lb
+    lp.col_upper_ = ub
+    lp.row_lower_ = np.array(rlb, dtype=np.float64)
+    lp.row_upper_ = np.array(rub, dtype=np.float64)
+    lp.integrality_ = integrality
+    lp.a_matrix_.format_ = highspy.MatrixFormat.kRowwise
+    lp.a_matrix_.start_ = A.indptr.astype(np.int32)
+    lp.a_matrix_.index_ = A.indices.astype(np.int32)
+    lp.a_matrix_.value_ = A.data.astype(np.float64)
+    lp.offset_ = 0.0
+
+    index_maps = {
+        "x_cand_start": x_cand_start,
+        "n_cand": n_cand,
+        "candidate_edge_indices": pd.candidate_edge_indices,
+        "undirected_edges": problem.canonical_candidate_edges,
+        "current_edges": problem.current_edges,
+        "x_path_start": x_path_start,
+        "n_paths": n_paths,
+        "flow_start": flow_start,
+        "util_start": util_start,
+        "n_dir": n_dir,
+        "mlu_idx": mlu_idx,
+        "n_vars": n_vars,
+        "commodities": list(problem.demand.keys()),
+        "comm_to_idx": {c: i for i, c in enumerate(problem.demand)},
+        "flow_var_index": {(pi,): flow_start + pi for pi in range(n_paths)},
+    }
+    return lp, index_maps
+
+
+# ---------------------------------------------------------------------------
+# onset_v1_1 builder (path-based flow, core-edge mandate, transponders)
+# ---------------------------------------------------------------------------
+
+
+def _build_milp_onset_v1_1(problem: DopplerProblem):
+    """Build a HiGHS LP for the onset_v1_1 formulation.
+
+    Variables (deterministic order):
+      x_edge[0..E-1]: binary, per directed edge
+      node_deg[0..V-1]: integer, per node
+      x_path[N_paths]: binary, one per (s,t,i)
+      flow[N_paths]: continuous, normalized flow per path
+      util[0..E-1]: continuous, normalized utilization per directed edge
+      mlu: scalar [0, 1]
+
+    Returns (lp, index_maps).
+    """
+    import highspy
+
+    pd = problem.path_data
+    if pd is None:
+        raise ValueError("onset_v1_1 requires path_data on DopplerProblem")
+
+    nodes = list(problem.canonical_node_order)
+    n_nodes = len(nodes)
+    node_to_idx = {n: i for i, n in enumerate(nodes)}
+    n_dir = len(pd.supergraph_directed_edges)
+    dir_to_idx = {e: i for i, e in enumerate(pd.supergraph_directed_edges)}
+
+    sc = problem.scaled_capacity
+    norm_demand = {c: problem.demand[c] / sc for c in problem.demand}
+
+    # Enumerate path variables: flat list of (s,t,i) -> col
+    path_vars: Dict[Tuple, int] = {}
+    path_idx_to_edge_cols: Dict[int, List[int]] = {}
+    next_path = 0
+    for (s, t), path_idxs in pd.commodity_to_paths.items():
+        for li, pi in enumerate(path_idxs):
+            key = (s, t, li)
+            path_vars[key] = next_path
+            edges = pd.path_list[pi]
+            edge_cols = []
+            for j in range(len(edges) - 1):
+                de = (edges[j], edges[j + 1])
+                if de in dir_to_idx:
+                    edge_cols.append(dir_to_idx[de])
+            path_idx_to_edge_cols[next_path] = edge_cols
+            next_path += 1
+    n_path_vars = next_path
+
+    # Build link_path_map from computed path_idx_to_edge_cols
+    link_path_map: Dict[int, List[int]] = {}
+    for edge_dir in range(n_dir):
+        link_path_map[edge_dir] = []
+    for pi, edge_cols in path_idx_to_edge_cols.items():
+        for ei in edge_cols:
+            link_path_map[ei].append(pi)
+
+    var_idx = 0
+    x_edge_start = var_idx
+    var_idx += n_dir
+    node_deg_start = var_idx
+    var_idx += n_nodes
+    x_path_start = var_idx
+    var_idx += n_path_vars
+    flow_start = var_idx
+    var_idx += n_path_vars
+    util_start = var_idx
+    var_idx += n_dir
+    mlu_idx = var_idx
+    n_vars = var_idx + 1
+
+    rows: List[Dict[int, float]] = []
+    rlb: List[float] = []
+    rub: List[float] = []
+
+    def add_row(lo, hi, entries):
+        rows.append(entries)
+        rlb.append(lo)
+        rub.append(hi)
+
+    # 1. Symmetric edges: x_edge[u,v] == x_edge[v,u]
+    undir_seen = set()
+    for ei, (u, v) in enumerate(pd.supergraph_directed_edges):
+        u_canon, v_canon = _canonical_edge(u, v)
+        if (u_canon, v_canon) in undir_seen:
+            continue
+        undir_seen.add((u_canon, v_canon))
+        rev = (v, u)
+        if rev in dir_to_idx:
+            rev_ei = dir_to_idx[rev]
+            add_row(0.0, 0.0, {
+                x_edge_start + ei: 1.0,
+                x_edge_start + rev_ei: -1.0,
+            })
+
+    # 2. Transponder degree constraints
+    for ni, node in enumerate(nodes):
+        entries = {node_deg_start + ni: 1.0}
+        for ei, (u, v) in enumerate(pd.supergraph_directed_edges):
+            if u == node:
+                entries[x_edge_start + ei] = -1.0
+        add_row(0.0, 0.0, entries)
+
+        txp = problem.txp_count.get(node, len(pd.supergraph_directed_edges))
+        add_row(-np.inf, float(txp), {node_deg_start + ni: 1.0})
+
+    # 3. Core edge mandate
+    for (u, v) in pd.core_edge_set:
+        if (u, v) in dir_to_idx:
+            add_row(1.0, 1.0, {x_edge_start + dir_to_idx[(u, v)]: 1.0})
+        if (v, u) in dir_to_idx:
+            add_row(1.0, 1.0, {x_edge_start + dir_to_idx[(v, u)]: 1.0})
+
+    # 4. Path availability: x_path[p] == AND(x_edge[e] for e in path)
+    for pi in range(n_path_vars):
+        edge_cols = path_idx_to_edge_cols.get(pi, [])
+        if edge_cols:
+            _add_and_constraints(
+                rows, rlb, rub,
+                x_path_start + pi,
+                [x_edge_start + ei for ei in edge_cols],
+            )
+        else:
+            add_row(1.0, 1.0, {x_path_start + pi: 1.0})
+
+    # 5. Flow activation: flow[p] <= x_path[p]
+    for pi in range(n_path_vars):
+        add_row(-np.inf, 0.0, {
+            flow_start + pi: 1.0,
+            x_path_start + pi: -1.0,
+        })
+
+    # 6. Demand satisfaction per commodity
+    for (s, t), path_idxs in pd.commodity_to_paths.items():
+        d = norm_demand.get((s, t), 0.0)
+        if d <= 0 or not path_idxs:
+            continue
+        entries = {}
+        for li, pi in enumerate(path_idxs):
+            key = (s, t, li)
+            if key in path_vars:
+                entries[flow_start + path_vars[key]] = 1.0
+        if entries:
+            add_row(d, np.inf, entries)
+
+    # 7. Link utilization: util[ei] == sum(flow[p] for p on edge)
+    #    Equality (not <=) so that mlu = max(util) correctly measures
+    #    the maximum edge utilization rather than going to zero.
+    for ei in range(n_dir):
+        path_cols = link_path_map.get(ei, [])
+        entries = {util_start + ei: 1.0}
+        for pi in path_cols:
+            entries[flow_start + pi] = -1.0
+        add_row(0.0, 0.0, entries)
+
+    # 8. Capacity: sum(flow on edge) <= x_edge[ei] (normalized)
+    for ei in range(n_dir):
+        path_cols = link_path_map.get(ei, [])
+        entries = {x_edge_start + ei: -1.0}
+        for pi in path_cols:
+            entries[flow_start + pi] = 1.0
+        if len(entries) > 1:
+            add_row(-np.inf, 0.0, entries)
+
+    # 9. MLU: mlu >= util[ei] for all ei
+    for ei in range(n_dir):
+        add_row(-np.inf, 0.0, {
+            mlu_idx: -1.0,
+            util_start + ei: 1.0,
+        })
+
+    # Assemble CSR
+    n_con = len(rows)
+    ri, ci, vi = [], [], []
+    for i, r in enumerate(rows):
+        for col, val in r.items():
+            ri.append(i); ci.append(col); vi.append(val)
+    A = csr_matrix((vi, (ri, ci)), shape=(n_con, n_vars))
+
+    # Objective: sum(x_edge) + epsilon * mlu
+    # Matches legacy: edge count dominates (link_util -> 0, MLU is tiebreaker)
+    obj = np.zeros(n_vars, dtype=np.float64)
+    for ei in range(n_dir):
+        obj[x_edge_start + ei] = 1.0
+    obj[mlu_idx] = 0.01
+
+    # Bounds
+    lb = np.zeros(n_vars, dtype=np.float64)
+    ub = np.full(n_vars, np.inf, dtype=np.float64)
+    ub[x_edge_start:x_edge_start + n_dir] = 1.0
+    ub[x_path_start:x_path_start + n_path_vars] = 1.0
+    ub[util_start:util_start + n_dir] = 1.0
+    ub[mlu_idx] = min(1.0, problem.congestion_threshold_upper_bound)
+
+    # Integrality
+    integrality = [highspy.HighsVarType.kContinuous] * n_vars
+    for i in range(x_edge_start, x_edge_start + n_dir):
+        integrality[i] = highspy.HighsVarType.kInteger
+    for i in range(node_deg_start, node_deg_start + n_nodes):
+        integrality[i] = highspy.HighsVarType.kInteger
+    for i in range(x_path_start, x_path_start + n_path_vars):
+        integrality[i] = highspy.HighsVarType.kInteger
+
+    lp = highspy.HighsLp()
+    lp.num_col_ = n_vars
+    lp.num_row_ = n_con
+    lp.col_cost_ = obj
+    lp.col_lower_ = lb
+    lp.col_upper_ = ub
+    lp.row_lower_ = np.array(rlb, dtype=np.float64)
+    lp.row_upper_ = np.array(rub, dtype=np.float64)
+    lp.integrality_ = integrality
+    lp.a_matrix_.format_ = highspy.MatrixFormat.kRowwise
+    lp.a_matrix_.start_ = A.indptr.astype(np.int32)
+    lp.a_matrix_.index_ = A.indices.astype(np.int32)
+    lp.a_matrix_.value_ = A.data.astype(np.float64)
+    lp.offset_ = 0.0
+
+    index_maps = {
+        "x_edge_start": x_edge_start,
+        "n_dir": n_dir,
+        "supergraph_directed_edges": pd.supergraph_directed_edges,
+        "dir_to_idx": dir_to_idx,
+        "undirected_edges": problem.canonical_candidate_edges,
+        "current_edges": problem.current_edges,
+        "node_deg_start": node_deg_start,
+        "n_nodes": n_nodes,
+        "nodes": nodes,
+        "node_to_idx": node_to_idx,
+        "x_path_start": x_path_start,
+        "n_path_vars": n_path_vars,
+        "path_vars": path_vars,
+        "path_idx_to_edge_cols": path_idx_to_edge_cols,
+        "flow_start": flow_start,
+        "util_start": util_start,
+        "mlu_idx": mlu_idx,
+        "n_vars": n_vars,
+        "commodities": list(problem.demand.keys()),
+        "comm_to_idx": {c: i for i, c in enumerate(problem.demand)},
+        "link_path_map": link_path_map,
+        "core_edge_set": pd.core_edge_set,
+    }
+    return lp, index_maps
+
+
+# ---------------------------------------------------------------------------
+# Solution extraction for path-based formulations
+# ---------------------------------------------------------------------------
+
+
+def _canonical_edge(u: str, v: str) -> Tuple[str, str]:
+    return (u, v) if u <= v else (v, u)
+
+
+def _extract_solution_onset_v1(
+    problem: DopplerProblem,
+    index_maps: dict,
+    solution: np.ndarray,
+    proven_optimal: bool,
+) -> TopologySolution:
+    """Extract onset_v1 solution from HiGHS output."""
+    im = index_maps
+    n_cand = im["n_cand"]
+    cand_indices = im["candidate_edge_indices"]
+    undirected_edges = im["undirected_edges"]
+
+    x_cand = solution[im["x_cand_start"]:im["x_cand_start"] + n_cand]
+    selected = set(problem.current_edges)
+    for ci in range(n_cand):
+        if x_cand[ci] > 0.5 - BINARY_TOLERANCE:
+            ei = cand_indices[ci]
+            selected.add(undirected_edges[ei])
+
+    selected_frozen = frozenset(selected)
+    current = problem.current_edges
+    added = frozenset(selected_frozen - current)
+    dropped = frozenset(current - selected_frozen)
+    change_count = len(added) + len(dropped)
+
+    solver_mlu = float(solution[im["mlu_idx"]])
+
+    pd = problem.path_data
+    sc = problem.scaled_capacity
+    n_dir = im.get("n_dir", len(pd.supergraph_directed_edges))
+
+    agg_loads: Dict[Tuple[str, str], float] = {}
+    for ei in range(n_dir):
+        total = 0.0
+        for pi in pd.link_path_map[ei]:
+            total += solution[im["flow_start"] + pi]
+        if total > FLOW_TOLERANCE_ABSOLUTE:
+            u, v = pd.supergraph_directed_edges[ei]
+            agg_loads[(u, v)] = total * sc
+
+    validated_mlu = _validate_mlu_independently(
+        problem, selected_frozen, agg_loads
+    )
+
+    obj = solver_mlu + change_count
+
+    nodes = list(problem.canonical_node_order)
+    stable_id = compute_stable_topology_id(nodes, list(selected_frozen))
+    legacy_id = compute_legacy_topology_id(
+        problem.legacy_candidate_edge_order, selected_frozen
+    )
+
+    return TopologySolution(
+        selected_edges=selected_frozen,
+        added=added,
+        dropped=dropped,
+        commodity_flows=None,
+        aggregate_edge_loads=agg_loads,
+        solver_mlu=solver_mlu,
+        validated_mlu=validated_mlu,
+        change_count=change_count,
+        objective_value=obj,
+        stable_topology_id=stable_id,
+        legacy_topology_id=legacy_id,
+        provenance=BackendProvenance.OPEN,
+        proven_optimal=proven_optimal,
+    )
+
+
+def _extract_solution_onset_v1_1(
+    problem: DopplerProblem,
+    index_maps: dict,
+    solution: np.ndarray,
+    proven_optimal: bool,
+) -> TopologySolution:
+    """Extract onset_v1_1 solution from HiGHS output."""
+    im = index_maps
+    n_dir = im["n_dir"]
+    directed_edges = im["supergraph_directed_edges"]
+
+    x_edge = solution[im["x_edge_start"]:im["x_edge_start"] + n_dir]
+    selected_undir: Set[Tuple[str, str]] = set()
+    for ei in range(n_dir):
+        if x_edge[ei] > 0.5 - BINARY_TOLERANCE:
+            u, v = directed_edges[ei]
+            selected_undir.add(_canonical_edge(u, v))
+
+    selected_frozen = frozenset(selected_undir)
+    current = problem.current_edges
+    added = frozenset(selected_frozen - current)
+    dropped = frozenset(current - selected_frozen)
+    change_count = len(added) + len(dropped)
+
+    solver_mlu = float(solution[im["mlu_idx"]])
+
+    sc = problem.scaled_capacity
+    link_path_map = im["link_path_map"]
+    agg_loads: Dict[Tuple[str, str], float] = {}
+    for ei in range(n_dir):
+        total = 0.0
+        for pi in link_path_map.get(ei, []):
+            total += solution[im["flow_start"] + pi]
+        if total > FLOW_TOLERANCE_ABSOLUTE:
+            u, v = directed_edges[ei]
+            agg_loads[(u, v)] = total * sc
+
+    validated_mlu = _validate_mlu_independently(
+        problem, selected_frozen, agg_loads
+    )
+
+    obj = solver_mlu + change_count
+
+    nodes = list(problem.canonical_node_order)
+    stable_id = compute_stable_topology_id(nodes, list(selected_frozen))
+    legacy_id = compute_legacy_topology_id(
+        problem.legacy_candidate_edge_order, selected_frozen
+    )
+
+    return TopologySolution(
+        selected_edges=selected_frozen,
+        added=added,
+        dropped=dropped,
+        commodity_flows=None,
+        aggregate_edge_loads=agg_loads,
+        solver_mlu=solver_mlu,
+        validated_mlu=validated_mlu,
+        change_count=change_count,
+        objective_value=obj,
+        stable_topology_id=stable_id,
+        legacy_topology_id=legacy_id,
+        provenance=BackendProvenance.OPEN,
+        proven_optimal=proven_optimal,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Public entry points
+# ---------------------------------------------------------------------------
+
+
+def solve_onset_v1(problem: DopplerProblem) -> OptimizationResult:
+    """Run onset_v1 optimization (edge-based path flow with budget).
+
+    Single-solve method. Returns one solution or infeasible.
+    """
+    lp, im = _build_milp_onset_v1(problem)
+    return _solve_single_milp(problem, lp, im, _extract_solution_onset_v1)
+
+
+def solve_onset_v1_1(problem: DopplerProblem) -> OptimizationResult:
+    """Run onset_v1_1 optimization (path-based flow, core-edge mandate).
+
+    Single-solve method. Returns one solution or infeasible.
+    """
+    lp, im = _build_milp_onset_v1_1(problem)
+    return _solve_single_milp(problem, lp, im, _extract_solution_onset_v1_1)

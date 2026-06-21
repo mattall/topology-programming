@@ -22,7 +22,7 @@ from typing import Dict, List, Optional, Set, Tuple
 import networkx as nx
 import numpy as np
 
-from onset.base_types import DopplerProblem
+from onset.base_types import DopplerProblem, _PathProblemData
 from onset.constants import SCRIPT_HOME
 from onset.utilities.graph import (
     astar_path_generator,
@@ -667,13 +667,14 @@ def build_doppler_problem(
     parallel_execution: bool = False,
     compute_paths: bool = True,
     retain_commodity_flows: bool = False,
+    method: str = "doppler",
 ) -> DopplerProblem:
     """Build a DopplerProblem from AlpWolf / simulator state.
 
     This is the single factory for constructing a fully-validated
     DopplerProblem from the raw graph, demand, and transponder data
-    available at the simulation layer.  Used by both Doppler and
-    onset_v3 optimization paths.
+    available at the simulation layer.  Used by Doppler, onset_v3,
+    onset_v2, and onset optimization paths.
 
     Parameters
     ----------
@@ -707,6 +708,9 @@ def build_doppler_problem(
         Whether to compute tunnel paths.
     retain_commodity_flows : bool
         If True, per-commodity flows are retained in solutions.
+    method : str
+        Optimization method: "doppler", "onset_v3", "onset_v2", "onset".
+        Determines which solver and data structures are used.
 
     Returns
     -------
@@ -744,6 +748,85 @@ def build_doppler_problem(
         if directed_set:
             tunnel_edge_sets[(s, t)] = frozenset(directed_set)
 
+    # Build path-based data for onset_v2 / onset formulations
+    path_data = None
+    if method in ("onset", "onset_v2"):
+        tunnel_list = data["tunnel_list"]
+        tunnel_dict = data["tunnel_dict"]
+        candidate_links = data["candidate_links"]
+        current_edges = data["current_edges"]
+        super_graph = data["super_graph"]
+
+        # path_list: tuple of paths, each path is a tuple of node IDs
+        path_list = tuple(tuple(p) for p in tunnel_list)
+
+        # commodity_to_paths: (s,t) -> tuple of path indices
+        commodity_to_paths: Dict[Tuple[str, str], Tuple[int, ...]] = {}
+        ordered_pairs = data["ordered_node_pairs"]
+        for s, t in ordered_pairs:
+            if (s, t) in data["demand_dict"] and data["demand_dict"][(s, t)] > 0:
+                idxs = tuple(tunnel_dict.get((s, t), []))
+                if idxs:
+                    commodity_to_paths[(s, t)] = idxs
+
+        # candidate_edge_indices: indices into canonical_edges for edges NOT in current
+        cand_link_set = {tuple(sorted(e)) for e in candidate_links}
+        candidate_edge_indices: Tuple[int, ...] = tuple(
+            i for i, e in enumerate(canonical_edges) if e in cand_link_set
+        )
+
+        # path_candidate_map: per path, which local candidate indices (into
+        # candidate_edge_indices, NOT global canonical_edges) are in this path
+        cand_global_to_local = {gi: li for li, gi in enumerate(candidate_edge_indices)}
+        path_candidate_map: Tuple[Tuple[int, ...], ...] = tuple(
+            tuple(
+                cand_global_to_local[ci]
+                for ci in candidate_edge_indices
+                if any(
+                    canonical_edges[ci] == tuple(sorted((path[j], path[j + 1])))
+                    for j in range(len(path) - 1)
+                )
+            )
+            for path in path_list
+        )
+
+        # supergraph_directed_edges: both directions of all canonical candidate edges
+        supergraph_directed_edges: Tuple[Tuple[str, str], ...] = tuple(
+            (u, v) for (u, v) in canonical_edges
+        ) + tuple((v, u) for (u, v) in canonical_edges)
+
+        dir_to_idx = {e: i for i, e in enumerate(supergraph_directed_edges)}
+
+        # link_path_map: per supergraph directed edge, which path indices traverse it
+        link_path_map: Tuple[Tuple[int, ...], ...] = tuple(
+            tuple(
+                pi for pi, path in enumerate(path_list)
+                if len(path) >= 2 and any(
+                    (path[j], path[j + 1]) == de
+                    for j in range(len(path) - 1)
+                )
+            )
+            for de in supergraph_directed_edges
+        )
+
+        # core_edge_set: undirected physical-graph edges (onset_v2 only)
+        if method == "onset_v2":
+            core_edge_set: FrozenSet[Tuple[str, str]] = frozenset(
+                tuple(sorted(e)) for e in base_graph.edges
+            )
+        else:
+            core_edge_set = frozenset()
+
+        path_data = _PathProblemData(
+            path_list=path_list,
+            commodity_to_paths=commodity_to_paths,
+            candidate_edge_indices=candidate_edge_indices,
+            path_candidate_map=path_candidate_map,
+            supergraph_directed_edges=supergraph_directed_edges,
+            link_path_map=link_path_map,
+            core_edge_set=core_edge_set,
+        )
+
     return DopplerProblem(
         canonical_node_order=nodes,
         canonical_candidate_edges=canonical_edges,
@@ -758,4 +841,5 @@ def build_doppler_problem(
         top_k=top_k,
         optimizer_time_limit=optimizer_time_limit,
         retain_commodity_flows=retain_commodity_flows,
+        path_data=path_data,
     )

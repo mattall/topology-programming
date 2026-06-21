@@ -11,11 +11,17 @@ from onset.base_types import (
     OptimizerStatus,
     BackendProvenance,
     compute_stable_topology_id,
+    _PathProblemData,
 )
 from onset.open_doppler import (
     solve_doppler_with_enumeration,
     solve_baseline,
     make_no_good_cut,
+    solve_onset_v1,
+    solve_onset_v1_1,
+    _add_and_constraints,
+    _build_milp_onset_v1,
+    _build_milp_onset_v1_1,
 )
 
 
@@ -441,3 +447,236 @@ class TestSelectedSolution:
         result = solve_doppler_with_enumeration(prob)
         if result.has_solutions:
             assert result.objective_best is result.solutions[0]
+
+
+# ---------------------------------------------------------------------------
+# M3: onset_v1 and onset_v1_1 path-based builders
+# ---------------------------------------------------------------------------
+
+
+def _build_path_problem_onset_v1():
+    """4-node line: a-b-c-d with candidate a-c (shortcut).
+
+    Logical: a-b-c-d  (3 undirected edges)
+    Candidate: a-c (1 candidate)
+    Paths: a->c via a-b-c (needs b-c active) or direct a-c (needs candidate)
+    Demand: a->c = 50
+    """
+    nodes = ("a", "b", "c", "d")
+    candidates = (("a", "b"), ("b", "c"), ("c", "d"), ("a", "c"))
+    current = frozenset({("a", "b"), ("b", "c"), ("c", "d")})
+    cand_edge_idxs = (3,)  # ("a", "c") is index 3 in candidates
+
+    # paths: a-b-c and a-c (direct)
+    path_list = (("a", "b", "c"), ("a", "c"))
+    # path 0 has candidate edge ("a","c")? No, path 0 is a-b-c, only current edges
+    path_cand_map = ((), (0,))  # path 1 uses candidate idx 0 (which is ("a","c"))
+    commodity_to_paths = {("a", "c"): (0, 1)}
+
+    supergraph_dir = tuple(
+        (u, v) for (u, v) in candidates
+    ) + tuple((v, u) for (u, v) in candidates)
+
+    # link_path_map: per supergraph directed edge, which paths traverse it
+    link_path_map = []
+    for de in supergraph_dir:
+        paths_on_edge = []
+        for pi, path in enumerate(path_list):
+            for j in range(len(path) - 1):
+                if (path[j], path[j + 1]) == de:
+                    paths_on_edge.append(pi)
+        link_path_map.append(tuple(paths_on_edge))
+
+    pd = _PathProblemData(
+        path_list=path_list,
+        commodity_to_paths=commodity_to_paths,
+        candidate_edge_indices=cand_edge_idxs,
+        path_candidate_map=path_cand_map,
+        supergraph_directed_edges=supergraph_dir,
+        link_path_map=tuple(link_path_map),
+        core_edge_set=frozenset(),
+    )
+
+    return DopplerProblem(
+        canonical_node_order=nodes,
+        canonical_candidate_edges=candidates,
+        legacy_candidate_edge_order=candidates,
+        current_edges=current,
+        txp_count={"a": 2, "b": 2, "c": 2, "d": 2},
+        demand={("a", "c"): 50.0},
+        tunnel_edge_sets={
+            ("a", "c"): frozenset({("a", "b"), ("b", "c"), ("a", "c")})
+        },
+        link_capacity=100.0,
+        scale_factor=1.0,
+        congestion_threshold_upper_bound=1.0,
+        top_k=1,
+        optimizer_time_limit=30.0,
+        path_data=pd,
+    )
+
+
+def _build_path_problem_onset_v1_1():
+    """Same topology as onset_v1 but with core-edge mandate on a-b.
+
+    Core edges (physical): a-b, b-c, c-d
+    Candidate: a-c
+    Demand: a->c = 50
+    """
+    nodes = ("a", "b", "c", "d")
+    candidates = (("a", "b"), ("b", "c"), ("c", "d"), ("a", "c"))
+    current = frozenset({("a", "b"), ("b", "c"), ("c", "d")})
+    core_set = frozenset({("a", "b"), ("b", "c"), ("c", "d")})
+
+    path_list = (("a", "b", "c"), ("a", "c"))
+    commodity_to_paths = {("a", "c"): (0, 1)}
+
+    supergraph_dir = tuple(
+        (u, v) for (u, v) in candidates
+    ) + tuple((v, u) for (u, v) in candidates)
+
+    link_path_map = []
+    for de in supergraph_dir:
+        paths_on_edge = []
+        for pi, path in enumerate(path_list):
+            for j in range(len(path) - 1):
+                if (path[j], path[j + 1]) == de:
+                    paths_on_edge.append(pi)
+        link_path_map.append(tuple(paths_on_edge))
+
+    pd = _PathProblemData(
+        path_list=path_list,
+        commodity_to_paths=commodity_to_paths,
+        candidate_edge_indices=(3,),
+        path_candidate_map=((), (0,)),
+        supergraph_directed_edges=supergraph_dir,
+        link_path_map=tuple(link_path_map),
+        core_edge_set=core_set,
+    )
+
+    return DopplerProblem(
+        canonical_node_order=nodes,
+        canonical_candidate_edges=candidates,
+        legacy_candidate_edge_order=candidates,
+        current_edges=current,
+        txp_count={"a": 2, "b": 3, "c": 3, "d": 2},
+        demand={("a", "c"): 50.0},
+        tunnel_edge_sets={
+            ("a", "c"): frozenset({("a", "b"), ("b", "c"), ("a", "c")})
+        },
+        link_capacity=100.0,
+        scale_factor=1.0,
+        congestion_threshold_upper_bound=1.0,
+        top_k=1,
+        optimizer_time_limit=30.0,
+        path_data=pd,
+    )
+
+
+class TestOnsetV1Builder:
+    """Tests for the onset_v1 path-based builder."""
+
+    def test_builds_without_error(self):
+        prob = _build_path_problem_onset_v1()
+        lp, im = _build_milp_onset_v1(prob)
+        assert lp.num_col_ > 0
+        assert lp.num_row_ > 0
+        assert im["n_cand"] == 1
+        assert im["n_paths"] == 2
+
+    def test_solve_returns_solution(self):
+        prob = _build_path_problem_onset_v1()
+        result = solve_onset_v1(prob)
+        assert result.has_solutions
+        assert result.status == OptimizerStatus.TOP_K_REACHED
+        sol = result.selected_solution
+        assert sol is not None
+        assert len(sol.added | sol.dropped) >= 0
+
+    def test_solution_satisfies_demand(self):
+        prob = _build_path_problem_onset_v1()
+        result = solve_onset_v1(prob)
+        assert result.has_solutions
+        sol = result.selected_solution
+        # Selected edges should include a-c path (either via b or direct)
+        assert ("a", "c") in sol.selected_edges or (
+            ("a", "b") in sol.selected_edges and ("b", "c") in sol.selected_edges
+        )
+
+    def test_solution_invariants(self):
+        prob = _build_path_problem_onset_v1()
+        result = solve_onset_v1(prob)
+        sol = result.selected_solution
+        assert sol.selected_edges == (
+            prob.current_edges | sol.added
+        ) - sol.dropped
+        assert not (sol.added & sol.dropped)
+        assert sol.change_count == len(sol.added) + len(sol.dropped)
+
+
+class TestOnsetV11Builder:
+    """Tests for the onset_v1_1 path-based builder."""
+
+    def test_builds_without_error(self):
+        prob = _build_path_problem_onset_v1_1()
+        lp, im = _build_milp_onset_v1_1(prob)
+        assert lp.num_col_ > 0
+        assert lp.num_row_ > 0
+        assert im["n_dir"] > 0
+        assert im["n_path_vars"] == 2
+
+    def test_solve_returns_solution(self):
+        prob = _build_path_problem_onset_v1_1()
+        result = solve_onset_v1_1(prob)
+        assert result.has_solutions
+        assert result.status == OptimizerStatus.TOP_K_REACHED
+
+    def test_core_edges_always_active(self):
+        prob = _build_path_problem_onset_v1_1()
+        result = solve_onset_v1_1(prob)
+        sol = result.selected_solution
+        # Core edges a-b, b-c, c-d must be selected
+        for e in prob.path_data.core_edge_set:
+            assert e in sol.selected_edges, f"Core edge {e} not selected"
+
+    def test_solution_invariants(self):
+        prob = _build_path_problem_onset_v1_1()
+        result = solve_onset_v1_1(prob)
+        sol = result.selected_solution
+        assert sol.selected_edges == (
+            prob.current_edges | sol.added
+        ) - sol.dropped
+        assert not (sol.added & sol.dropped)
+        assert sol.change_count == len(sol.added) + len(sol.dropped)
+
+
+class TestAndConstraints:
+    """Tests for the _add_and_constraints linearization helper."""
+
+    def test_adds_expected_rows(self):
+        rows = []
+        rlb = []
+        rub = []
+        _add_and_constraints(rows, rlb, rub, 0, [1, 2, 3])
+        # 3 <= constraints + 1 >= constraint = 4 rows
+        assert len(rows) == 4
+        # <= constraints: path <= x_i
+        for i in range(3):
+            assert rows[i][0] == 1.0
+            assert rows[i][i + 1] == -1.0
+            assert rlb[i] == -np.inf
+            assert rub[i] == 0.0
+        # >= constraint: path >= sum - 2
+        assert rows[3][0] == 1.0
+        assert rows[3][1] == -1.0
+        assert rows[3][2] == -1.0
+        assert rows[3][3] == -1.0
+        assert rlb[3] == -2.0  # -(3-1) = -2
+        assert rub[3] == np.inf
+
+    def test_empty_input_is_noop(self):
+        rows = []
+        rlb = []
+        rub = []
+        _add_and_constraints(rows, rlb, rub, 0, [])
+        assert len(rows) == 0

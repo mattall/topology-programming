@@ -118,6 +118,23 @@ def compute_legacy_topology_id(
 
 
 @dataclass(frozen=True)
+class _PathProblemData:
+    """Precomputed path-flow data used by onset_v1 / onset_v1_1 builders.
+
+    Built once by build_doppler_problem when method="onset" or
+    method="onset_v2", then stored on DopplerProblem.path_data.
+    """
+
+    path_list: Tuple[Tuple[str, ...], ...]
+    commodity_to_paths: Dict[Tuple[str, str], Tuple[int, ...]]
+    candidate_edge_indices: Tuple[int, ...]
+    path_candidate_map: Tuple[Tuple[int, ...], ...]
+    supergraph_directed_edges: Tuple[Tuple[str, str], ...]
+    link_path_map: Tuple[Tuple[int, ...], ...]
+    core_edge_set: FrozenSet[Tuple[str, str]]
+
+
+@dataclass(frozen=True)
 class DopplerProblem:
     """Immutable description of a single Doppler optimization problem.
 
@@ -140,6 +157,7 @@ class DopplerProblem:
     top_k: int
     optimizer_time_limit: float
     retain_commodity_flows: bool = False
+    path_data: Optional[_PathProblemData] = None
 
     def __post_init__(self) -> None:
         self._validate()
@@ -222,6 +240,28 @@ class DopplerProblem:
                 "legacy_candidate_edge_order must have same elements "
                 "as canonical_candidate_edges"
             )
+
+        # Path-data consistency (if present)
+        if self.path_data is not None:
+            pd = self.path_data
+            if len(pd.path_candidate_map) != len(pd.path_list):
+                raise ValueError(
+                    "path_candidate_map length must equal path_list length"
+                )
+            if len(pd.link_path_map) != len(pd.supergraph_directed_edges):
+                raise ValueError(
+                    "link_path_map length must equal supergraph_directed_edges length"
+                )
+            for (s, t), idxs in pd.commodity_to_paths.items():
+                if (s, t) not in self.demand:
+                    raise ValueError(
+                        f"commodity_to_paths key ({s},{t}) not in demand"
+                    )
+                for pi in idxs:
+                    if pi >= len(pd.path_list) or pi < 0:
+                        raise ValueError(
+                            f"Path index {pi} for ({s},{t}) out of range"
+                        )
 
         # Warning: legacy ID precision limit
         if len(self.legacy_candidate_edge_order) > 53:
