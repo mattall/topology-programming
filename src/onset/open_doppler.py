@@ -400,7 +400,7 @@ def _extract_solution(
 
 def _validate_mlu_independently(
     problem: OptimizationProblem,
-    selected: Frozenset[tuple[str, str]],
+    selected: frozenset[tuple[str, str]],
     agg_loads: dict[tuple[str, str], float],
 ) -> float:
     """Recompute MLU from aggregate loads and capacity."""
@@ -458,7 +458,7 @@ def solve_edge_flow_changes_mlu_single(
 
 
 def make_no_good_cut(
-    selected_edges: Frozenset[tuple[str, str]],
+    selected_edges: frozenset[tuple[str, str]],
     undirected_edges: list[tuple[str, str]],
     edge_to_idx: dict[tuple[str, str], int],
     n_vars: int,

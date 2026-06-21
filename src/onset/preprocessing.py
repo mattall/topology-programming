@@ -553,7 +553,7 @@ def preprocess_doppler(
     use_cache: bool = False,
     parallel_execution: bool = False,
     compute_paths: bool = True,
-) -> Dict:
+) -> dict:
     """Run all Gurobi-free preprocessing and return a data dict.
 
     This is the main entry point for both the open and legacy backends.
@@ -811,7 +811,7 @@ def build_optimization_problem(
 
         # core_edge_set: undirected physical-graph edges (onset_v2 only)
         if solver == "onset_v2":
-            core_edge_set: Frozenset[tuple[str, str]] = frozenset(
+            core_edge_set: frozenset[tuple[str, str]] = frozenset(
                 tuple(sorted(e)) for e in base_graph.edges
             )
         else:
