@@ -19,8 +19,8 @@ read first.
 ## High-Signal Files
 
 - `src/onset/simulator.py`: main orchestration layer for simulations.
-- `src/onset/optimization_two.py`: current optimization workhorse, especially
-  for Doppler-era runs.
+- `src/onset/open_doppler.py`: HiGHS-based MILP solver for all four topology
+  programming formulations.
 - `scripts/Doppler/exp-v2.py`: latest Doppler experiment driver and batch
   command generator.
 - `scripts/Doppler/experiment_params.py`: network, host-count, method, repeat,
@@ -33,11 +33,15 @@ read first.
 - `scripts/TDSC/`: crossfire/rolling attack evaluation scripts and plotting.
 - `src/onset/network_model.py`: graph import and network model enrichment.
 - `src/onset/utilities/`: graph, traffic, result, and plotting helpers.
+- `src/onset/method_registry.py`: data-driven method dispatch configuration.
+- `src/onset/handlers.py`: per-method handler functions invoked by the simulator.
 
 ## Current Read
 
-The recent work appears to have moved from broad simulator development toward
-running parameterized experiment campaigns. The freshest Doppler path generates
-explicit commands for scheduler execution, evaluates `top_k`, fallow
-transponder counts, candidate-link choice methods, and optimizer time limits,
-then writes compact CSV reports in `data/reports/`.
+The recent work has transitioned from Gurobi-backed optimization to an
+open-source HiGHS backend. The four MILP methods are dispatched through
+`method_registry.py` and solved by `open_doppler.py` with preprocessing in
+`preprocessing.py`. The Doppler experiment path generates explicit commands
+for scheduler execution, evaluates `top_k`, fallow transponder counts,
+candidate-link choice methods, and optimizer time limits, then writes compact
+CSV reports in `data/reports/`.

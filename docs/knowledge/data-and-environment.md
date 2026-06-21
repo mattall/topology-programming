@@ -11,7 +11,7 @@ The project uses a PyScaffold-style Python package:
 - install target: `pip install .`
 - focused test command: `python -m unittest tests.te_engine_test`
 
-Dependencies are listed in `setup.cfg`. Important ones include:
+Dependencies are listed in `pyproject.toml`. Important ones include:
 
 - `networkx`
 - `numpy`
@@ -19,8 +19,7 @@ Dependencies are listed in `setup.cfg`. Important ones include:
 - `scipy`
 - `matplotlib`
 - `seaborn`
-- `gurobipy`
-- `TMgen`, installed from a Git SSH URL
+- `highspy`
 
 ## External Tools
 
@@ -28,8 +27,9 @@ The simulator expects:
 
 - NetworkX and SciPy for internal ECMP/MCF traffic engineering. SciPy uses its
   bundled open-source HiGHS solver.
-- Gurobi, `gurobipy`, and a working Gurobi license for Gurobi-backed topology
-  programming methods. Internal ECMP and MCF do not require it.
+- Gurobi and `gurobipy` are only needed for the legacy optimization files
+  (`gurobi_doppler.py`, `gurobi_optimization.py`). The active path through
+  `open_doppler.py` uses HiGHS and does not require Gurobi.
 - Graphviz-style tooling may be needed for `.dot` output and graph rendering.
 - SLURM if using the batch scripts directly.
 

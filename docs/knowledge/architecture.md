@@ -11,16 +11,18 @@ metrics. Most experiment scripts are thin orchestration around that simulator.
   - Owns experiment IDs, result directories, traffic matrix selection/scaling,
     topology export, topology programming dispatch, TE evaluation, and metric
     collection.
-- `src/onset/optimization_two.py`
-  - Active `Link_optimization` implementation.
-  - Uses Gurobi models for Doppler/onset variants and related optimization
-    methods.
-  - Builds candidate links, path/tunnel sets, graph similarity terms, max-link
-    utilization terms, and solution outputs.
+- `src/onset/open_doppler.py`
+  - Active HiGHS-based MILP solver supporting all four topology programming
+    formulations (doppler, onset, onset_v2, onset_v3).
+  - Builds and solves edge-flow and path-flow optimization models.
+- `src/onset/preprocessing.py`
+  - Builds the `OptimizationProblem` dataclass: candidate links, tunnels,
+    demand loading, and fallow-transponder logic extracted from the legacy
+    Gurobi code.
 - `src/onset/doppler.py`
-  - Older or narrower Doppler optimization implementation. It shares concepts
-    with `optimization_two.py`, but recent simulator imports point to
-    `optimization_two.Link_optimization`.
+  - Legacy Gurobi Doppler implementation. Will be renamed in a subsequent
+    phase. Current dispatch goes through `method_registry.py` →
+    `open_doppler.py`.
 - `src/onset/network_model.py`
   - Imports `.gml` or `.json` topologies into a richer NetworkX model.
   - Adds router/client structure, interface metadata, node/link types, and
@@ -89,8 +91,8 @@ and ECMP is capped deterministically by the path budget (currently three).
 The current Doppler path is spread across:
 
 - `scripts/Doppler/exp-v2.py`: creates one `Simulation` per parameter tuple.
-- `src/onset/simulator.py`: detects `Doppler` and invokes `doppler_method`.
-- `src/onset/optimization_two.py`: builds and solves the Gurobi optimization.
+- `src/onset/simulator.py`: detects `Doppler` and dispatches through `method_registry.py`.
+- `src/onset/open_doppler.py`: builds and solves the HiGHS optimization.
 
 Important Doppler parameters:
 
@@ -104,8 +106,8 @@ Important Doppler parameters:
 
 ## Candidate Links and Paths
 
-`optimization_two.Link_optimization.initialize_candidate_links()` supports
-several candidate sets:
+Candidate link and tunnel logic lives in `src/onset/preprocessing.py`, which
+builds the `OptimizationProblem` dataclass. Supported candidate sets:
 
 - `max`: broad candidate set, including reachable non-existing node pairs
   within distance constraints.

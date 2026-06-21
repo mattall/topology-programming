@@ -9,7 +9,7 @@ The best mental model is:
 
 - `src/onset/` is the reusable package.
 - `src/onset/simulator.py` is the central coordinator.
-- `src/onset/optimization_two.py` is the active optimization workhorse.
+- `src/onset/open_doppler.py` and `src/onset/preprocessing.py` are the active optimization path.
 - `scripts/` contains publication- or campaign-specific experiment workflows.
 - `data/` contains topologies, traffic matrices, host files, paths, reports,
   results, and other generated or input artifacts.
@@ -40,7 +40,8 @@ The best mental model is:
 
 Treat this as a living research repo. Some paths are clearly current and some
 are legacy. The package is installable in the PyScaffold style, but actual
-experiment execution depends on external data. Gurobi is additionally required
-for optimization-backed topology methods, but not internal ECMP or MCF. Use
-`scripts/check-env.sh` for a quick local dependency check and
-`scripts/smoke_ans_ecmp.py` for a known end-to-end ECMP run.
+experiment execution depends on external data. All MILP-based topology
+programming methods use the open-source HiGHS backend (via `highspy`). No
+Gurobi license is required. Use `scripts/check-env.sh` for a quick local
+dependency check and `python scripts/smoke_ans_ecmp.py` for a known end-to-end
+ECMP run.

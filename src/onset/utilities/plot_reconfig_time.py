@@ -33,7 +33,6 @@ def calc_haversine(lat1, lon1, lat2, lon2):
 
 
 def calc_link_config_time(distance: float) -> float:
-    # source OptSys 2021 Nance Hall et al.
     amps_on_path = math.ceil(distance / 80)  # one amp per 80 km
     reconfig_time = amps_on_path / 10  # 1 second per ten amps
     return reconfig_time

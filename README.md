@@ -40,7 +40,7 @@ installation is needed.
 | `doppler`     | Doppler reconnaissance defense (TNSM 2024) |
 | `onset_v3`    | ONSET DDoS defense — edge-flow formulation (TDSC 2025) |
 | `onset_v2`    | ONSET DDoS defense — path-flow formulation (TDSC 2025) |
-| `onset`       | Original topology programming formulation (OptSys 2021) |
+| `onset`       | Original topology programming formulation |
 | `OTP`         | Offline Traffic Provisioning — shortcut-link heuristic |
 | `greylambda`  | Add circuits on fully-congested edges |
 | `cache`       | Cache-based defense (`Defender` module) |

@@ -21,7 +21,7 @@ experiment production, especially Doppler and TDSC evaluation.
   - Updated `scripts/Doppler/exp-v2.py`.
   - Updated `scripts/Doppler/experiment_params.py`.
   - Added/updated `scripts/Doppler/batch/CEN.batch`.
-  - Changed `src/onset/simulator.py`, `src/onset/optimization_two.py`, and
+  - Changed `src/onset/simulator.py`, `src/onset/gurobi_optimization.py`, and
     `src/onset/utilities/graph.py`.
   - Direction: run Doppler experiments over explicit parameter tuples,
     including `top_k`, fallow transponder counts, candidate-link selection, and

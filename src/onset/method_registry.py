@@ -85,7 +85,7 @@ _METHOD_REGISTRY: dict[str, MethodConfig] = {
         solver_method="onset",
         solve_fn=_SOLVER_CALLABLES["onset"],
         uses_ecmp_multisol=False,
-        description="Original topology programming formulation (OptSys 2021)",
+        description="Original topology programming formulation",
     ),
     "OTP": MethodConfig(
         name="OTP",
