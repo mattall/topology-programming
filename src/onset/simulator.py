@@ -13,9 +13,35 @@ from onset.alpwolf import AlpWolf
 from onset.constants import SCRIPT_HOME
 from onset.defender import Defender
 from onset.utilities.config import CROSSFIRE
-from onset.optimization_two import Link_optimization
 from multiprocessing import Pool, Manager
-# from mcf_net_difference import Link_optimization
+
+# Lazy import: gurobipy must not be loaded at module level.
+# The open backend (default) does not require it; only legacy methods do.
+
+
+def _get_optimizer_class(backend: str = "open"):
+    """Return the Link_optimization class for the requested backend.
+
+    The 'open' backend uses SciPy/HiGHS and never imports gurobipy.
+    The 'gurobi-legacy' backend lazily imports the existing implementation.
+    """
+    if backend == "open":
+        from onset.open_doppler import solve_doppler_with_enumeration
+        return solve_doppler_with_enumeration
+    elif backend == "gurobi-legacy":
+        try:
+            from onset.optimization_two import Link_optimization
+        except ImportError as exc:
+            raise ImportError(
+                "The 'gurobi-legacy' backend requires gurobipy. "
+                "Install with: pip install gurobipy>=10.0.1"
+            ) from exc
+        return Link_optimization
+    else:
+        raise ValueError(
+            f"Unknown backend: {backend!r}. "
+            "Expected 'open' or 'gurobi-legacy'."
+        )
 from onset.utilities.diff_compare import diff_compare
 from onset.utilities.gml_to_dot import Gml_to_dot
 # from onset.utilities.logger import NewLogger
@@ -78,7 +104,8 @@ class Simulation:
         scale_down_factor = 1,
         salt="",
         top_k=100,
-        optimizer_time_limit_minutes=1
+        optimizer_time_limit_minutes=1,
+        optimizer_backend="open",
     ):
         """Simulation initializer
 
@@ -131,6 +158,11 @@ class Simulation:
                 Used when fallow_tx_allocation_strategy = "file", contains a path to a file that explicitly states the number of fallow transponders per node.
 
             salt (str, optional): Used to generate unique file name for temp files when experiments with similar parameters are running simultaneously. Defaults to "".
+
+            optimizer_backend (str, optional): Solver backend. 'open' uses SciPy/HiGHS
+                (no Gurobi required). 'gurobi-legacy' uses the existing Gurobi implementation.
+                Defaults to 'open'. Individual method dispatch points may override via a
+                per-call backend keyword argument.
         """
         makedirs(".temp", exist_ok=True)
         self.nonce = (
@@ -199,6 +231,7 @@ class Simulation:
         self.scale_down_factor = scale_down_factor
         self.top_k = top_k
         self.optimizer_time_limit_minutes = optimizer_time_limit_minutes
+        self.optimizer_backend = optimizer_backend
         self.topo_solved = None
         self.optimizer = None
         # Set Experiment ID
@@ -1059,10 +1092,10 @@ class Simulation:
         return
 
     def onset_method(self):        
-        optimizer = Link_optimization(
+        optimizer = _get_optimizer_class("gurobi-legacy")(
             G=self.wolf.logical_graph,
             BUDGET=4,
-            demand_matrix=self.temp_tm_i_file,
+            demand_matrix_file=self.temp_tm_i_file,
             network=self.network_name,
         )
         # optimizer.run_model()
@@ -1115,7 +1148,7 @@ class Simulation:
     def onset_v3_method(self):
         logger.info("TP Method: onset_v3")
         txp_count_dict = self.wolf.get_txp_count() # Maps node NAMES to their total transponders.
-        self.optimizer = optimizer = Link_optimization(
+        self.optimizer = optimizer = _get_optimizer_class("gurobi-legacy")(
             G                   = self.wolf.logical_graph,
             demand_matrix_file  = self.temp_tm_i_file,
             network             = self.network_name,
@@ -1123,10 +1156,14 @@ class Simulation:
             txp_count           = txp_count_dict,
             use_cache           = True,
             compute_paths       = True,
-            dynamic_scale_down  = True,
-            parallel_execution  = True,
             candidate_set       = self.candidate_link_choice_method,
+            scale_down_factor   = self.scale_down_factor,
+            debug               = True,
             time_limit_minutes  = self.optimizer_time_limit_minutes,            
+            congestion_threshold_upper_bound    = \
+                self.congestion_threshold_upper_bound,
+            parallel_execution  = True
+            
         )
 
         self.max_load = 0.9
@@ -1300,7 +1337,7 @@ class Simulation:
 
     def onset_v2_method(self):
         txp_count_dict = self.wolf.get_txp_count() # Maps node NAMES to their total transponders.
-        self.optimizer = optimizer = Link_optimization(
+        self.optimizer = optimizer = _get_optimizer_class("gurobi-legacy")(
             G                   = self.wolf.logical_graph,
             demand_matrix_file  = self.temp_tm_i_file,
             network             = self.network_name,
@@ -1619,7 +1656,7 @@ class Simulation:
         # )
         # optimizer.run_model()
         txp_count_dict = self.wolf.get_txp_count() # Maps node NAMES to their total transponders.
-        self.optimizer = optimizer = Link_optimization(
+        self.optimizer =         optimizer = _get_optimizer_class(self.optimizer_backend)(
             G                   = self.wolf.logical_graph,
             demand_matrix_file  = self.temp_tm_i_file,
             network             = self.network_name,
