@@ -69,3 +69,6 @@ scripts/TDSC/notebooks/
 temp/
 tmp/
 /external/yates/
+docs/references.md
+docs/publications
+opencode.json
