@@ -14,7 +14,7 @@ class TestMethodRegistry:
     """Tests for _METHOD_REGISTRY and MethodConfig."""
 
     def test_all_keys_have_handler_field(self):
-        """Every entry has a handler field (may be empty string until wired)."""
+        """Every entry has a handler field (set directly in method_registry.py)."""
         for name, config in _METHOD_REGISTRY.items():
             assert isinstance(config.handler, str) or callable(config.handler), \
                 f"{name}: handler should be str or callable"
