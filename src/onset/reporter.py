@@ -254,15 +254,16 @@ def evaluate_candidate_topologies(
     end: float = time()
     multi_sol_time: float = end - start
 
-    valid_items = [
-        (k, t, m)
-        for (k, (t, m)) in mlu_container.items()
-        if isinstance(m, Number)
-    ]
+    valid_items: list[tuple[int, Any, float]] = []
+    for k, v in mlu_container.items():
+        pair: Any = v
+        if isinstance(pair, tuple) and len(pair) == 2:
+            m = pair[1]
+            if isinstance(m, (int, float)):
+                valid_items.append((k, pair[0], float(m)))
 
     if valid_items:
         (best_i, best_topo, best_mlu) = min(valid_items, key=lambda x: x[2])
-        best_mlu = cast(float, best_mlu)
         best_sol: TopologySolution | None = id_to_solution.get(best_i)
         return (best_sol, multi_sol_time, best_i, best_mlu)
 

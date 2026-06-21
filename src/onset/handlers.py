@@ -162,9 +162,8 @@ def _run_cache(sim, config: MethodConfig) -> None:
     ):
         logger.debug(
             "Adding {} ({}, {}) circuits.".format(
-                sim.circuits
-            ),
-            *sim.new_circuit,
+                sim.circuits, *sim.new_circuit
+            )
         )
         for _ in range(sim.circuits):
             u, v = sim.new_circuit

@@ -28,7 +28,7 @@ class Network:
         self.prefix = prefix
         self.ip_address_space = self.random_ipv4_address_space()
         self.available_ip_interfaces = self.interfaces_list()
-        self.used_ip_interfaces = []
+        self.used_ip_interfaces: list[str] = []
         self.node_types = [
             "Amplifier",
             "ROADM",

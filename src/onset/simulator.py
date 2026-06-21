@@ -1,5 +1,6 @@
 import os
 from collections import defaultdict
+from typing import cast
 
 
 from onset.alpwolf import AlpWolf
@@ -177,7 +178,7 @@ class Simulation:
         self.optimizer_time_limit_minutes = optimizer_time_limit_minutes
         self.topo_solved = None
         self.optimization_result = None
-        self._applied_solution = None
+        self._applied_solution: TopologySolution | None = None
         self.multi_sol_time = "NaN"
         self.multi_sol_number_best_sol = "NaN"
         self.multi_sol_best_mlu = "NaN"
@@ -388,7 +389,7 @@ class Simulation:
             self.chaff = []
             self.flux_circuits = []
             self.optimization_result = None
-            self._applied_solution = None
+            self._applied_solution: TopologySolution | None = None
             self.multi_sol_time = "NaN"
             self.multi_sol_number_best_sol = "NaN"
             self.multi_sol_best_mlu = "NaN"
@@ -664,7 +665,7 @@ class Simulation:
             base_graph=self.wolf.base_graph,
             demand_matrix_file=self.temp_tm_i_file,
             network_name=self.network_name,
-            txp_count=self.wolf.get_txp_count(),
+            txp_count=self.wolf.txp_count,
             candidate_set=self.candidate_link_choice_method,
             scale_down_factor=self.scale_down_factor,
             congestion_threshold_upper_bound=self.congestion_threshold_upper_bound,
@@ -683,5 +684,5 @@ class Simulation:
         result = solve_fn(problem)
         self.optimization_result = result
         self.opt_time = result.wall_time
-        return result
+        return cast(OptimizationResult, result)
 

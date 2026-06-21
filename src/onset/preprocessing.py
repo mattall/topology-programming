@@ -17,6 +17,7 @@ from itertools import permutations
 from math import floor, log10
 from multiprocessing import Manager, Pool
 from time import time
+from typing import Any, cast
 
 
 import networkx as nx
@@ -94,7 +95,7 @@ def _astar_path_worker(
         u_long = G.nodes[u]["Longitude"]
         v_lat = G.nodes[v]["Latitude"]
         v_long = G.nodes[v]["Longitude"]
-        return calc_haversine(u_lat, u_long, v_lat, v_long)
+        return float(calc_haversine(u_lat, u_long, v_lat, v_long))
 
     paths: list[list[str]] = []
     path_generator = astar_path_generator(G, source, target, dist)
@@ -322,8 +323,14 @@ def compute_tunnels(
     if use_cache:
         cached = _load_cached_paths(network_name)
         if cached is not None:
-            tunnel_list, tunnel_dict, tunnel_tuple_dict = cached
-            return tunnel_list, tunnel_dict, tunnel_tuple_dict
+            return cast(
+                tuple[
+                    list[list[str]],
+                    dict[tuple[str, str], list[list[str]]],
+                    dict[tuple[str, str], list[list[str]]],
+                ],
+                cached,
+            )
 
     tunnel_list: list[list[str]] = []
     tunnel_dict: dict[tuple[str, str], list[list[str]]] = defaultdict(list)
@@ -331,7 +338,7 @@ def compute_tunnels(
     if parallel:
         manager = Manager()
         shared_list = manager.list()
-        is_done_flags: dict[tuple[str, str], object] = {}
+        is_done_flags: dict[tuple[str, str], Any] = {}
 
         work = []
         worker_fn = _astar_path_worker if use_astar else _shortest_path_worker
@@ -582,10 +589,6 @@ def preprocess_doppler(
             node: (len(list(base_graph.neighbors(node))) + 1)
             for node in base_graph.nodes
         }
-    if isinstance(txp_count, dict):
-        pass
-    elif isinstance(txp_count, list):
-        txp_count = dict(zip(base_graph.nodes, txp_count))
 
     # Candidate links
     candidate_links = compute_candidate_links(

@@ -5,7 +5,7 @@ CLEAN_START = True
 SEED = 0
 PLOT_DIR = "data/plots/"
 
-IPV4 = ipaddress.IPv4Address._ALL_ONES
+IPV4 = ipaddress.IPv4Address("255.255.255.255")
 IPV4LENGTH = 32
 SCRIPT_HOME = os.path.abspath(".")
 ZERO_INDEXED = False
