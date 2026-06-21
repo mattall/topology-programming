@@ -45,14 +45,21 @@ _SOLVER_CALLABLES: dict[str, Callable] = {
 # ---------------------------------------------------------------------------
 # Method registry
 # ---------------------------------------------------------------------------
-# Handler functions are module-level functions in simulator.py.
-# They are imported lazily at dispatch time to avoid circular imports.
-# The string names here are resolved to actual callables via
-# _resolve_handler() at the bottom of simulator.py.
+
+from onset.handlers import (
+    _run_milp_method,
+    _run_otp,
+    _run_greylambda,
+    _run_cache,
+    _run_bvt,
+    _run_tbe,
+    _run_cli,
+)
 
 _METHOD_REGISTRY: dict[str, MethodConfig] = {
     "doppler": MethodConfig(
         name="doppler",
+        handler=_run_milp_method,
         is_milp=True,
         objective_mode="changes_plus_mlu",
         solver_method="doppler",
@@ -62,6 +69,7 @@ _METHOD_REGISTRY: dict[str, MethodConfig] = {
     ),
     "onset_v3": MethodConfig(
         name="onset_v3",
+        handler=_run_milp_method,
         is_milp=True,
         objective_mode="mlu",
         solver_method="onset_v3",
@@ -71,6 +79,7 @@ _METHOD_REGISTRY: dict[str, MethodConfig] = {
     ),
     "onset_v2": MethodConfig(
         name="onset_v2",
+        handler=_run_milp_method,
         is_milp=True,
         objective_mode="mlu",
         solver_method="onset_v2",
@@ -80,6 +89,7 @@ _METHOD_REGISTRY: dict[str, MethodConfig] = {
     ),
     "onset": MethodConfig(
         name="onset",
+        handler=_run_milp_method,
         is_milp=True,
         objective_mode="mlu",
         solver_method="onset",
@@ -89,6 +99,7 @@ _METHOD_REGISTRY: dict[str, MethodConfig] = {
     ),
     "OTP": MethodConfig(
         name="OTP",
+        handler=_run_otp,
         is_milp=False,
         objective_mode=None,
         solver_method=None,
@@ -98,6 +109,7 @@ _METHOD_REGISTRY: dict[str, MethodConfig] = {
     ),
     "greylambda": MethodConfig(
         name="greylambda",
+        handler=_run_greylambda,
         is_milp=False,
         objective_mode=None,
         solver_method=None,
@@ -107,6 +119,7 @@ _METHOD_REGISTRY: dict[str, MethodConfig] = {
     ),
     "cache": MethodConfig(
         name="cache",
+        handler=_run_cache,
         is_milp=False,
         objective_mode=None,
         solver_method=None,
@@ -116,6 +129,7 @@ _METHOD_REGISTRY: dict[str, MethodConfig] = {
     ),
     "BVT": MethodConfig(
         name="BVT",
+        handler=_run_bvt,
         is_milp=False,
         objective_mode=None,
         solver_method=None,
@@ -125,6 +139,7 @@ _METHOD_REGISTRY: dict[str, MethodConfig] = {
     ),
     "TBE": MethodConfig(
         name="TBE",
+        handler=_run_tbe,
         is_milp=False,
         objective_mode=None,
         solver_method=None,
@@ -134,6 +149,7 @@ _METHOD_REGISTRY: dict[str, MethodConfig] = {
     ),
     "cli": MethodConfig(
         name="cli",
+        handler=_run_cli,
         is_milp=False,
         objective_mode=None,
         solver_method=None,

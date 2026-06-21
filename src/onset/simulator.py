@@ -6,8 +6,7 @@ from onset.alpwolf import AlpWolf
 from onset.constants import SCRIPT_HOME
 from onset.preprocessing import build_optimization_problem
 from onset.base_types import TopologySolution, OptimizationResult
-from onset.method_registry import _METHOD_REGISTRY, _resolve_method, MethodConfig
-from onset.handlers import _run_milp_method, _run_otp, _run_greylambda, _run_cache, _run_bvt, _run_tbe, _run_cli
+from onset.method_registry import _METHOD_REGISTRY, _resolve_method
 from onset.validation import (
     _evaluate_te, _system, evaluate_performance_from_adding_link,
     export_logical_topo_to_gml, validate_simulation_inputs,
@@ -686,69 +685,3 @@ class Simulation:
         self.opt_time = result.wall_time
         return result
 
-
-# Wire handler callables into the method registry (avoids circular imports)
-_METHOD_REGISTRY["doppler"] = MethodConfig(
-    name="doppler", handler=_run_milp_method, is_milp=True,
-    objective_mode="changes_plus_mlu", solver_method="doppler",
-    solve_fn=_METHOD_REGISTRY["doppler"].solve_fn,
-    uses_ecmp_multisol=False,
-    description="Doppler reconnaissance defense (TNSM 2024)",
-)
-_METHOD_REGISTRY["onset_v3"] = MethodConfig(
-    name="onset_v3", handler=_run_milp_method, is_milp=True,
-    objective_mode="mlu", solver_method="onset_v3",
-    solve_fn=_METHOD_REGISTRY["onset_v3"].solve_fn,
-    uses_ecmp_multisol=True,
-    description="ONSET DDoS defense — post major revision (TDSC 2025)",
-)
-_METHOD_REGISTRY["onset_v2"] = MethodConfig(
-    name="onset_v2", handler=_run_milp_method, is_milp=True,
-    objective_mode="mlu", solver_method="onset_v2",
-    solve_fn=_METHOD_REGISTRY["onset_v2"].solve_fn,
-    uses_ecmp_multisol=False,
-    description="ONSET DDoS defense — path-based formulation (TDSC 2025)",
-)
-_METHOD_REGISTRY["onset"] = MethodConfig(
-    name="onset", handler=_run_milp_method, is_milp=True,
-    objective_mode="mlu", solver_method="onset",
-    solve_fn=_METHOD_REGISTRY["onset"].solve_fn,
-    uses_ecmp_multisol=False,
-    description="Original topology programming formulation",
-)
-_METHOD_REGISTRY["OTP"] = MethodConfig(
-    name="OTP", handler=_run_otp, is_milp=False,
-    objective_mode=None, solver_method=None, solve_fn=None,
-    uses_ecmp_multisol=False,
-    description="Offline Traffic Provisioning — shortcut-link heuristic",
-)
-_METHOD_REGISTRY["greylambda"] = MethodConfig(
-    name="greylambda", handler=_run_greylambda, is_milp=False,
-    objective_mode=None, solver_method=None, solve_fn=None,
-    uses_ecmp_multisol=False,
-    description="Greylambda — add circuits on fully-congested edges",
-)
-_METHOD_REGISTRY["cache"] = MethodConfig(
-    name="cache", handler=_run_cache, is_milp=False,
-    objective_mode=None, solver_method=None, solve_fn=None,
-    uses_ecmp_multisol=False,
-    description="Cache-based defense (Defender module)",
-)
-_METHOD_REGISTRY["BVT"] = MethodConfig(
-    name="BVT", handler=_run_bvt, is_milp=False,
-    objective_mode=None, solver_method=None, solve_fn=None,
-    uses_ecmp_multisol=False,
-    description="Bandwidth-variable transceiver emulation",
-)
-_METHOD_REGISTRY["TBE"] = MethodConfig(
-    name="TBE", handler=_run_tbe, is_milp=False,
-    objective_mode=None, solver_method=None, solve_fn=None,
-    uses_ecmp_multisol=False,
-    description="Temporary bandwidth expansion during flashcrowd",
-)
-_METHOD_REGISTRY["cli"] = MethodConfig(
-    name="cli", handler=_run_cli, is_milp=False,
-    objective_mode=None, solver_method=None, solve_fn=None,
-    uses_ecmp_multisol=False,
-    description="Interactive CLI mode",
-)

@@ -1,7 +1,7 @@
 """Pure functions for writing optimization reports and evaluating candidate
 topologies via parallel ECMP evaluation.
 
-Extracted from ``Simulation.save_doppler_results`` (open-backend branch) and
+Extracted from ``Simulation.save_doppler_results`` and
 ``Simulation._evaluate_candidate_topologies``.
 """
 
