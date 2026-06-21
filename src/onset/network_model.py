@@ -18,7 +18,7 @@ class Network:
     Network
     """
 
-    def __init__(self, graph_file: str, output_file="", prefix=24):
+    def __init__(self, graph_file: str, output_file="", prefix=24, enable_transponders=False):
         """
         graph_file (str): network topology file to build this network.
         output(str, optional): name of the graph file when the network topology is exported. Default is graph_file+"_netout".
@@ -52,6 +52,7 @@ class Network:
         self.optical_link_count = 0
         self.virtual_node_count = 0
         self.virtual_link_count = 0
+        self.enable_transponders = enable_transponders
 
         # self.fdL = {} # Links flow density.
         # self.fdN = {} # Nodes flow density. Sum of flow densities for all incoming links to the node.
@@ -234,8 +235,7 @@ class Network:
             router_u_id = G.nodes[u]["router_id"]
             router_v_id = G.nodes[v]["router_id"]
 
-            # for the sake of testing EqualNet transponders and optical links are commented out
-            if 0:
+            if self.enable_transponders:
                 transponder_u_id = self.transponder_id
                 transponder_v_id = self.transponder_id + 1
 
