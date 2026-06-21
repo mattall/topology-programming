@@ -1,5 +1,6 @@
 import os
 from collections import defaultdict
+from typing import Any
 from typing import cast
 
 
@@ -278,24 +279,25 @@ class Simulation:
 
     def perform_sim(
         self,
-        circuits=1,
-        start_iter=0,
-        end_iter=None,
-        repeat=False,
-        unit="Gbps",
-        demand_factor=1,
-        dry=False
-    ):
+        circuits: int = 1,
+        start_iter: int = 0,
+        end_iter: int | None = None,
+        repeat: bool = False,
+        unit: str = "Gbps",
+        demand_factor: int = 1,
+        dry: bool = False,
+    ) -> dict[str, list[object]] | str | None:
         self.unit = unit
         self.circuits = circuits
         self.demand_factor = demand_factor
         sim_param_tag = f"{self.circuits}_{start_iter}_{end_iter}_{int(repeat)}_{unit}_{self.demand_factor:.1f}"
-        self.new_circuit = []
-        self.chaff = []
+        self.new_circuit: list[object] = []
+        self.chaff: list[object] = []
         if end_iter is None:
             end_iter = self.iterations
 
-        return_data = self.return_data = defaultdict(list)
+        return_data: Any = defaultdict(list)
+        self.return_data = return_data
         self.circuits_added = False
 
         if CROSSFIRE == True:
@@ -344,30 +346,6 @@ class Simulation:
             self.ITERATION_ABS_PATH = ITERATION_ABS_PATH = os.path.join(
                 EXPERIMENT_ABSOLUTE_PATH, ITERATION_ID
             ).replace('.','')
-            if False: #dry:
-                return_data = ITERATION_ABS_PATH
-                if i == end_iter: 
-                    if repeat and j == 2:
-                        return return_data
-                    elif repeat and j == 1:
-                        j += 1
-                    elif repeat is False:
-                        pass
-                    else:
-                        logger.error(f"Impossible path. i = {i}, j={j}, repeat = {repeat}, end_iter = {end_iter}, ITERATION_ABS_PATH = {ITERATION_ABS_PATH}")
-                
-                    if i < start_iter:
-                        continue
-                    if i > end_iter:
-                        if repeat and i == (end_iter + 1) and j == 2:
-                            pass
-                        else:
-                            continue
-                    if repeat:
-                        j += 1
-
-                
-                continue                    
 
             logger.info(f"Initializing Traffic Matrix ({i}, {iter_i})")
             tm_i_data = [
@@ -389,7 +367,7 @@ class Simulation:
             self.chaff = []
             self.flux_circuits = []
             self.optimization_result = None
-            self._applied_solution: TopologySolution | None = None
+            self._applied_solution = None
             self.multi_sol_time = "NaN"
             self.multi_sol_number_best_sol = "NaN"
             self.multi_sol_best_mlu = "NaN"
