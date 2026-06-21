@@ -32,7 +32,7 @@ import sys
 from sys import argv
 from math import inf
 from os import path
-from typing import Counter, DefaultDict
+from collections import Counter
 from onset.constants import SCRIPT_HOME
 from onset.constants import ZERO_INDEXED
 from onset.utilities.graph_utils import get_paths, parse_edges
@@ -99,9 +99,9 @@ class Attacker:
         self.network = network
         self.most_used_edge = None
         # (edge:(core_node, core_node) -> int:count) increment int each time edge is seen.
-        self.edge_use = DefaultDict(int)
+        self.edge_use = defaultdict(int)
         # (edge:(core_node, core_node) -> list:[(host_node, host_node), ...]) append flow (host pair) for each edge
-        self.edge_flows = DefaultDict(list)
+        self.edge_flows = defaultdict(list)
         self.target_edges = []
         self.path_file = path_file
         # load paths as json format

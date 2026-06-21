@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 from time import perf_counter
-from typing import Dict, FrozenSet, List, Optional, Set, Tuple
+
 
 import numpy as np
 from scipy.sparse import csr_matrix, eye
@@ -94,7 +94,7 @@ def _build_edge_flow_milp(problem: OptimizationProblem, objective_mode: str = "c
     x_offset = 0
     x_count = n_undirected
     f_offset = x_count
-    flow_var_index: Dict[Tuple, int] = {}  # (comm_idx, u, v) -> col
+    flow_var_index: dict[Tuple, int] = {}  # (comm_idx, u, v) -> col
     f_idx = f_offset
     for ci, comm in enumerate(commodities):
         allowed = problem.tunnel_edge_sets.get(comm, frozenset())
@@ -108,11 +108,11 @@ def _build_edge_flow_milp(problem: OptimizationProblem, objective_mode: str = "c
     # ---- Constraints ----
     # We build constraint rows as lists of (col, coeff) pairs, then assemble into CSR
 
-    row_entries: List[Dict[int, float]] = []  # list of {col: coeff}
-    row_lower: List[float] = []
-    row_upper: List[float] = []
+    row_entries: list[dict[int, float]] = []  # list of {col: coeff}
+    row_lower: list[float] = []
+    row_upper: list[float] = []
 
-    def add_row(lower: float, upper: float, entries: Dict[int, float]):
+    def add_row(lower: float, upper: float, entries: dict[int, float]):
         row_entries.append(entries)
         row_lower.append(lower)
         row_upper.append(upper)
@@ -185,7 +185,7 @@ def _build_edge_flow_milp(problem: OptimizationProblem, objective_mode: str = "c
     root = nodes[0]
     root_flow_offset = n_vars
     # Add artificial root-flow variables (one per directed edge)
-    rf_vars: Dict[Tuple[str, str], int] = {}
+    rf_vars: dict[tuple[str, str], int] = {}
     for (u, v) in directed_edges:
         rf_vars[(u, v)] = root_flow_offset
         root_flow_offset += 1
@@ -335,8 +335,8 @@ def _extract_solution(
     change_count = len(added) + len(dropped)
 
     # Aggregate flows per directed edge
-    agg_loads: Dict[Tuple[str, str], float] = {}
-    total_flow_on_directed: Dict[Tuple[str, str], float] = {}
+    agg_loads: dict[tuple[str, str], float] = {}
+    total_flow_on_directed: dict[tuple[str, str], float] = {}
     for (ci, u, v), fcol in im["flow_var_index"].items():
         val = solution[fcol]
         if val > FLOW_TOLERANCE_ABSOLUTE:
@@ -400,8 +400,8 @@ def _extract_solution(
 
 def _validate_mlu_independently(
     problem: OptimizationProblem,
-    selected: FrozenSet[Tuple[str, str]],
-    agg_loads: Dict[Tuple[str, str], float],
+    selected: Frozenset[tuple[str, str]],
+    agg_loads: dict[tuple[str, str], float],
 ) -> float:
     """Recompute MLU from aggregate loads and capacity."""
     sc = problem.scaled_capacity
@@ -425,9 +425,9 @@ def solve_edge_flow_changes_mlu_single(
     problem: OptimizationProblem,
     time_limit: float,
     *,
-    additional_cuts: Optional[List[Dict[int, float]]] = None,
+    additional_cuts: list[dict[int, float]] | None = None,
     objective_mode: str = "changes_plus_mlu",
-) -> Tuple[Optional[TopologySolution], OptimizerStatus, float]:
+) -> tuple[TopologySolution | None, OptimizerStatus, float]:
     """Solve the corrected Doppler MILP once using HiGHS.
 
     Parameters
@@ -458,11 +458,11 @@ def solve_edge_flow_changes_mlu_single(
 
 
 def make_no_good_cut(
-    selected_edges: FrozenSet[Tuple[str, str]],
-    undirected_edges: List[Tuple[str, str]],
-    edge_to_idx: Dict[Tuple[str, str], int],
+    selected_edges: Frozenset[tuple[str, str]],
+    undirected_edges: list[tuple[str, str]],
+    edge_to_idx: dict[tuple[str, str], int],
     n_vars: int,
-) -> Tuple[np.ndarray, float, float]:
+) -> tuple[np.ndarray, float, float]:
     """Build a no-good cut excluding exactly this topology.
 
     Constraint: sum_{e in S} (1 - x_e) + sum_{e not in S} x_e >= 1
@@ -489,7 +489,7 @@ def make_no_good_cut(
 
 def solve_baseline(
     problem: OptimizationProblem,
-) -> Tuple[bool, Optional[float]]:
+) -> tuple[bool, float | None]:
     """Solve a continuous LP on the CURRENT topology (no optimization).
 
     Returns (feasible, mlu) where mlu is None if infeasible.
@@ -509,7 +509,7 @@ def solve_baseline(
     sc = problem.scaled_capacity
     norm_demand = {c: problem.demand[c] / sc for c in commodities}
 
-    flow_var_index: Dict[Tuple, int] = {}
+    flow_var_index: dict[Tuple, int] = {}
     f_idx = 0
     for ci, comm in enumerate(commodities):
         allowed = problem.tunnel_edge_sets.get(comm, frozenset())
@@ -654,8 +654,8 @@ def solve_edge_flow_changes_mlu(
     h.setOptionValue("mip_rel_gap", 0.0)
     h.passModel(lp)
 
-    solutions: List[TopologySolution] = []
-    seen_ids: Set[str] = set()
+    solutions: list[TopologySolution] = []
+    seen_ids: set[str] = set()
     solve_count = 0
 
     undirected_edges = im["undirected_edges"]
@@ -888,11 +888,11 @@ def solve_edge_flow_mlu(problem: OptimizationProblem) -> OptimizationResult:
 
 
 def _add_and_constraints(
-    row_entries: List[Dict[int, float]],
-    row_lower: List[float],
-    row_upper: List[float],
+    row_entries: list[dict[int, float]],
+    row_lower: list[float],
+    row_upper: list[float],
     path_var_col: int,
-    edge_var_cols: List[int],
+    edge_var_cols: list[int],
 ) -> None:
     """Add linear constraints encoding path_var == min(edge_vars).
 
@@ -1066,9 +1066,9 @@ def _build_path_flow_budget_milp(problem: OptimizationProblem):
     mlu_idx = var_idx
     n_vars = var_idx + 1
 
-    rows: List[Dict[int, float]] = []
-    rlb: List[float] = []
-    rub: List[float] = []
+    rows: list[dict[int, float]] = []
+    rlb: list[float] = []
+    rub: list[float] = []
 
     def add_row(lo, hi, entries):
         rows.append(entries)
@@ -1226,8 +1226,8 @@ def _build_path_flow_core_milp(problem: OptimizationProblem):
     norm_demand = {c: problem.demand[c] / sc for c in problem.demand}
 
     # Enumerate path variables: flat list of (s,t,i) -> col
-    path_vars: Dict[Tuple, int] = {}
-    path_idx_to_edge_cols: Dict[int, List[int]] = {}
+    path_vars: dict[Tuple, int] = {}
+    path_idx_to_edge_cols: dict[int, list[int]] = {}
     next_path = 0
     for (s, t), path_idxs in pd.commodity_to_paths.items():
         for li, pi in enumerate(path_idxs):
@@ -1244,7 +1244,7 @@ def _build_path_flow_core_milp(problem: OptimizationProblem):
     n_path_vars = next_path
 
     # Build link_path_map from computed path_idx_to_edge_cols
-    link_path_map: Dict[int, List[int]] = {}
+    link_path_map: dict[int, list[int]] = {}
     for edge_dir in range(n_dir):
         link_path_map[edge_dir] = []
     for pi, edge_cols in path_idx_to_edge_cols.items():
@@ -1265,9 +1265,9 @@ def _build_path_flow_core_milp(problem: OptimizationProblem):
     mlu_idx = var_idx
     n_vars = var_idx + 1
 
-    rows: List[Dict[int, float]] = []
-    rlb: List[float] = []
-    rub: List[float] = []
+    rows: list[dict[int, float]] = []
+    rlb: list[float] = []
+    rub: list[float] = []
 
     def add_row(lo, hi, entries):
         rows.append(entries)
@@ -1444,7 +1444,7 @@ def _build_path_flow_core_milp(problem: OptimizationProblem):
 # ---------------------------------------------------------------------------
 
 
-def _canonical_edge(u: str, v: str) -> Tuple[str, str]:
+def _canonical_edge(u: str, v: str) -> tuple[str, str]:
     return (u, v) if u <= v else (v, u)
 
 
@@ -1479,7 +1479,7 @@ def _extract_path_flow_budget(
     sc = problem.scaled_capacity
     n_dir = im.get("n_dir", len(pd.supergraph_directed_edges))
 
-    agg_loads: Dict[Tuple[str, str], float] = {}
+    agg_loads: dict[tuple[str, str], float] = {}
     for ei in range(n_dir):
         total = 0.0
         for pi in pd.link_path_map[ei]:
@@ -1529,7 +1529,7 @@ def _extract_path_flow_core(
     directed_edges = im["supergraph_directed_edges"]
 
     x_edge = solution[im["x_edge_start"]:im["x_edge_start"] + n_dir]
-    selected_undir: Set[Tuple[str, str]] = set()
+    selected_undir: set[tuple[str, str]] = set()
     for ei in range(n_dir):
         if x_edge[ei] > 0.5 - BINARY_TOLERANCE:
             u, v = directed_edges[ei]
@@ -1545,7 +1545,7 @@ def _extract_path_flow_core(
 
     sc = problem.scaled_capacity
     link_path_map = im["link_path_map"]
-    agg_loads: Dict[Tuple[str, str], float] = {}
+    agg_loads: dict[tuple[str, str], float] = {}
     for ei in range(n_dir):
         total = 0.0
         for pi in link_path_map.get(ei, []):

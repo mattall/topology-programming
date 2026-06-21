@@ -1,6 +1,6 @@
 import os
 from collections import defaultdict
-from typing import Optional
+
 
 from onset.alpwolf import AlpWolf
 from onset.constants import SCRIPT_HOME
@@ -660,7 +660,7 @@ class Simulation:
         self,
         objective_mode: str = "changes_plus_mlu",
         solver: str = "doppler",
-        top_k: Optional[int] = None,
+        top_k: int | None = None,
     ) -> OptimizationResult:
         """Build a OptimizationProblem from AlpWolf state, solve, store result.
 

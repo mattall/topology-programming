@@ -1,7 +1,7 @@
 from ipaddress import ip_address
 from os import path
 from sys import exit
-from typing import DefaultDict
+from collections import defaultdict
 import networkx as nx
 
 
@@ -351,7 +351,7 @@ def get_paths(source_gml_file, target_json_file):
     pid = 0
     source_nodes = G.nodes()
     target_nodes = G.nodes()
-    path_dict = DefaultDict(dict)
+    path_dict = defaultdict(dict)
     for source in source_nodes:
         for target in target_nodes:
             if source != target:

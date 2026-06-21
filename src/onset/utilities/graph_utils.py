@@ -1,7 +1,7 @@
 from ipaddress import ip_address
 from os import path
 from sys import exit
-from typing import DefaultDict
+from collections import defaultdict
 import networkx as nx
 import math
 import json
@@ -254,7 +254,7 @@ def get_edge_flows(G, paths=None):
         paths = read_paths(paths)
     else:
         paths = get_paths(G)
-    edge_flows = DefaultDict(set)
+    edge_flows = defaultdict(set)
     
     for net_path in paths:
         src = paths[net_path]["src"]
@@ -311,7 +311,7 @@ def get_paths(source: nx.Graph | str, target_json_file=""):
     path_id = 0
     source_nodes = G.nodes()
     target_nodes = G.nodes()
-    path_dict = DefaultDict(dict)
+    path_dict = defaultdict(dict)
     for s in source_nodes:
         for t in target_nodes:
             if s != t:

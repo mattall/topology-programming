@@ -13,7 +13,7 @@ import json
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from struct import pack
-from typing import Dict, FrozenSet, List, Optional, Sequence, Set, Tuple
+from collections.abc import Sequence
 
 import numpy as np
 
@@ -58,19 +58,19 @@ FLOW_TOLERANCE_RELATIVE = 1e-7
 # ---------------------------------------------------------------------------
 
 
-def _canonical_node_order(nodes: Sequence[str]) -> List[str]:
+def _canonical_node_order(nodes: Sequence[str]) -> list[str]:
     """Return nodes sorted by UTF-8 byte order (deterministic)."""
     return sorted(nodes, key=lambda s: s.encode("utf-8"))
 
 
-def _canonical_edge_tuple(u: str, v: str) -> Tuple[str, str]:
+def _canonical_edge_tuple(u: str, v: str) -> tuple[str, str]:
     """Return (lower, higher) in canonical order."""
     return (u, v) if u <= v else (v, u)
 
 
 def compute_stable_topology_id(
     nodes: Sequence[str],
-    edges: Sequence[Tuple[str, str]],
+    edges: Sequence[tuple[str, str]],
 ) -> str:
     """SHA-256 hex digest of canonical JSON.
 
@@ -91,8 +91,8 @@ def compute_stable_topology_id(
 
 
 def compute_legacy_topology_id(
-    candidate_edge_order: Sequence[Tuple[str, str]],
-    selected: FrozenSet[Tuple[str, str]],
+    candidate_edge_order: Sequence[tuple[str, str]],
+    selected: frozenset[tuple[str, str]],
 ) -> str:
     """Legacy bit-vector ID for report compatibility.
 
@@ -125,13 +125,13 @@ class _PathProblemData:
     solver="onset_v2", then stored on OptimizationProblem.path_data.
     """
 
-    path_list: Tuple[Tuple[str, ...], ...]
-    commodity_to_paths: Dict[Tuple[str, str], Tuple[int, ...]]
-    candidate_edge_indices: Tuple[int, ...]
-    path_candidate_map: Tuple[Tuple[int, ...], ...]
-    supergraph_directed_edges: Tuple[Tuple[str, str], ...]
-    link_path_map: Tuple[Tuple[int, ...], ...]
-    core_edge_set: FrozenSet[Tuple[str, str]]
+    path_list: tuple[tuple[str, ...], ...]
+    commodity_to_paths: dict[tuple[str, str], tuple[int, ...]]
+    candidate_edge_indices: tuple[int, ...]
+    path_candidate_map: tuple[tuple[int, ...], ...]
+    supergraph_directed_edges: tuple[tuple[str, str], ...]
+    link_path_map: tuple[tuple[int, ...], ...]
+    core_edge_set: frozenset[tuple[str, str]]
 
 
 @dataclass(frozen=True)
@@ -142,14 +142,14 @@ class OptimizationProblem:
     The object is immutable after creation.
     """
 
-    canonical_node_order: Tuple[str, ...]
-    canonical_candidate_edges: Tuple[Tuple[str, str], ...]
-    legacy_candidate_edge_order: Tuple[Tuple[str, str], ...]
-    current_edges: FrozenSet[Tuple[str, str]]
-    txp_count: Dict[str, int]
-    demand: Dict[Tuple[str, str], float]
-    tunnel_edge_sets: Dict[
-        Tuple[str, str], FrozenSet[Tuple[str, str]]
+    canonical_node_order: tuple[str, ...]
+    canonical_candidate_edges: tuple[tuple[str, str], ...]
+    legacy_candidate_edge_order: tuple[tuple[str, str], ...]
+    current_edges: frozenset[tuple[str, str]]
+    txp_count: dict[str, int]
+    demand: dict[tuple[str, str], float]
+    tunnel_edge_sets: dict[
+        tuple[str, str], frozenset[tuple[str, str]]
     ]
     link_capacity: float
     scale_factor: float
@@ -157,7 +157,7 @@ class OptimizationProblem:
     top_k: int
     optimizer_time_limit: float
     retain_commodity_flows: bool = False
-    path_data: Optional[_PathProblemData] = None
+    path_data: _PathProblemData | None = None
 
     def __post_init__(self) -> None:
         self._validate()
@@ -286,7 +286,7 @@ class OptimizationProblem:
         return self.link_capacity / self.scale_factor
 
     @property
-    def normalized_demand(self) -> Dict[Tuple[str, str], float]:
+    def normalized_demand(self) -> dict[tuple[str, str], float]:
         """Demand normalized by scaled_capacity."""
         sc = self.scaled_capacity
         return {k: v / sc for k, v in self.demand.items()}
@@ -304,13 +304,11 @@ class TopologySolution:
     Immutable.  All fields are set at construction and never change.
     """
 
-    selected_edges: FrozenSet[Tuple[str, str]]
-    added: FrozenSet[Tuple[str, str]]
-    dropped: FrozenSet[Tuple[str, str]]
-    commodity_flows: Optional[
-        Dict[Tuple[str, str, str, str], float]
-    ]
-    aggregate_edge_loads: Dict[Tuple[str, str], float]
+    selected_edges: frozenset[tuple[str, str]]
+    added: frozenset[tuple[str, str]]
+    dropped: frozenset[tuple[str, str]]
+    commodity_flows: dict[tuple[str, str, str, str], float] | None
+    aggregate_edge_loads: dict[tuple[str, str], float]
     solver_mlu: float
     validated_mlu: float
     change_count: int
@@ -356,14 +354,14 @@ class TopologySolution:
 class OptimizationResult:
     """Immutable collection of solutions from a single optimization run."""
 
-    solutions: Tuple[TopologySolution, ...]
+    solutions: tuple[TopologySolution, ...]
     status: OptimizerStatus
     wall_time: float
     backend: BackendProvenance
     solve_count: int
-    backend_diagnostics: Optional[str] = None
+    backend_diagnostics: str | None = None
     baseline_feasible: bool = False
-    baseline_mlu: Optional[float] = None
+    baseline_mlu: float | None = None
 
     def __post_init__(self) -> None:
         if self.solve_count < 0:
@@ -376,12 +374,12 @@ class OptimizationResult:
         return len(self.solutions) > 0
 
     @property
-    def objective_best(self) -> Optional[TopologySolution]:
+    def objective_best(self) -> TopologySolution | None:
         """Repository index 0 after deterministic sort."""
         return self.solutions[0] if self.solutions else None
 
     @property
-    def selected_solution(self) -> Optional[TopologySolution]:
+    def selected_solution(self) -> TopologySolution | None:
         """Lowest MLU, then fewer changes, then lower objective, then stable ID."""
         if not self.solutions:
             return None
@@ -402,7 +400,7 @@ class OptimizationResult:
         wall_time: float,
         backend: BackendProvenance,
         solve_count: int,
-        diagnostics: Optional[str] = None,
+        diagnostics: str | None = None,
     ) -> "OptimizationResult":
         return cls(
             solutions=(),

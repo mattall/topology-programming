@@ -7,7 +7,7 @@ replacing the old if/elif dispatch chain in simulator.py.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, Dict, Optional
+from collections.abc import Callable
 
 from onset.open_doppler import (
     solve_edge_flow_changes_mlu,
@@ -22,19 +22,19 @@ class MethodConfig:
 
     name: str
     is_milp: bool
-    objective_mode: Optional[str]  # "changes_plus_mlu" or "mlu"
-    solver_method: Optional[str]  # "doppler", "onset_v3", "onset_v2", "onset"
-    solve_fn: Optional[Callable]  # solver callable for MILP methods
+    objective_mode: str | None  # "changes_plus_mlu" or "mlu"
+    solver_method: str | None  # "doppler", "onset_v3", "onset_v2", "onset"
+    solve_fn: Callable | None  # solver callable for MILP methods
     uses_ecmp_multisol: bool
     description: str
-    handler: Optional[Callable[..., None]] = None  # (Simulation, MethodConfig) -> None; resolved at import time
+    handler: Callable[..., None] | None = None  # (Simulation, MethodConfig) -> None; resolved at import time
 
 
 # ---------------------------------------------------------------------------
 # Solver callables: maps solver_method string → solver function
 # ---------------------------------------------------------------------------
 
-_SOLVER_CALLABLES: Dict[str, Callable] = {
+_SOLVER_CALLABLES: dict[str, Callable] = {
     "doppler": solve_edge_flow_changes_mlu,
     "onset_v3": lambda p: solve_edge_flow_changes_mlu(p, objective_mode="mlu"),
     "onset_v2": solve_path_flow_core,
@@ -50,7 +50,7 @@ _SOLVER_CALLABLES: Dict[str, Callable] = {
 # The string names here are resolved to actual callables via
 # _resolve_handler() at the bottom of simulator.py.
 
-_METHOD_REGISTRY: Dict[str, MethodConfig] = {
+_METHOD_REGISTRY: dict[str, MethodConfig] = {
     "doppler": MethodConfig(
         name="doppler",
         is_milp=True,

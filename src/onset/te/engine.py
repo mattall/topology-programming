@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import re
 import time
-from typing import Dict, List, Mapping, Sequence, Tuple
+from collections.abc import Mapping, Sequence
 
 import networkx as nx
 import numpy as np
@@ -16,9 +16,9 @@ from scipy.sparse import coo_matrix
 
 from onset.constants import SCRIPT_HOME
 
-Edge = Tuple[str, str]
-Commodity = Tuple[str, str]
-Route = Tuple[Tuple[str, ...], float]
+Edge = tuple[str, str]
+Commodity = tuple[str, str]
+Route = tuple[tuple[str, ...], float]
 
 _MAGNITUDES = {
     "": 1.0,
@@ -80,7 +80,7 @@ def _load_topology(path: str) -> nx.DiGraph:
     return graph
 
 
-def _load_demands(traffic_file: str, hosts_file: str) -> Dict[Commodity, float]:
+def _load_demands(traffic_file: str, hosts_file: str) -> dict[Commodity, float]:
     with open(hosts_file, encoding="utf-8") as stream:
         hosts = [line.strip() for line in stream if line.strip()]
     with open(traffic_file, encoding="utf-8") as stream:
@@ -102,8 +102,8 @@ def _load_demands(traffic_file: str, hosts_file: str) -> Dict[Commodity, float]:
 
 def _ecmp_routes(
     graph: nx.DiGraph, demands: Mapping[Commodity, float], budget: int
-) -> Dict[Commodity, List[Route]]:
-    routes: Dict[Commodity, List[Route]] = {}
+) -> dict[Commodity, list[Route]]:
+    routes: dict[Commodity, list[Route]] = {}
     for commodity in sorted(demands):
         source, target = commodity
         paths = []
@@ -121,7 +121,7 @@ def _ecmp_routes(
 
 def _mcf_routes(
     graph: nx.DiGraph, demands: Mapping[Commodity, float]
-) -> Dict[Commodity, List[Route]]:
+) -> dict[Commodity, list[Route]]:
     all_commodities = sorted(demands)
     commodities = [commodity for commodity in all_commodities if demands[commodity] > 0]
     if not commodities:
@@ -134,9 +134,9 @@ def _mcf_routes(
     variable_count = len(commodities) * edge_count + 1
     z_index = variable_count - 1
 
-    eq_rows: List[int] = []
-    eq_cols: List[int] = []
-    eq_data: List[float] = []
+    eq_rows: list[int] = []
+    eq_cols: list[int] = []
+    eq_data: list[float] = []
     b_eq = np.zeros(len(commodities) * len(nodes))
     for k, (source, target) in enumerate(commodities):
         demand = demands[(source, target)]
@@ -148,9 +148,9 @@ def _mcf_routes(
         b_eq[k * len(nodes) + node_index[source]] = demand
         b_eq[k * len(nodes) + node_index[target]] = -demand
 
-    ub_rows: List[int] = []
-    ub_cols: List[int] = []
-    ub_data: List[float] = []
+    ub_rows: list[int] = []
+    ub_cols: list[int] = []
+    ub_data: list[float] = []
     for edge_i, edge in enumerate(edges):
         for k in range(len(commodities)):
             ub_rows.append(edge_i)
@@ -185,7 +185,7 @@ def _mcf_routes(
     if not solution.success:
         raise RuntimeError(f"MCF solve failed: {solution.message}")
 
-    routes: Dict[Commodity, List[Route]] = {
+    routes: dict[Commodity, list[Route]] = {
         commodity: [] for commodity in all_commodities
     }
     tolerance = max(demands.values(), default=1.0) * 1e-9
@@ -195,7 +195,7 @@ def _mcf_routes(
             for edge in edges
             if solution.x[k * edge_count + edge_index[edge]] > tolerance
         }
-        paths: List[Route] = []
+        paths: list[Route] = []
         while residual:
             flow_graph = nx.DiGraph(edge for edge, flow in residual.items() if flow > tolerance)
             try:
@@ -213,9 +213,9 @@ def _mcf_routes(
     return routes
 
 
-def _fair_share(capacity: float, flows: Sequence[Tuple[int, float]]) -> Dict[int, float]:
+def _fair_share(capacity: float, flows: Sequence[tuple[int, float]]) -> dict[int, float]:
     remaining = capacity
-    shares: Dict[int, float] = {}
+    shares: dict[int, float] = {}
     ordered = sorted(flows, key=lambda item: (item[1], item[0]))
     for position, (flow_id, demand) in enumerate(ordered):
         count = len(ordered) - position
@@ -229,9 +229,9 @@ def _statistics(
     graph: nx.DiGraph,
     demands: Mapping[Commodity, float],
     routes: Mapping[Commodity, Sequence[Route]],
-) -> Tuple[Dict[Edge, float], Dict[Edge, float], float, float, float]:
-    path_flows: List[Tuple[Tuple[str, ...], float]] = []
-    expected_loads: Dict[Edge, float] = defaultdict(float)
+) -> tuple[dict[Edge, float], dict[Edge, float], float, float, float]:
+    path_flows: list[tuple[tuple[str, ...], float]] = []
+    expected_loads: dict[Edge, float] = defaultdict(float)
     for commodity, commodity_routes in routes.items():
         for path, probability in commodity_routes:
             demand = demands[commodity] * probability
@@ -240,11 +240,11 @@ def _statistics(
                 expected_loads[edge] += demand
 
     current = {flow_id: demand for flow_id, (_, demand) in enumerate(path_flows)}
-    actual_loads: Dict[Edge, float] = defaultdict(float)
+    actual_loads: dict[Edge, float] = defaultdict(float)
     max_hops = max((len(path) - 1 for path, _ in path_flows), default=0)
     congestion_drop = 0.0
     for hop in range(max_hops):
-        queues: Dict[Edge, List[Tuple[int, float]]] = defaultdict(list)
+        queues: dict[Edge, list[tuple[int, float]]] = defaultdict(list)
         for flow_id, (path, _) in enumerate(path_flows):
             if hop < len(path) - 1 and current.get(flow_id, 0.0) > 0:
                 queues[(path[hop], path[hop + 1])].append((flow_id, current[flow_id]))

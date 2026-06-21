@@ -10,7 +10,7 @@ from __future__ import annotations
 import os
 from numbers import Number
 from time import time
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, cast
 
 from onset.base_types import OptimizationResult, TopologySolution
 
@@ -27,7 +27,7 @@ def _write_result_vals(
     file_path: str,
     id_label: str,
     val_label: str,
-    val_dict: Dict[str, float],
+    val_dict: dict[str, float],
 ) -> None:
     with open(file_path, "a") as f:
         for k, v in val_dict.items():
@@ -38,8 +38,8 @@ def _write_result_vals(
 
 
 def write_optimization_reports(
-    result: Optional[OptimizationResult],
-    return_data: Dict[str, List[Any]],
+    result: OptimizationResult | None,
+    return_data: dict[str, list[Any]],
     iteration_abs_path: str,
     iteration_id: str,
     te_method: str,
@@ -78,15 +78,15 @@ def write_optimization_reports(
 
     if has_sol:
         total: Any = len(result.solutions)  # type: ignore[union-attr]
-        sel: Optional[TopologySolution] = result.selected_solution  # type: ignore[union-attr]
-        obj_best: Optional[TopologySolution] = result.objective_best  # type: ignore[union-attr]
+        sel: TopologySolution | None = result.selected_solution  # type: ignore[union-attr]
+        obj_best: TopologySolution | None = result.objective_best  # type: ignore[union-attr]
 
         optimal_id: Any = obj_best.stable_topology_id if obj_best else "NaN"
         curr_id: Any = sel.stable_topology_id if sel else "NaN"
         min_mlu: Any = (
             round(sel.validated_mlu, 3) if sel else "NaN"
         )
-        mlu_dict: Dict[str, float] = {
+        mlu_dict: dict[str, float] = {
             str(i): sol.validated_mlu
             for i, sol in enumerate(result.solutions)  # type: ignore[union-attr]
         }
@@ -154,7 +154,7 @@ def write_optimization_reports(
 
 
 def evaluate_candidate_topologies(
-    solutions: Tuple[TopologySolution, ...],
+    solutions: tuple[TopologySolution, ...],
     wolf: Any,
     iteration_abs_path: str,
     iteration_rel_path: str,
@@ -162,7 +162,7 @@ def evaluate_candidate_topologies(
     te_method: str,
     temp_tm_file: str,
     unit: str,
-) -> Tuple[Optional[TopologySolution], float, Optional[int], Optional[float]]:
+) -> tuple[TopologySolution | None, float, int | None, float | None]:
     """Apply, export, evaluate (ECMP in parallel), revert each solution.
 
     Returns the solution with the lowest validated MLU.
@@ -198,9 +198,9 @@ def evaluate_candidate_topologies(
     from onset.utilities.post_process import evaluate_te
 
     solution_set: set = set()
-    dot_files: Dict[int, str] = {}
-    sol_paths: Dict[int, str] = {}
-    id_to_solution: Dict[int, TopologySolution] = {}
+    dot_files: dict[int, str] = {}
+    sol_paths: dict[int, str] = {}
+    id_to_solution: dict[int, TopologySolution] = {}
 
     for i, sol in enumerate(solutions):
         if i >= 32:
@@ -228,11 +228,11 @@ def evaluate_candidate_topologies(
             dot_files[i] = sol_topo
             sol_paths[i] = iteration_rel_path + f"_sol_{i}"
 
-    sol_ids: List[int] = sorted(dot_files.keys())
+    sol_ids: list[int] = sorted(dot_files.keys())
     manager = Manager()
     mlu_container = manager.dict({sid: "NaN" for sid in sol_ids})
 
-    work: List[tuple] = []
+    work: list[tuple] = []
     for sid in sol_ids:
         work.append(
             (
@@ -263,7 +263,7 @@ def evaluate_candidate_topologies(
     if valid_items:
         (best_i, best_topo, best_mlu) = min(valid_items, key=lambda x: x[2])
         best_mlu = cast(float, best_mlu)
-        best_sol: Optional[TopologySolution] = id_to_solution.get(best_i)
+        best_sol: TopologySolution | None = id_to_solution.get(best_i)
         return (best_sol, multi_sol_time, best_i, best_mlu)
 
     return (None, multi_sol_time, None, None)

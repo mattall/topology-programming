@@ -17,7 +17,7 @@ from itertools import permutations
 from math import floor, log10
 from multiprocessing import Manager, Pool
 from time import time
-from typing import Dict, List, Optional, Set, Tuple
+
 
 import networkx as nx
 import numpy as np
@@ -42,8 +42,8 @@ def _shortest_path_worker(
     source: str,
     target: str,
     G: nx.Graph,
-    original_tunnel_list: List[List[str]],
-    tunnel_list: List[List[str]],
+    original_tunnel_list: list[list[str]],
+    tunnel_list: list[list[str]],
     is_done,
 ):
     """Worker for parallel shortest-path enumeration on a super-graph."""
@@ -53,7 +53,7 @@ def _shortest_path_worker(
     cutoff = max(core_length, 4)
     max_paths = core_length**2
 
-    paths: List[List[str]] = []
+    paths: list[list[str]] = []
     path_generator = nx.shortest_simple_paths(G, source, target)
     for path in path_generator:
         if len(path) > cutoff:
@@ -78,8 +78,8 @@ def _astar_path_worker(
     source: str,
     target: str,
     G: nx.Graph,
-    original_tunnel_list: List[List[str]],
-    tunnel_list: List[List[str]],
+    original_tunnel_list: list[list[str]],
+    tunnel_list: list[list[str]],
     is_done,
 ):
     """Worker for parallel A*-based path enumeration on a super-graph."""
@@ -96,7 +96,7 @@ def _astar_path_worker(
         v_long = G.nodes[v]["Longitude"]
         return calc_haversine(u_lat, u_long, v_lat, v_long)
 
-    paths: List[List[str]] = []
+    paths: list[list[str]] = []
     path_generator = astar_path_generator(G, source, target, dist)
     for path in path_generator:
         if len(path) > cutoff:
@@ -125,14 +125,14 @@ def load_demand_from_file(
     demand_matrix_file: str,
     scale_down_factor: float = 1.0,
     dynamic_scale_down: bool = False,
-) -> Dict[Tuple[str, str], float]:
+) -> dict[tuple[str, str], float]:
     """Load a demand matrix from a text file.
 
     Returns a dict mapping (source, target) -> float demand value.
     """
     matrix = np.loadtxt(demand_matrix_file)
     n = len(matrix)
-    demand: Dict[Tuple[str, str], float] = {}
+    demand: dict[tuple[str, str], float] = {}
     for i in range(n):
         for j in range(n):
             if i != j:
@@ -161,7 +161,7 @@ def compute_candidate_links(
     candidate_set: str = "max",
     max_distance: float = float("inf"),
     liberal_p: float = 0.1,
-) -> List[Tuple[str, str]]:
+) -> list[tuple[str, str]]:
     """Compute a list of candidate (undirected) shortcut links.
 
     Parameters
@@ -179,7 +179,7 @@ def compute_candidate_links(
     -------
     List of (u, v) tuples, each in sorted order.
     """
-    candidates: List[Tuple[str, str]] = []
+    candidates: list[tuple[str, str]] = []
     edges = set(G.edges)
 
     if candidate_set == "max":
@@ -248,7 +248,7 @@ def compute_candidate_links(
 
 def build_super_graph(
     core_G: nx.Graph,
-    candidate_links: List[Tuple[str, str]],
+    candidate_links: list[tuple[str, str]],
 ) -> nx.Graph:
     """Build the super-graph: core graph + candidate shortcut edges.
 
@@ -275,14 +275,14 @@ def build_super_graph(
 
 def find_original_tunnels(
     G: nx.Graph,
-    ordered_node_pairs: Set[Tuple[str, str]],
-) -> Tuple[List[List[str]], Dict[Tuple[str, str], List[List[str]]]]:
+    ordered_node_pairs: set[tuple[str, str]],
+) -> tuple[list[list[str]], dict[tuple[str, str], list[list[str]]]]:
     """Compute shortest paths on the original graph (without candidate links).
 
     Returns (tunnel_list, tunnel_dict).
     """
-    tunnel_list: List[List[str]] = []
-    tunnel_dict: Dict[Tuple[str, str], List[List[str]]] = defaultdict(list)
+    tunnel_list: list[list[str]] = []
+    tunnel_dict: dict[tuple[str, str], list[list[str]]] = defaultdict(list)
 
     for s, t in ordered_node_pairs:
         try:
@@ -301,18 +301,18 @@ def find_original_tunnels(
 
 def compute_tunnels(
     super_graph: nx.Graph,
-    ordered_node_pairs: Set[Tuple[str, str]],
-    original_tunnel_list: List[List[str]],
-    original_tunnel_dict: Dict[Tuple[str, str], List[List[str]]],
+    ordered_node_pairs: set[tuple[str, str]],
+    original_tunnel_list: list[list[str]],
+    original_tunnel_dict: dict[tuple[str, str], list[list[str]]],
     *,
     parallel: bool = False,
     use_astar: bool = False,
     network_name: str = "",
     use_cache: bool = False,
-) -> Tuple[
-    List[List[str]],
-    Dict[Tuple[str, str], List[List[str]]],
-    Dict[Tuple[str, str], List[List[str]]],
+) -> tuple[
+    list[list[str]],
+    dict[tuple[str, str], list[list[str]]],
+    dict[tuple[str, str], list[list[str]]],
 ]:
     """Compute tunnels (paths) on the super-graph for all node pairs.
 
@@ -325,13 +325,13 @@ def compute_tunnels(
             tunnel_list, tunnel_dict, tunnel_tuple_dict = cached
             return tunnel_list, tunnel_dict, tunnel_tuple_dict
 
-    tunnel_list: List[List[str]] = []
-    tunnel_dict: Dict[Tuple[str, str], List[List[str]]] = defaultdict(list)
+    tunnel_list: list[list[str]] = []
+    tunnel_dict: dict[tuple[str, str], list[list[str]]] = defaultdict(list)
 
     if parallel:
         manager = Manager()
         shared_list = manager.list()
-        is_done_flags: Dict[Tuple[str, str], object] = {}
+        is_done_flags: dict[tuple[str, str], object] = {}
 
         work = []
         worker_fn = _astar_path_worker if use_astar else _shortest_path_worker
@@ -366,7 +366,7 @@ def compute_tunnels(
                 tunnel_list.extend(tunnel_dict[(s, t)])
 
     else:
-        shortest_path_lengths: Dict[Tuple[str, str], int] = {}
+        shortest_path_lengths: dict[tuple[str, str], int] = {}
         for s, t in ordered_node_pairs:
             try:
                 gen = nx.shortest_simple_paths(super_graph, s, t)
@@ -377,7 +377,7 @@ def compute_tunnels(
 
         for s, t in ordered_node_pairs:
             cutoff = max(shortest_path_lengths.get((s, t), 4), 4)
-            paths_s_t: List[List[str]] = []
+            paths_s_t: list[list[str]] = []
             try:
                 gen = nx.shortest_simple_paths(super_graph, s, t)
                 for path in gen:
@@ -397,7 +397,7 @@ def compute_tunnels(
             tunnel_list.extend(paths_s_t)
 
     # Build tunnel_tuple_dict (same content, plain dict)
-    tunnel_tuple_dict: Dict[Tuple[str, str], List[List[str]]] = {}
+    tunnel_tuple_dict: dict[tuple[str, str], list[list[str]]] = {}
     for (s, t), paths in tunnel_dict.items():
         tunnel_tuple_dict[(s, t)] = paths
 
@@ -446,9 +446,9 @@ def _load_cached_paths(network_name: str):
 
 def _save_cached_paths(
     network_name: str,
-    tunnel_list: List[List[str]],
-    tunnel_dict: Dict[Tuple[str, str], List[List[str]]],
-    tunnel_tuple_dict: Dict[Tuple[str, str], List[List[str]]],
+    tunnel_list: list[list[str]],
+    tunnel_dict: dict[tuple[str, str], list[list[str]]],
+    tunnel_tuple_dict: dict[tuple[str, str], list[list[str]]],
 ):
     """Save tunnel data to disk for future reuse."""
     cache_dir = os.path.join(
@@ -475,8 +475,8 @@ def _save_cached_paths(
 
 def save_original_paths(
     network: str,
-    tunnel_list: List[List[str]],
-    tunnel_dict: Dict[Tuple[str, str], List[List[str]]],
+    tunnel_list: list[list[str]],
+    tunnel_dict: dict[tuple[str, str], list[list[str]]],
 ):
     """Save original (pre-candidate) tunnel data to JSON on disk."""
     import json as _json
@@ -505,7 +505,7 @@ def save_original_paths(
 
 def load_original_paths(
     network: str,
-) -> Tuple[List[List[str]], Dict[Tuple[str, str], List[List[str]]]]:
+) -> tuple[list[list[str]], dict[tuple[str, str], list[list[str]]]]:
     """Load original tunnel data from disk. Returns ([], {}) if missing."""
     import json as _json
 
@@ -518,8 +518,8 @@ def load_original_paths(
         f"{network}_original_dict.json",
     )
 
-    tunnel_list: List[List[str]] = []
-    tunnel_dict: Dict[Tuple[str, str], List[List[str]]] = defaultdict(list)
+    tunnel_list: list[list[str]] = []
+    tunnel_dict: dict[tuple[str, str], list[list[str]]] = defaultdict(list)
 
     if os.path.exists(list_file):
         with open(list_file) as f:
@@ -545,7 +545,7 @@ def preprocess_doppler(
     base_graph: nx.Graph,
     demand_matrix_file: str,
     network_name: str,
-    txp_count: Optional[Dict[str, int]] = None,
+    txp_count: dict[str, int] | None = None,
     *,
     candidate_set: str = "max",
     scale_down_factor: float = 1.0,
@@ -655,7 +655,7 @@ def build_optimization_problem(
     base_graph,
     demand_matrix_file: str,
     network_name: str,
-    txp_count: Optional[Dict[str, int]] = None,
+    txp_count: dict[str, int] | None = None,
     *,
     candidate_set: str = "max",
     scale_down_factor: float = 1.0,
@@ -761,7 +761,7 @@ def build_optimization_problem(
         path_list = tuple(tuple(p) for p in tunnel_list)
 
         # commodity_to_paths: (s,t) -> tuple of path indices
-        commodity_to_paths: Dict[Tuple[str, str], Tuple[int, ...]] = {}
+        commodity_to_paths: dict[tuple[str, str], tuple[int, ...]] = {}
         ordered_pairs = data["ordered_node_pairs"]
         for s, t in ordered_pairs:
             if (s, t) in data["demand_dict"] and data["demand_dict"][(s, t)] > 0:
@@ -771,14 +771,14 @@ def build_optimization_problem(
 
         # candidate_edge_indices: indices into canonical_edges for edges NOT in current
         cand_link_set = {tuple(sorted(e)) for e in candidate_links}
-        candidate_edge_indices: Tuple[int, ...] = tuple(
+        candidate_edge_indices: tuple[int, ...] = tuple(
             i for i, e in enumerate(canonical_edges) if e in cand_link_set
         )
 
         # path_candidate_map: per path, which local candidate indices (into
         # candidate_edge_indices, NOT global canonical_edges) are in this path
         cand_global_to_local = {gi: li for li, gi in enumerate(candidate_edge_indices)}
-        path_candidate_map: Tuple[Tuple[int, ...], ...] = tuple(
+        path_candidate_map: tuple[tuple[int, ...], ...] = tuple(
             tuple(
                 cand_global_to_local[ci]
                 for ci in candidate_edge_indices
@@ -791,14 +791,14 @@ def build_optimization_problem(
         )
 
         # supergraph_directed_edges: both directions of all canonical candidate edges
-        supergraph_directed_edges: Tuple[Tuple[str, str], ...] = tuple(
+        supergraph_directed_edges: tuple[tuple[str, str], ...] = tuple(
             (u, v) for (u, v) in canonical_edges
         ) + tuple((v, u) for (u, v) in canonical_edges)
 
         dir_to_idx = {e: i for i, e in enumerate(supergraph_directed_edges)}
 
         # link_path_map: per supergraph directed edge, which path indices traverse it
-        link_path_map: Tuple[Tuple[int, ...], ...] = tuple(
+        link_path_map: tuple[tuple[int, ...], ...] = tuple(
             tuple(
                 pi for pi, path in enumerate(path_list)
                 if len(path) >= 2 and any(
@@ -811,7 +811,7 @@ def build_optimization_problem(
 
         # core_edge_set: undirected physical-graph edges (onset_v2 only)
         if solver == "onset_v2":
-            core_edge_set: FrozenSet[Tuple[str, str]] = frozenset(
+            core_edge_set: Frozenset[tuple[str, str]] = frozenset(
                 tuple(sorted(e)) for e in base_graph.edges
             )
         else:

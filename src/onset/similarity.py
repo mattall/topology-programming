@@ -5,7 +5,7 @@ import json
 from collections import defaultdict
 from sys import argv
 from os import devnull
-from typing import DefaultDict
+
 
 import networkx as nx
 import pandas as pd 
