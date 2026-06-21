@@ -33,6 +33,18 @@ The simulator expects:
 - Graphviz-style tooling may be needed for `.dot` output and graph rendering.
 - SLURM if using the batch scripts directly.
 
+### YATES (external OCaml TE engine) — historical, not required
+
+The `external/yates/` directory contains the OCaml YATES traffic engineering
+engine. It is **not required** for the current active pipeline. It was used
+historically with TE methods such as `-semimcfraeke` and `-semimcfraekeft`
+(Semi-Oblivious MCF with Racke decomposition, akin to SMORE-style traffic
+patterns).
+
+The internal TE engine (`src/onset/te/engine.py`) handles `-ecmp` and `-mcf`
+and raises a clear error for legacy YATES TE methods. The YATES source is
+retained for historical reproducibility of older experiment campaigns.
+
 `src/onset/constants.py` sets `SCRIPT_HOME` to `os.path.abspath(".")`, so many
 paths assume commands are run from the repository root.
 

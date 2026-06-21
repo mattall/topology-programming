@@ -77,9 +77,12 @@ loss, throughput, and path counts under `data/results/`.
 
 The experiment scripts primarily exercise `-ecmp` and `-mcf`. Some historical
 paths name `-semimcfraeke`, `-semimcfraekeft`, and `-semimcfecmp`; these legacy
-methods are not implemented by the internal engine and now fail with a clear
-error. In `onset_v3`, ECMP candidate topologies are ranked in parallel through
-the same internal evaluator.
+methods invoke the external YATES OCaml TE engine (see
+`docs/knowledge/data-and-environment.md`) and are not implemented by the
+internal engine, which raises a clear error when they are requested. YATES is
+retained in `external/yates/` for historical reproducibility only and is not
+required for the current pipeline. In `onset_v3`, ECMP candidate topologies are
+ranked in parallel through the same internal evaluator.
 
 Compatibility details are deliberate: capacity suffixes use YATES's binary
 multipliers, non-switch access links receive its historical 100x multiplier,
