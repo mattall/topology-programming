@@ -181,7 +181,7 @@ if __name__ == "__main__":
             )
             exit()
         else:
-            post_process(test_name, result_ids)
+            post_process(test_name, result_ids, [topology])
             exit()
 
     logger.info("Beginning simulation.")
