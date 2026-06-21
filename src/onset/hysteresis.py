@@ -470,20 +470,6 @@ class FiberGraph(object):
 
 
 def main():
-    if 0:
-        myG = FiberGraph()
-        myG.random_graph(20)
-        myG.simulate_random_starts_and_failures(
-            steps=10, kind="random", alpha=0.1, beta=0.2
-        )
-
-    if 0:
-        myG = FiberGraph()
-        myG.complete_graph(10)
-        myG.simulate_random_starts_and_failures(
-            steps=10, kind="complete", alpha=0.1, beta=0.2
-        )
-
     if 1:
         myG = FiberGraph()
         gml_file = path.join(SCRIPT_HOME, "graphs", "gml", "Abilene.gml")

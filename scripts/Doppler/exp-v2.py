@@ -220,36 +220,6 @@ def main():
     
     experiment(network, traffic, scale, te, tp, int(top_k), int(n_ftx), candidate_link_choice_method, float(optimizer_time_limit_minutes), dry=True)
 
-    
-    # # time_limit = [60]
-    # # sol_limit = [1]
-    # experiment_params = argv[1:]
-    # # experiment_params = product(network, 
-    # #                             traffic, 
-    # #                             scale, 
-    # #                             te, 
-    # #                             tp, 
-    # #                             use_cached_result, 
-    # #                             top_k, 
-    # #                             n_ftx, 
-    # #                             candidate_link_choice_method, 
-    # #                             optimizer_time_limit_minutes)
-    # if PARALLEL: 
-    #     pool = multiprocessing.Pool(10)
-    #     pool.map_async(
-    #         experiment, 
-    #         experiment_params)
-    #     pool.close()
-    #     pool.join()
-    # else:
-    #     for e in experiment_params:
-    #         experiment(e)
-    #         # break                                       
-
-    
-    # # args = ("Comcast","background","0.8","mcf","greylambda")
-    # # args = ("Comcast","background-plus-flashcrowd","0.3","mcf","greylambda")
-    # # experiment(*args)
 
 if __name__ == "__main__":
     main()

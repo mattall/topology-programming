@@ -84,21 +84,4 @@ if __name__ == "__main__":
             ) as fob:
                 json.dump(config, fob, indent=4)
 
-    if 0:
-        base_traffic_matrix = (
-            "/home/matt/network_stability_sim/data/traffic/sprint.txt"
-        )
-        attack_traffic_matrix = "/home/matt/network_stability_sim/data/traffic/sprint_link_2_9_strength_11"
-        json_paths = "/home/matt/ripple/simulator/topologies/sprint/path.json"
-        out_file = (
-            "/home/matt/ripple/simulator/topologies/sprint/attack_100G.json"
-        )
-        congestion_factor = 1.0
-        write_flows_to_json(
-            base_traffic_matrix,
-            attack_traffic_matrix,
-            json_paths,
-            out_file,
-            [(1, 5)],
-            congestion_factor,
-        )
+

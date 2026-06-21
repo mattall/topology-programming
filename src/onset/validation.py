@@ -58,12 +58,6 @@ def _evaluate_te(
 
 
 def export_logical_topo_to_gml(name, G):
-    # Relabels to be consistent with naming in Ripple.
-    if 0:  # to make consistent with ripple examples.
-        te_to_ripple_map = {
-            node: ("sw" + str(int(node) - 1)) for (node) in G
-        }
-
     te_to_ripple_map = {node: ("s{}".format(node)) for (node) in G}
     gml_view = relabel_nodes(G, te_to_ripple_map, copy=True)
     write_gml(gml_view, name)

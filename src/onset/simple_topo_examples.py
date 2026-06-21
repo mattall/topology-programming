@@ -113,62 +113,6 @@ def get_whisker_topo(n_span_hops:int, n_whiskers) -> nx.Graph:
         G.nodes[rwn]['Longitude'] = longitude
         G.nodes[rwn]['Latitude'] = i
         
-    return G
-
-def get_whisker_topo(n_span_hops:int, n_whiskers) -> nx.Graph:
-    # creates and returns whisker topology with n_span_hops links in the middle and n_whiskers on each end.
-    # Linear topology with whiskers
-    # e.g., 
-    # get_whisker_topo(n_span_hops=1, n_whiskers=3).
-    # A             F
-    #  \           /
-    #   \         /
-    # B---D <-> E---G
-    #   /         \
-    #  /           \
-    # C             H
-
-    G = nx.Graph()
-    
-    nodes = ['s{}'.format(n + 1) for n in range( 2*(n_whiskers+1) + (n_span_hops - 1) )]
-    
-    left_whisk_nodes = nodes[:n_whiskers]
-    left_span_node = nodes[n_whiskers]
-    span_nodes = nodes[n_whiskers:-n_whiskers]
-    right_span_node = nodes[-n_whiskers-1]
-    right_whisk_nodes = nodes[-n_whiskers:]
-    
-    mid_latitude = n_whiskers / 2 
-    longitude = 0
-
-    for i, lwn in enumerate(left_whisk_nodes):
-        G.add_edge(lwn, left_span_node, capacity=100)
-        G.nodes[lwn]['Latitude'] = i
-        G.nodes[lwn]['Longitude'] = longitude
-    
-    # Left whiskers placed, move longitude.
-    longitude += 1 
-    G.nodes[left_span_node]['Longitude'] = longitude
-    G.nodes[left_span_node]['Latitude'] = mid_latitude 
-    
-
-    # first span node placed, move longitude
-    longitude += 1 
-
-    for u, v in zip(span_nodes, span_nodes[1:]):
-        G.add_edge(u, v, capacity=100)
-        G.nodes[v]['Longitude'] = longitude
-        G.nodes[v]['Latitude'] = mid_latitude
-        
-        
-        # after each span hop is placed, move longitude
-        longitude += 1
-
-    for i, rwn in enumerate(right_whisk_nodes):
-        G.add_edge(right_span_node, rwn, capacity=100)
-        G.nodes[rwn]['Longitude'] = longitude
-        G.nodes[rwn]['Latitude'] = i
-        
     return G    
 
 def get_grid_topo(grid_dimension) -> nx.Graph:

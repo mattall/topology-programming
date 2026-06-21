@@ -551,23 +551,6 @@ def multi_attack_timeseries(series1, series2, label1, label2, experiment_name):
 
 
 if __name__ == "__main__":
-    if 0:
-        networks = ["CRL", "sprint", "ANS", "surfNet", "bellCanada"]
-        # traffic_vol = [100, 200, 300, 400, 5000]
-        traffic_vol = [300]
-        # traffic_split = [(80,20), (50,50), (20,80)]
-        traffic_split = [(50, 50), (20, 80)]
-        # networks = ['sprint', 'bellCanada']
-        # traffic_vol = [300]
-        # traffic_split = [(20, 80)]
-        for network in networks:
-            for agg_vol in traffic_vol:
-                for ts in traffic_split:
-                    benign_vol = str(int(ts[0] * agg_vol / 100)) + "Gbps"
-                    atk_vol = str(int(ts[1] * agg_vol / 100)) + "Gbps"
-                    str_agg_vol = str(agg_vol) + "Gbps"
-                    main(network, 3, str_agg_vol, benign_vol, atk_vol)
-
     if 1:
         attack_folders_ecmp = [
             "./data/results/sprint_optimal_1_link_attack_100_0Gbps-100Gbps_-ecmp/",

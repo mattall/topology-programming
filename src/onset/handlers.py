@@ -186,13 +186,6 @@ def _run_bvt(sim, config: MethodConfig) -> None:
         if edge_congestion_d[k] == 1
     ]
 
-    # for edge in congested_edges:
-    #     u, v = edge.strip("()").replace("s", "").split(",")
-    #     u = int(u)
-    #     v = int(v)
-    #     for _ in range(circuits):
-    #         sim.wolf.add_circuit(u, v)
-    # flux_circuits.extend(congested_edges)
     sim.sig_add_circuits = False
     return
 

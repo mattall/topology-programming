@@ -590,35 +590,6 @@ def read_link_congestion_to_dict(f: str):
 
 
 if __name__ == "__main__":
-    if 0:
-        post_process()
-
-    # cls = get_candidate_links("ANS", 2)
-    # pass
-    if 0:
-        networks = ["ANS", "CRL", "sprint", "bellCanada", "surfNet"]
-        for network in networks:
-            # post_proc_timeseries("/home/matt/network_stability_sim/data/results/{}_attack".format(network),
-            #                      "/home/matt/network_stability_sim/data/results/{}_attack-no-topology-adaptation".format(network), network, 20)
-            post_proc_timeseries(
-                [
-                    "/home/matt/network_stability_sim/data/results/{}_attack-no-topology-adaptation".format(
-                        network
-                    ),
-                    "/home/matt/network_stability_sim/data/results/{}_attack".format(
-                        network
-                    ),
-                    "/home/matt/network_stability_sim/data/results/{}_attack_15".format(
-                        network
-                    ),
-                ],
-                network,
-                20,
-                series_labels=["No Defense", "Alp-Wolf: 10", "Alp-Wolf: 15"],
-            )
-            # time_series_files = ["/home/matt/network_stability_sim/data/results/{}_attack_heuristic_0_{}".format(net, proportion),
-            #                 "/home/matt/network_stability_sim/data/results/{}_attack_heuristic_7_10_{}".format(net, proportion)]
-
     if 1:
         time_series_files = [
             "/home/matt/network_stability_sim/data/results-2022-02-11/sprint_optimal_3_link_attack_10_0Gbps-150Gbps",

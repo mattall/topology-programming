@@ -369,16 +369,6 @@ class Simulation:
                 
                 continue                    
 
-            # CONGESTION_PATH = os.path.join(
-            #     EXPERIMENT_ABSOLUTE_PATH,
-            #     ITERATION_ID,
-            #     "EdgeCongestionVsIterations.dat",
-            # )
-            # MAX_CONGESTION_PATH = os.path.join(
-            #     EXPERIMENT_ABSOLUTE_PATH,
-            #     ITERATION_ID,
-            #     "MaxCongestionVsIterations.dat",
-            # )
             logger.info(f"Initializing Traffic Matrix ({i}, {iter_i})")
             tm_i_data = [
                 str(float(demand_val) * self.demand_factor)
@@ -404,13 +394,6 @@ class Simulation:
             self.multi_sol_number_best_sol = "NaN"
             self.multi_sol_best_mlu = "NaN"
             makedirs(ITERATION_ABS_PATH, exist_ok=True)
-
-            # if i == 360:
-            #     print("BREAK")
-            # if 300 <= i: #<= 335 :
-            #     pass
-            # else:
-            #     continue
 
             return_data["Experiment"].append(EXPERIMENT_ID)
             return_data["Iteration"].append(f"{iter_i}-{j}")

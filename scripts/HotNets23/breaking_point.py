@@ -16,20 +16,9 @@ from sys import exit
 
 # te_method = "-mcf"
 
-# otp = "0ft"
-# otp = "2ft"
-# otp = "4ft"
 
-# if topo == "hdumb":
-#     network = "hdumb"
-#     hosts = 17
-#     te_method = "-mcf"
-#     demand_factor = 5.846151300000004e-05
-    
-# elif topo == "tiered":
-#     network = "tiered"
-#     hosts = 26
-#     demand_factor = 0.0000001
+
+
 
 #     traffic, name
 #     params = ("data/traffic/{network}_mixed_attack", "otp_plus_pdp_{exp_type}_{otp}")
@@ -87,7 +76,7 @@ try:
     prev_path=""
     while True:
 
-        result = my_sim.perform_sim(unit="Mbps", self.demand_factor=demand_factor, repeat=True)
+        result = my_sim.perform_sim(unit="Mbps", demand_factor=demand_factor, repeat=True)
 
 
         if print_header:
