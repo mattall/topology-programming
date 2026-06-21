@@ -5,7 +5,7 @@ Programming (OTP).
 
 ## Installation
 
-Python 3.9 or newer is required.  All commands assume they are run from
+Python 3.11 or newer is required.  All commands assume they are run from
 the repository root.
 
 ```bash
