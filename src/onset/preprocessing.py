@@ -1,7 +1,7 @@
 """
 Gurobi-free preprocessing for topology optimization.
 
-Extracted from optimization_two.py, this module handles all candidate
+Extracted from gurobi_optimization.py, this module handles all candidate
 link selection, tunnel/path computation, and demand loading.  It never
 imports gurobipy and can be safely imported in any environment.
 """

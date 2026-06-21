@@ -1,3 +1,10 @@
+"""Legacy Gurobi-based optimization.
+
+Superseded by `open_doppler.py` + `preprocessing.py` (open-source HiGHS
+backend).  Retained for reference only.  Not imported by the active
+simulator dispatch path.
+"""
+
 # builtins
 import os
 from itertools import combinations, permutations, product
