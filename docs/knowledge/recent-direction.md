@@ -71,9 +71,10 @@ The current parameter axes in `exp-v2.py` include:
   the `dry` parameter is not currently used to skip work.
 - `Makefile clean` removes generated outputs and `gurobi.log`. Use it
   carefully because it deletes `data/results/*`, `data/reports/*`, and `.temp/*`.
-- Tests reference data files and one test contains
-  `self.my_sim.perform_sim(self.demand_factor=100)`, which is syntactically
-  suspicious. Expect test cleanup before relying on the suite.
+- Tests reference data files that may not exist in a fresh clone.
+  Run `python -m pytest tests/ --ignore=tests/sim_import_json_test.py
+  --ignore=tests/network_model_test.py --ignore=tests/generate_flows_test.py`
+  to exercise the tests that do not depend on external data.
 - ECMP and MCF TE evaluation now live in `src/onset/te/`; historical SemiMCF
   and Raecke variants are intentionally unsupported pending evidence they are
   needed by a current experiment.

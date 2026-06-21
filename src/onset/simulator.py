@@ -714,7 +714,7 @@ _METHOD_REGISTRY["onset"] = MethodConfig(
     objective_mode="mlu", solver_method="onset",
     solve_fn=_METHOD_REGISTRY["onset"].solve_fn,
     uses_ecmp_multisol=False,
-    description="Original topology programming formulation (OptSys 2021)",
+    description="Original topology programming formulation",
 )
 _METHOD_REGISTRY["OTP"] = MethodConfig(
     name="OTP", handler=_run_otp, is_milp=False,

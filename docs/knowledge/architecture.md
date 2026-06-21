@@ -19,10 +19,9 @@ metrics. Most experiment scripts are thin orchestration around that simulator.
   - Builds the `OptimizationProblem` dataclass: candidate links, tunnels,
     demand loading, and fallow-transponder logic extracted from the legacy
     Gurobi code.
-- `src/onset/doppler.py`
-  - Legacy Gurobi Doppler implementation. Will be renamed in a subsequent
-    phase. Current dispatch goes through `method_registry.py` →
-    `open_doppler.py`.
+- `src/onset/gurobi_doppler.py`
+  - Legacy Gurobi Doppler implementation. Current dispatch goes through
+    `method_registry.py` → `open_doppler.py` (HiGHS).
 - `src/onset/network_model.py`
   - Imports `.gml` or `.json` topologies into a richer NetworkX model.
   - Adds router/client structure, interface metadata, node/link types, and
@@ -101,7 +100,7 @@ Important Doppler parameters:
   allocation policy.
 - `candidate_link_choice_method`: candidate set mode, commonly `max` or
   `conservative`.
-- `optimizer_time_limit_minutes`: Gurobi time limit for optimization calls.
+- `optimizer_time_limit_minutes`: time limit for optimization calls.
 - `scale_down_factor`: numerical scaling for demand values in optimization.
 
 ## Candidate Links and Paths
