@@ -22,7 +22,7 @@ from typing import Dict, List, Optional, Set, Tuple
 import networkx as nx
 import numpy as np
 
-from onset.base_types import DopplerProblem, _PathProblemData
+from onset.base_types import OptimizationProblem, _PathProblemData
 from onset.constants import SCRIPT_HOME
 from onset.utilities.graph import (
     astar_path_generator,
@@ -560,7 +560,7 @@ def preprocess_doppler(
     Returns a dictionary with all the data needed to construct a MILP
     model (super graph, candidate edges, tunnels, demand, etc.).
 
-    The caller is responsible for constructing a DopplerProblem from
+    The caller is responsible for constructing a OptimizationProblem from
     these values plus any per-call overrides (top_k, time_limit, etc.).
     """
     # Demand
@@ -646,11 +646,11 @@ def preprocess_doppler(
 
 
 # ---------------------------------------------------------------------------
-# DopplerProblem factory
+# OptimizationProblem factory
 # ---------------------------------------------------------------------------
 
 
-def build_doppler_problem(
+def build_optimization_problem(
     logical_graph,
     base_graph,
     demand_matrix_file: str,
@@ -668,11 +668,11 @@ def build_doppler_problem(
     compute_paths: bool = True,
     retain_commodity_flows: bool = False,
     method: str = "doppler",
-) -> DopplerProblem:
-    """Build a DopplerProblem from AlpWolf / simulator state.
+) -> OptimizationProblem:
+    """Build a OptimizationProblem from AlpWolf / simulator state.
 
     This is the single factory for constructing a fully-validated
-    DopplerProblem from the raw graph, demand, and transponder data
+    OptimizationProblem from the raw graph, demand, and transponder data
     available at the simulation layer.  Used by Doppler, onset_v3,
     onset_v2, and onset optimization paths.
 
@@ -714,7 +714,7 @@ def build_doppler_problem(
 
     Returns
     -------
-    DopplerProblem
+    OptimizationProblem
         Fully validated, immutable problem description.
     """
     data = preprocess_doppler(
@@ -827,7 +827,7 @@ def build_doppler_problem(
             core_edge_set=core_edge_set,
         )
 
-    return DopplerProblem(
+    return OptimizationProblem(
         canonical_node_order=nodes,
         canonical_candidate_edges=canonical_edges,
         legacy_candidate_edge_order=canonical_edges,

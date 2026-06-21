@@ -12,8 +12,8 @@ from pyparsing import alphanums
 from onset.alpwolf import AlpWolf
 from onset.constants import SCRIPT_HOME
 from onset.defender import Defender
-from onset.preprocessing import build_doppler_problem
-from onset.open_doppler import solve_doppler_with_enumeration, solve_onset_v3, solve_onset_v1, solve_onset_v1_1
+from onset.preprocessing import build_optimization_problem
+from onset.open_doppler import solve_edge_flow_changes_mlu, solve_path_flow_budget, solve_path_flow_core
 from onset.base_types import TopologySolution, OptimizationResult, BackendProvenance
 from onset.utilities.config import CROSSFIRE
 from multiprocessing import Pool, Manager
@@ -29,8 +29,8 @@ def _get_optimizer_class(backend: str = "open"):
     The 'gurobi-legacy' backend lazily imports the existing implementation.
     """
     if backend == "open":
-        from onset.open_doppler import solve_doppler_with_enumeration
-        return solve_doppler_with_enumeration
+        from onset.open_doppler import solve_edge_flow_changes_mlu
+        return solve_edge_flow_changes_mlu
     elif backend == "gurobi-legacy":
         try:
             from onset.optimization_two import Link_optimization
@@ -707,7 +707,7 @@ class Simulation:
                 self.TBE_method()
 
             # Net Recon Defense Method
-            elif ( "Doppler" in self.topology_programming_method 
+            elif ( "doppler" in self.topology_programming_method 
                 #   and self.sig_add_circuits
             ):
                 self.doppler_method(iter_i)
@@ -1345,7 +1345,7 @@ class Simulation:
         top_k: Optional[int] = None,
         method: str = "doppler",
     ) -> OptimizationResult:
-        """Build a DopplerProblem from AlpWolf state, solve, store result.
+        """Build a OptimizationProblem from AlpWolf state, solve, store result.
 
         Parameters
         ----------
@@ -1360,7 +1360,7 @@ class Simulation:
         if top_k is None:
             top_k = self.top_k
 
-        problem = build_doppler_problem(
+        problem = build_optimization_problem(
             logical_graph=self.wolf.logical_graph,
             base_graph=self.wolf.base_graph,
             demand_matrix_file=self.temp_tm_i_file,
@@ -1377,14 +1377,14 @@ class Simulation:
         )
 
         _SOLVER = {
-            "doppler": lambda p: solve_doppler_with_enumeration(
+            "doppler": lambda p: solve_edge_flow_changes_mlu(
                 p, objective_mode=objective_mode
             ),
-            "onset_v3": lambda p: solve_doppler_with_enumeration(
+            "onset_v3": lambda p: solve_edge_flow_changes_mlu(
                 p, objective_mode="mlu"
             ),
-            "onset_v2": solve_onset_v1_1,
-            "onset": solve_onset_v1,
+            "onset_v2": solve_path_flow_core,
+            "onset": solve_path_flow_budget,
         }
         solver = _SOLVER.get(method)
         if solver is None:

@@ -6,7 +6,7 @@ import numpy as np
 from onset.base_types import (
     compute_stable_topology_id,
     compute_legacy_topology_id,
-    DopplerProblem,
+    OptimizationProblem,
     TopologySolution,
     OptimizationResult,
     OptimizerStatus,
@@ -47,9 +47,9 @@ class TestLegacyID:
         assert lid == "0.0"
 
 
-class TestDopplerProblem:
+class TestOptimizationProblem:
     def test_valid_construction(self):
-        p = DopplerProblem(
+        p = OptimizationProblem(
             canonical_node_order=("a", "b", "c"),
             canonical_candidate_edges=(("a", "b"), ("b", "c")),
             legacy_candidate_edge_order=(("a", "b"), ("b", "c")),
@@ -72,7 +72,7 @@ class TestDopplerProblem:
 
     def test_rejects_unknown_node_in_edge(self):
         with pytest.raises(ValueError, match="unknown node"):
-            DopplerProblem(
+            OptimizationProblem(
                 canonical_node_order=("a", "b"),
                 canonical_candidate_edges=(("a", "b"), ("a", "c")),
                 legacy_candidate_edge_order=(("a", "b"), ("a", "c")),
@@ -89,7 +89,7 @@ class TestDopplerProblem:
 
     def test_rejects_current_edge_not_candidate(self):
         with pytest.raises(ValueError, match="not a candidate"):
-            DopplerProblem(
+            OptimizationProblem(
                 canonical_node_order=("a", "b", "c"),
                 canonical_candidate_edges=(("a", "b"),),
                 legacy_candidate_edge_order=(("a", "b"),),
@@ -106,7 +106,7 @@ class TestDopplerProblem:
 
     def test_rejects_negative_scale(self):
         with pytest.raises(ValueError, match="scale_factor"):
-            DopplerProblem(
+            OptimizationProblem(
                 canonical_node_order=("a", "b"),
                 canonical_candidate_edges=(("a", "b"),),
                 legacy_candidate_edge_order=(("a", "b"),),
@@ -123,7 +123,7 @@ class TestDopplerProblem:
 
     def test_rejects_zero_capacity_after_scale(self):
         with pytest.raises(ValueError, match="Scaled capacity"):
-            DopplerProblem(
+            OptimizationProblem(
                 canonical_node_order=("a", "b"),
                 canonical_candidate_edges=(("a", "b"),),
                 legacy_candidate_edge_order=(("a", "b"),),
@@ -138,7 +138,7 @@ class TestDopplerProblem:
                 optimizer_time_limit=60.0,
             )
         with pytest.raises(ValueError, match="scale_factor"):
-            DopplerProblem(
+            OptimizationProblem(
                 canonical_node_order=("a", "b"),
                 canonical_candidate_edges=(("a", "b"),),
                 legacy_candidate_edge_order=(("a", "b"),),
@@ -155,7 +155,7 @@ class TestDopplerProblem:
 
     def test_rejects_congestion_out_of_range(self):
         with pytest.raises(ValueError, match="congestion_threshold"):
-            DopplerProblem(
+            OptimizationProblem(
                 canonical_node_order=("a", "b"),
                 canonical_candidate_edges=(("a", "b"),),
                 legacy_candidate_edge_order=(("a", "b"),),
@@ -172,7 +172,7 @@ class TestDopplerProblem:
 
     def test_rejects_negative_demand(self):
         with pytest.raises(ValueError, match="finite and non-negative"):
-            DopplerProblem(
+            OptimizationProblem(
                 canonical_node_order=("a", "b"),
                 canonical_candidate_edges=(("a", "b"),),
                 legacy_candidate_edge_order=(("a", "b"),),
@@ -188,7 +188,7 @@ class TestDopplerProblem:
             )
 
     def test_immutable(self):
-        p = DopplerProblem(
+        p = OptimizationProblem(
             canonical_node_order=("a", "b"),
             canonical_candidate_edges=(("a", "b"),),
             legacy_candidate_edge_order=(("a", "b"),),

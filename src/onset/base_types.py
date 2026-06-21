@@ -113,16 +113,16 @@ def compute_legacy_topology_id(
 
 
 # ---------------------------------------------------------------------------
-# DopplerProblem
+# OptimizationProblem
 # ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
 class _PathProblemData:
-    """Precomputed path-flow data used by onset_v1 / onset_v1_1 builders.
+    """Precomputed path-flow data used by path_flow_budget / path_flow_core builders.
 
-    Built once by build_doppler_problem when method="onset" or
-    method="onset_v2", then stored on DopplerProblem.path_data.
+    Built once by build_optimization_problem when solver="onset" or
+    solver="onset_v2", then stored on OptimizationProblem.path_data.
     """
 
     path_list: Tuple[Tuple[str, ...], ...]
@@ -135,8 +135,8 @@ class _PathProblemData:
 
 
 @dataclass(frozen=True)
-class DopplerProblem:
-    """Immutable description of a single Doppler optimization problem.
+class OptimizationProblem:
+    """Immutable description of a topology optimization problem.
 
     All validation is performed at construction time via __post_init__.
     The object is immutable after creation.

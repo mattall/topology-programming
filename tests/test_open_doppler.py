@@ -5,7 +5,7 @@ import pytest
 import numpy as np
 
 from onset.base_types import (
-    DopplerProblem,
+    OptimizationProblem,
     TopologySolution,
     OptimizationResult,
     OptimizerStatus,
@@ -14,14 +14,14 @@ from onset.base_types import (
     _PathProblemData,
 )
 from onset.open_doppler import (
-    solve_doppler_with_enumeration,
+    solve_edge_flow_changes_mlu,
     solve_baseline,
     make_no_good_cut,
-    solve_onset_v1,
-    solve_onset_v1_1,
+    solve_path_flow_budget,
+    solve_path_flow_core,
     _add_and_constraints,
-    _build_milp_onset_v1,
-    _build_milp_onset_v1_1,
+    _build_path_flow_budget_milp,
+    _build_path_flow_core_milp,
 )
 
 
@@ -29,7 +29,7 @@ def _build_triangle_problem():
     """A minimal 3-node triangle: a-b, b-c, a-c candidates. Demand a->c."""
     nodes = ("a", "b", "c")
     candidates = (("a", "b"), ("b", "c"), ("a", "c"))
-    return DopplerProblem(
+    return OptimizationProblem(
         canonical_node_order=nodes,
         canonical_candidate_edges=candidates,
         legacy_candidate_edge_order=candidates,
@@ -52,7 +52,7 @@ def _build_square_problem():
     nodes = ("a", "b", "c", "d")
     candidates = (("a", "b"), ("b", "c"), ("c", "d"), ("a", "d"), ("a", "c"))
     current = frozenset({("a", "b"), ("b", "c"), ("c", "d"), ("a", "d")})
-    return DopplerProblem(
+    return OptimizationProblem(
         canonical_node_order=nodes,
         canonical_candidate_edges=candidates,
         legacy_candidate_edge_order=candidates,
@@ -76,7 +76,7 @@ class TestBaselineEvaluation:
         """Current topology can route demand: a-b and a-c active, tunnel allows both."""
         nodes = ("a", "b", "c")
         candidates = (("a", "b"), ("b", "c"), ("a", "c"))
-        prob = DopplerProblem(
+        prob = OptimizationProblem(
             canonical_node_order=nodes,
             canonical_candidate_edges=candidates,
             legacy_candidate_edge_order=candidates,
@@ -101,7 +101,7 @@ class TestBaselineEvaluation:
         # Disconnected current topology
         nodes = ("a", "b", "c")
         candidates = (("a", "b"),)
-        prob = DopplerProblem(
+        prob = OptimizationProblem(
             canonical_node_order=nodes,
             canonical_candidate_edges=candidates,
             legacy_candidate_edge_order=candidates,
@@ -125,7 +125,7 @@ class TestBaselineEvaluation:
 class TestSingleSolve:
     def test_triangle_feasible(self):
         prob = _build_triangle_problem()
-        result = solve_doppler_with_enumeration(prob)
+        result = solve_edge_flow_changes_mlu(prob)
         assert result.has_solutions
         assert result.status in (
             OptimizerStatus.TOP_K_REACHED,
@@ -138,20 +138,20 @@ class TestSingleSolve:
 
     def test_square_feasible(self):
         prob = _build_square_problem()
-        result = solve_doppler_with_enumeration(prob)
+        result = solve_edge_flow_changes_mlu(prob)
         assert result.has_solutions
         assert result.solve_count >= 1
 
     def test_solution_ids_unique(self):
         prob = _build_square_problem()
-        result = solve_doppler_with_enumeration(prob)
+        result = solve_edge_flow_changes_mlu(prob)
         if len(result.solutions) > 1:
             ids = [s.stable_topology_id for s in result.solutions]
             assert len(ids) == len(set(ids))
 
     def test_selected_in_candidates(self):
         prob = _build_square_problem()
-        result = solve_doppler_with_enumeration(prob)
+        result = solve_edge_flow_changes_mlu(prob)
         for sol in result.solutions:
             for e in sol.selected_edges:
                 assert e in set(prob.canonical_candidate_edges)
@@ -159,7 +159,7 @@ class TestSingleSolve:
     def test_connectivity(self):
         """Every returned topology must be connected (validation check)."""
         prob = _build_square_problem()
-        result = solve_doppler_with_enumeration(prob)
+        result = solve_edge_flow_changes_mlu(prob)
         for sol in result.solutions:
             edges = list(sol.selected_edges)
             # Build undirected graph from selected edges
@@ -322,7 +322,7 @@ class TestExhaustiveOracle:
         feasible_topologies.sort(key=lambda x: (x[0], x[1], x[2], x[3]))
 
         # Run MILP
-        result = solve_doppler_with_enumeration(prob)
+        result = solve_edge_flow_changes_mlu(prob)
         assert result.has_solutions
 
         # MILP's best objective should match exhaustive best objective
@@ -371,7 +371,7 @@ class TestOnsetV3Objective:
 
     def test_mlu_objective_single_solve(self):
         prob = _build_triangle_problem()
-        result = solve_doppler_with_enumeration(prob, objective_mode="mlu")
+        result = solve_edge_flow_changes_mlu(prob, objective_mode="mlu")
         assert result.has_solutions
         sol = result.solutions[0]
         # With MLU-only objective, objective_value == validated_mlu
@@ -382,7 +382,7 @@ class TestOnsetV3Objective:
     def test_changes_plus_mlu_objective(self):
         """Default mode still works: objective = 2*changes + mlu."""
         prob = _build_triangle_problem()
-        result = solve_doppler_with_enumeration(prob, objective_mode="changes_plus_mlu")
+        result = solve_edge_flow_changes_mlu(prob, objective_mode="changes_plus_mlu")
         assert result.has_solutions
         sol = result.solutions[0]
         assert abs(sol.objective_value - (2.0 * sol.change_count + sol.validated_mlu)) < 1e-6
@@ -390,7 +390,7 @@ class TestOnsetV3Objective:
     def test_mlu_mode_objective_ordering(self):
         """With MLU-only, solutions sort by MLU first."""
         prob = _build_square_problem()
-        result = solve_doppler_with_enumeration(prob, objective_mode="mlu")
+        result = solve_edge_flow_changes_mlu(prob, objective_mode="mlu")
         if len(result.solutions) >= 2:
             for i in range(len(result.solutions) - 1):
                 a = result.solutions[i]
@@ -400,7 +400,7 @@ class TestOnsetV3Objective:
     def test_mlu_mode_feasible(self):
         """MLU-only mode finds feasible solutions."""
         prob = _build_triangle_problem()
-        result = solve_doppler_with_enumeration(prob, objective_mode="mlu")
+        result = solve_edge_flow_changes_mlu(prob, objective_mode="mlu")
         assert result.has_solutions
         assert result.solve_count >= 1
         assert result.solutions[0].objective_value < float("inf")
@@ -411,20 +411,20 @@ class TestSolutionApplyRevert:
 
     def test_added_dropped_are_disjoint(self):
         prob = _build_square_problem()
-        result = solve_doppler_with_enumeration(prob)
+        result = solve_edge_flow_changes_mlu(prob)
         for sol in result.solutions:
             assert sol.added.isdisjoint(sol.dropped)
 
     def test_selected_equals_current_plus_added_minus_dropped(self):
         prob = _build_square_problem()
-        result = solve_doppler_with_enumeration(prob)
+        result = solve_edge_flow_changes_mlu(prob)
         for sol in result.solutions:
             expected = (prob.current_edges | sol.added) - sol.dropped
             assert sol.selected_edges == expected
 
     def test_change_count_matches_derived(self):
         prob = _build_square_problem()
-        result = solve_doppler_with_enumeration(prob)
+        result = solve_edge_flow_changes_mlu(prob)
         for sol in result.solutions:
             assert sol.change_count == len(sol.added) + len(sol.dropped)
 
@@ -434,7 +434,7 @@ class TestSelectedSolution:
 
     def test_selected_solution_lowest_mlu(self):
         prob = _build_square_problem()
-        result = solve_doppler_with_enumeration(prob)
+        result = solve_edge_flow_changes_mlu(prob)
         if result.has_solutions:
             sel = result.selected_solution
             assert sel is not None
@@ -444,17 +444,17 @@ class TestSelectedSolution:
 
     def test_objective_best_is_first(self):
         prob = _build_square_problem()
-        result = solve_doppler_with_enumeration(prob)
+        result = solve_edge_flow_changes_mlu(prob)
         if result.has_solutions:
             assert result.objective_best is result.solutions[0]
 
 
 # ---------------------------------------------------------------------------
-# M3: onset_v1 and onset_v1_1 path-based builders
+# M3: path-flow budget and path-flow core builders
 # ---------------------------------------------------------------------------
 
 
-def _build_path_problem_onset_v1():
+def _build_path_problem_budget():
     """4-node line: a-b-c-d with candidate a-c (shortcut).
 
     Logical: a-b-c-d  (3 undirected edges)
@@ -497,7 +497,7 @@ def _build_path_problem_onset_v1():
         core_edge_set=frozenset(),
     )
 
-    return DopplerProblem(
+    return OptimizationProblem(
         canonical_node_order=nodes,
         canonical_candidate_edges=candidates,
         legacy_candidate_edge_order=candidates,
@@ -516,8 +516,8 @@ def _build_path_problem_onset_v1():
     )
 
 
-def _build_path_problem_onset_v1_1():
-    """Same topology as onset_v1 but with core-edge mandate on a-b.
+def _build_path_problem_core():
+    """Same topology as path_flow_budget but with core-edge mandate on a-b.
 
     Core edges (physical): a-b, b-c, c-d
     Candidate: a-c
@@ -554,7 +554,7 @@ def _build_path_problem_onset_v1_1():
         core_edge_set=core_set,
     )
 
-    return DopplerProblem(
+    return OptimizationProblem(
         canonical_node_order=nodes,
         canonical_candidate_edges=candidates,
         legacy_candidate_edge_order=candidates,
@@ -573,20 +573,20 @@ def _build_path_problem_onset_v1_1():
     )
 
 
-class TestOnsetV1Builder:
-    """Tests for the onset_v1 path-based builder."""
+class TestPathFlowBudgetBuilder:
+    """Tests for the path-flow budget builder."""
 
     def test_builds_without_error(self):
-        prob = _build_path_problem_onset_v1()
-        lp, im = _build_milp_onset_v1(prob)
+        prob = _build_path_problem_budget()
+        lp, im = _build_path_flow_budget_milp(prob)
         assert lp.num_col_ > 0
         assert lp.num_row_ > 0
         assert im["n_cand"] == 1
         assert im["n_paths"] == 2
 
     def test_solve_returns_solution(self):
-        prob = _build_path_problem_onset_v1()
-        result = solve_onset_v1(prob)
+        prob = _build_path_problem_budget()
+        result = solve_path_flow_budget(prob)
         assert result.has_solutions
         assert result.status == OptimizerStatus.TOP_K_REACHED
         sol = result.selected_solution
@@ -594,8 +594,8 @@ class TestOnsetV1Builder:
         assert len(sol.added | sol.dropped) >= 0
 
     def test_solution_satisfies_demand(self):
-        prob = _build_path_problem_onset_v1()
-        result = solve_onset_v1(prob)
+        prob = _build_path_problem_budget()
+        result = solve_path_flow_budget(prob)
         assert result.has_solutions
         sol = result.selected_solution
         # Selected edges should include a-c path (either via b or direct)
@@ -604,8 +604,8 @@ class TestOnsetV1Builder:
         )
 
     def test_solution_invariants(self):
-        prob = _build_path_problem_onset_v1()
-        result = solve_onset_v1(prob)
+        prob = _build_path_problem_budget()
+        result = solve_path_flow_budget(prob)
         sol = result.selected_solution
         assert sol.selected_edges == (
             prob.current_edges | sol.added
@@ -614,34 +614,34 @@ class TestOnsetV1Builder:
         assert sol.change_count == len(sol.added) + len(sol.dropped)
 
 
-class TestOnsetV11Builder:
-    """Tests for the onset_v1_1 path-based builder."""
+class TestPathFlowCoreBuilder:
+    """Tests for the path-flow core builder."""
 
     def test_builds_without_error(self):
-        prob = _build_path_problem_onset_v1_1()
-        lp, im = _build_milp_onset_v1_1(prob)
+        prob = _build_path_problem_budget_1()
+        lp, im = _build_path_flow_core_milp(prob)
         assert lp.num_col_ > 0
         assert lp.num_row_ > 0
         assert im["n_dir"] > 0
         assert im["n_path_vars"] == 2
 
     def test_solve_returns_solution(self):
-        prob = _build_path_problem_onset_v1_1()
-        result = solve_onset_v1_1(prob)
+        prob = _build_path_problem_budget_1()
+        result = solve_path_flow_core(prob)
         assert result.has_solutions
         assert result.status == OptimizerStatus.TOP_K_REACHED
 
     def test_core_edges_always_active(self):
-        prob = _build_path_problem_onset_v1_1()
-        result = solve_onset_v1_1(prob)
+        prob = _build_path_problem_budget_1()
+        result = solve_path_flow_core(prob)
         sol = result.selected_solution
         # Core edges a-b, b-c, c-d must be selected
         for e in prob.path_data.core_edge_set:
             assert e in sol.selected_edges, f"Core edge {e} not selected"
 
     def test_solution_invariants(self):
-        prob = _build_path_problem_onset_v1_1()
-        result = solve_onset_v1_1(prob)
+        prob = _build_path_problem_budget_1()
+        result = solve_path_flow_core(prob)
         sol = result.selected_solution
         assert sol.selected_edges == (
             prob.current_edges | sol.added

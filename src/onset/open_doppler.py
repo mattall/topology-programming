@@ -23,7 +23,7 @@ from scipy.sparse import csr_matrix, eye
 
 from onset.base_types import (
     BackendProvenance,
-    DopplerProblem,
+    OptimizationProblem,
     OptimizerStatus,
     TopologySolution,
     OptimizationResult,
@@ -43,12 +43,12 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-def _build_milp(problem: DopplerProblem, objective_mode: str = "changes_plus_mlu"):
+def _build_edge_flow_milp(problem: OptimizationProblem, objective_mode: str = "changes_plus_mlu"):
     """Build a HiGHS-compatible LP model for the corrected Doppler formulation.
 
     Parameters
     ----------
-    problem : DopplerProblem
+    problem : OptimizationProblem
     objective_mode : str
         "changes_plus_mlu" (Doppler) or "mlu" (onset_v3).
 
@@ -311,7 +311,7 @@ def _build_milp(problem: DopplerProblem, objective_mode: str = "changes_plus_mlu
 
 
 def _extract_solution(
-    problem: DopplerProblem,
+    problem: OptimizationProblem,
     index_maps: dict,
     solution: np.ndarray,
     proven_optimal: bool,
@@ -399,7 +399,7 @@ def _extract_solution(
 
 
 def _validate_mlu_independently(
-    problem: DopplerProblem,
+    problem: OptimizationProblem,
     selected: FrozenSet[Tuple[str, str]],
     agg_loads: Dict[Tuple[str, str], float],
 ) -> float:
@@ -421,8 +421,8 @@ def _validate_mlu_independently(
 # ---------------------------------------------------------------------------
 
 
-def solve_doppler(
-    problem: DopplerProblem,
+def solve_edge_flow_changes_mlu_single(
+    problem: OptimizationProblem,
     time_limit: float,
     *,
     additional_cuts: Optional[List[Dict[int, float]]] = None,
@@ -432,7 +432,7 @@ def solve_doppler(
 
     Parameters
     ----------
-    problem : DopplerProblem
+    problem : OptimizationProblem
         The fully specified problem.
     time_limit : float
         Solver time limit in seconds.
@@ -450,7 +450,7 @@ def solve_doppler(
     t_start = perf_counter()
 
     # Build model
-    lp, im = _build_milp(problem, objective_mode=objective_mode)
+    lp, im = _build_edge_flow_milp(problem, objective_mode=objective_mode)
 
     h = highspy.Highs()
     h.setOptionValue("time_limit", time_limit)
@@ -556,7 +556,7 @@ def make_no_good_cut(
 
 
 def solve_baseline(
-    problem: DopplerProblem,
+    problem: OptimizationProblem,
 ) -> Tuple[bool, Optional[float]]:
     """Solve a continuous LP on the CURRENT topology (no optimization).
 
@@ -689,15 +689,15 @@ def solve_baseline(
 # ---------------------------------------------------------------------------
 
 
-def solve_doppler_with_enumeration(
-    problem: DopplerProblem,
+def solve_edge_flow_changes_mlu(
+    problem: OptimizationProblem,
     objective_mode: str = "changes_plus_mlu",
 ) -> OptimizationResult:
     """Run the full open-backend optimization with solution enumeration.
 
     Parameters
     ----------
-    problem : DopplerProblem
+    problem : OptimizationProblem
     objective_mode : str
         "changes_plus_mlu" (Doppler) or "mlu" (onset_v3).
 
@@ -716,7 +716,7 @@ def solve_doppler_with_enumeration(
     baseline_feasible, baseline_mlu = solve_baseline(problem)
 
     # Build model once
-    lp, im = _build_milp(problem, objective_mode=objective_mode)
+    lp, im = _build_edge_flow_milp(problem, objective_mode=objective_mode)
     h = highspy.Highs()
     h.setOptionValue("output_flag", False)
     h.setOptionValue("mip_rel_gap", 0.0)
@@ -942,14 +942,14 @@ def solve_doppler_with_enumeration(
         )
 
 
-def solve_onset_v3(problem: DopplerProblem) -> OptimizationResult:
+def solve_edge_flow_mlu(problem: OptimizationProblem) -> OptimizationResult:
     """Run onset_v3 open-backend optimization (MLU-only objective).
 
-    Convenience wrapper around solve_doppler_with_enumeration with
+    Convenience wrapper around solve_edge_flow_changes_mlu with
     objective_mode="mlu".  The caller should set top_k on the problem
     (top_k=1 for MCF single-solve, top_k=N for ECMP enumeration).
     """
-    return solve_doppler_with_enumeration(problem, objective_mode="mlu")
+    return solve_edge_flow_changes_mlu(problem, objective_mode="mlu")
 
 
 # ---------------------------------------------------------------------------
@@ -996,7 +996,7 @@ def _add_and_constraints(
 
 
 def _solve_single_milp(
-    problem: DopplerProblem,
+    problem: OptimizationProblem,
     lp,
     index_maps: dict,
     extract_fn,
@@ -1005,7 +1005,7 @@ def _solve_single_milp(
 
     Parameters
     ----------
-    problem : DopplerProblem
+    problem : OptimizationProblem
     lp : highspy.HighsLp
     index_maps : dict
     extract_fn : callable
@@ -1099,7 +1099,7 @@ def _solve_single_milp(
 # ---------------------------------------------------------------------------
 
 
-def _build_milp_onset_v1(problem: DopplerProblem):
+def _build_path_flow_budget_milp(problem: OptimizationProblem):
     """Build a HiGHS LP for the onset_v1 formulation.
 
     Variables (deterministic order):
@@ -1115,7 +1115,7 @@ def _build_milp_onset_v1(problem: DopplerProblem):
 
     pd = problem.path_data
     if pd is None:
-        raise ValueError("onset_v1 requires path_data on DopplerProblem")
+        raise ValueError("onset_v1 requires path_data on OptimizationProblem")
 
     n_cand = len(pd.candidate_edge_indices)
     n_paths = len(pd.path_list)
@@ -1267,7 +1267,7 @@ def _build_milp_onset_v1(problem: DopplerProblem):
 # ---------------------------------------------------------------------------
 
 
-def _build_milp_onset_v1_1(problem: DopplerProblem):
+def _build_path_flow_core_milp(problem: OptimizationProblem):
     """Build a HiGHS LP for the onset_v1_1 formulation.
 
     Variables (deterministic order):
@@ -1284,7 +1284,7 @@ def _build_milp_onset_v1_1(problem: DopplerProblem):
 
     pd = problem.path_data
     if pd is None:
-        raise ValueError("onset_v1_1 requires path_data on DopplerProblem")
+        raise ValueError("onset_v1_1 requires path_data on OptimizationProblem")
 
     nodes = list(problem.canonical_node_order)
     n_nodes = len(nodes)
@@ -1518,8 +1518,8 @@ def _canonical_edge(u: str, v: str) -> Tuple[str, str]:
     return (u, v) if u <= v else (v, u)
 
 
-def _extract_solution_onset_v1(
-    problem: DopplerProblem,
+def _extract_path_flow_budget(
+    problem: OptimizationProblem,
     index_maps: dict,
     solution: np.ndarray,
     proven_optimal: bool,
@@ -1587,8 +1587,8 @@ def _extract_solution_onset_v1(
     )
 
 
-def _extract_solution_onset_v1_1(
-    problem: DopplerProblem,
+def _extract_path_flow_core(
+    problem: OptimizationProblem,
     index_maps: dict,
     solution: np.ndarray,
     proven_optimal: bool,
@@ -1658,19 +1658,19 @@ def _extract_solution_onset_v1_1(
 # ---------------------------------------------------------------------------
 
 
-def solve_onset_v1(problem: DopplerProblem) -> OptimizationResult:
+def solve_path_flow_budget(problem: OptimizationProblem) -> OptimizationResult:
     """Run onset_v1 optimization (edge-based path flow with budget).
 
     Single-solve method. Returns one solution or infeasible.
     """
-    lp, im = _build_milp_onset_v1(problem)
-    return _solve_single_milp(problem, lp, im, _extract_solution_onset_v1)
+    lp, im = _build_path_flow_budget_milp(problem)
+    return _solve_single_milp(problem, lp, im, _extract_path_flow_budget)
 
 
-def solve_onset_v1_1(problem: DopplerProblem) -> OptimizationResult:
+def solve_path_flow_core(problem: OptimizationProblem) -> OptimizationResult:
     """Run onset_v1_1 optimization (path-based flow, core-edge mandate).
 
     Single-solve method. Returns one solution or infeasible.
     """
-    lp, im = _build_milp_onset_v1_1(problem)
-    return _solve_single_milp(problem, lp, im, _extract_solution_onset_v1_1)
+    lp, im = _build_path_flow_core_milp(problem)
+    return _solve_single_milp(problem, lp, im, _extract_path_flow_core)
