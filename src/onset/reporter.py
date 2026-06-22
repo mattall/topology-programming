@@ -160,6 +160,7 @@ def evaluate_candidate_topologies(
     te_method: str,
     temp_tm_file: str,
     unit: str,
+    n_workers: int | None = None,
 ) -> tuple[TopologySolution | None, float, int | None, float | None]:
     """Apply, export, evaluate (ECMP in parallel), revert each solution.
 
@@ -183,6 +184,10 @@ def evaluate_candidate_topologies(
         Temporary traffic-matrix file path passed to ``evaluate_te``.
     unit:
         Unit string for ``Gml_to_dot`` (e.g. ``"Gbps"``).
+    n_workers:
+        Number of parallel ECMP evaluation workers.  Defaults to
+        ``os.cpu_count()``, capped at the number of distinct solutions
+        (max 32).
 
     Returns
     -------
@@ -244,7 +249,9 @@ def evaluate_candidate_topologies(
             )
         )
 
-    p = Pool(120)
+    if n_workers is None:
+        n_workers = min(os.cpu_count() or 1, len(sol_ids))
+    p = Pool(n_workers)
     start: float = time()
     p.starmap(evaluate_te, work)
     p.close()
