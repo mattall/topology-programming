@@ -25,16 +25,17 @@ The best mental model is:
 
 - Topology programming: modifying logical topology by adding, dropping, or
   reassigning links/circuits/transponders.
-- TE: traffic engineering method passed through to evaluation, often `-ecmp`
-  or `-mcf`.
+- TE: traffic engineering method passed through to evaluation: `-ecmp`,
+  `-mcf`, `-semimcfraeke`, or `-semimcfraekeft`.
 - TP: topology programming method, such as `Doppler`, `greylambda`, `TBE`,
   `BVT`, `onset`, `onset_v2`, or `onset_v3`.
 - Fallow transponders: spare optical resources available for reconfiguration.
 - Candidate links: possible links/circuits the optimizer may add or choose
   among.
 - MLU: maximum link utilization, a central result metric.
-- Internal TE engine: `src/onset/te/` implements ECMP and MCF routing and
-  writes the simulator's historical metric-file contract.
+- Internal TE engine: `src/onset/te/` implements ECMP, MCF, and SMORE
+  (semi-oblivious MCF with Raecke decomposition) routing and writes the
+  simulator's metric-file contract.
 
 ## What Is Polished vs. Researchy
 

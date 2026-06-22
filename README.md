@@ -25,9 +25,11 @@ pip install -e vendor/TMgen
 
 ## Traffic Engineering
 
-ECMP and MCF routing are built-in.  ECMP uses NetworkX shortest paths;
-MCF uses SciPy's open-source HiGHS solver.  No external executables are
-required.
+ECMP, MCF, and SMORE (semi-oblivious MCF with Raecke decomposition)
+routing are built-in.  ECMP uses NetworkX shortest paths; MCF uses
+SciPy's open-source HiGHS solver; SMORE uses FRT tree decomposition
+with multiplicative weights for path selection and a restricted-MCF
+LP for rate adaptation.  No external executables are required.
 
 ## Topology Programming
 
@@ -105,7 +107,7 @@ src/onset/
 ├── base_types.py           # OptimizationProblem, TopologySolution, OptimizationResult
 ├── attacker.py             # DDoS attack generation (lazy TMgen dependency)
 ├── te/
-│   └── engine.py           # ECMP and MCF traffic engineering
+│   └── engine.py           # ECMP, MCF, and SMORE/Raecke traffic engineering
 └── utilities/              # Graph I/O, plotting, logging, path utilities
 ```
 

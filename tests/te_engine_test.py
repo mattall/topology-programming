@@ -1,11 +1,25 @@
+import math
+import random
 import tempfile
 import unittest
 from pathlib import Path
 
+import networkx as nx
+
 from onset.te.engine import (
+    _all_pairs_paths as all_pairs_paths,
+)
+from onset.te.engine import (
+    _boundary_capacity,
+    _build_routing_usage,
     _ecmp_routes,
+    _frt_decompose,
     _frt_paths,
     _load_topology,
+    _normalize_scheme,
+    _oblivious_paths_ft,
+    _prune_scheme,
+    _raecke_paths,
     evaluate,
 )
 
@@ -130,8 +144,22 @@ s1 -> h1 [cost=1, capacity="100Gbps"];
 
         result = self.evaluate("-semimcfraeke")
 
-        self.assertGreaterEqual(result.failure_loss, 0.0)
-        self.assertLessEqual(result.throughput, 1.0)
+        self.assertEqual(result.throughput, 0.0)
+        self.assertEqual(result.congestion_loss, 0.0)
+        self.assertEqual(result.failure_loss, 1.0)
+
+    def test_semimcfraekeft_distinguishes_unroutable_demand(self):
+        text = self.topology.read_text(encoding="utf-8")
+        text = text.replace('s1 -> s3 [cost=1, capacity="100Gbps"];', "")
+        text = text.replace('s1 -> s2 [cost=1, capacity="100Gbps"];', "")
+        self.topology.write_text(text, encoding="utf-8")
+        self.matrix.write_text("0 60 0 0", encoding="utf-8")
+
+        result = self.evaluate("-semimcfraekeft")
+
+        self.assertEqual(result.throughput, 0.0)
+        self.assertEqual(result.congestion_loss, 0.0)
+        self.assertEqual(result.failure_loss, 1.0)
 
     def test_frt_paths_non_root_lca(self):
         """_frt_paths must stop at the LCA, not traverse up to root."""
@@ -167,6 +195,363 @@ s1 -> h1 [cost=1, capacity="100Gbps"];
         )
         result = _frt_paths(tree, "a", "b")
         self.assertEqual(result, ["a", "r", "b"])
+
+
+class RaeckeTest(unittest.TestCase):
+    """Tests for the Raecke/SMORE engine internals."""
+
+    def _triangle_graph(self):
+        """Bidirectional triangle s1↔s2↔s3↔s1 with two hosts h1→s1, h3→s3."""
+        g = nx.DiGraph()
+        for n in ("h1", "s1", "s2", "s3", "h3"):
+            g.add_node(n, type="host" if n.startswith("h") else "switch")
+        cap = float(2**30)  # 1 Gbps
+        for a, b in (("s1", "s2"), ("s2", "s3"), ("s3", "s1")):
+            g.add_edge(a, b, cost=1.0, capacity=cap)
+            g.add_edge(b, a, cost=1.0, capacity=cap)
+        for src, sw in (("h1", "s1"), ("s1", "h1"), ("h3", "s3"), ("s3", "h3")):
+            g.add_edge(src, sw, cost=1.0, capacity=cap * 100)
+        return g
+
+    # -- boundary capacity -------------------------------------------------
+
+    def test_boundary_capacity_single_node(self):
+        g = nx.DiGraph()
+        g.add_node("a", type="switch")
+        g.add_node("b", type="switch")
+        g.add_edge("a", "b", capacity=100.0)
+        g.add_edge("b", "a", capacity=100.0)
+
+        # Cluster {a}: only edge a→b crosses outward.
+        self.assertEqual(_boundary_capacity(g, {"a"}), 100.0)
+        # Cluster {b}: only edge b→a crosses outward.
+        self.assertEqual(_boundary_capacity(g, {"b"}), 100.0)
+        # Cluster {a,b}: all edges internal, boundary is zero.
+        self.assertEqual(_boundary_capacity(g, {"a", "b"}), 0.0)
+
+    def test_boundary_capacity_asymmetric_edges(self):
+        g = nx.DiGraph()
+        g.add_node("a", type="switch")
+        g.add_node("b", type="switch")
+        g.add_edge("a", "b", capacity=100.0)
+        g.add_edge("b", "a", capacity=50.0)
+
+        self.assertEqual(_boundary_capacity(g, {"a"}), 100.0)
+        self.assertEqual(_boundary_capacity(g, {"b"}), 50.0)
+
+    # -- building routing usage ---------------------------------------------
+
+    def test_routing_usage_two_node_oracle(self):
+        """Single bidirectional link: one child→parent path = exactly 1.0 both ways."""
+        g = nx.DiGraph()
+        g.add_node("a", type="switch")
+        g.add_node("b", type="switch")
+        g.add_edge("a", "b", cost=1.0, capacity=100.0)
+        g.add_edge("b", "a", cost=1.0, capacity=100.0)
+        phys = {("a", "b"): ["a", "b"], ("b", "a"): ["b", "a"]}
+        frt = (
+            "node",
+            "b",
+            {"a", "b"},
+            [("leaf", "a", {"a"})],
+        )
+        usage, pruned, ptable = _build_routing_usage(g, frt, {"a", "b"}, phys)
+
+        self.assertIsNotNone(pruned)
+        self.assertEqual(usage[("a", "b")], 1.0)
+        self.assertEqual(usage[("b", "a")], 1.0)
+
+    def test_routing_usage_empty_child_skipped(self):
+        """Endpoint-free FRT branch contributes no usage."""
+        g = nx.DiGraph()
+        g.add_node("a", type="switch")
+        g.add_node("b", type="switch")
+        g.add_node("c", type="switch")
+        g.add_edge("a", "b", cost=1.0, capacity=100.0)
+        g.add_edge("b", "a", cost=1.0, capacity=100.0)
+        g.add_edge("b", "c", cost=1.0, capacity=100.0)
+        g.add_edge("c", "b", cost=1.0, capacity=100.0)
+        phys = {
+            ("a", "b"): ["a", "b"],
+            ("b", "a"): ["b", "a"],
+            ("c", "b"): ["c", "b"],
+            ("b", "c"): ["b", "c"],
+        }
+        frt = (
+            "node",
+            "b",
+            {"a", "b", "c"},
+            [
+                ("leaf", "a", {"a"}),
+                ("leaf", "c", set()),
+            ],
+        )
+        usage, pruned, ptable = _build_routing_usage(g, frt, {"a"}, phys)
+
+        self.assertIsNotNone(pruned)
+        # Only a-b gets charged; c-b is skipped (no endpoints in c cluster).
+        self.assertEqual(usage[("a", "b")], 1.0)
+        self.assertEqual(usage[("b", "a")], 1.0)
+        self.assertNotIn(("c", "b"), usage)
+
+    def test_mw_edge_weights_sum_to_one(self):
+        """The first and every later MW edge-weight vector sums to one."""
+        g = self._triangle_graph()
+
+        # Replicate MW iterations manually to check weight-vector sums.
+        gc = g.copy()
+        cumulative: dict[tuple[str, str], float] = {e: 0.0 for e in gc.edges()}
+        epsilon = 0.1
+
+        for iteration in range(5):
+            dists, phys = all_pairs_paths(gc)
+            frt = _frt_decompose(list(gc.nodes()), dists, rng=random.Random(43))
+            usage, _pruned, _ptable = _build_routing_usage(g, frt, {"h1", "h3"}, phys)
+            if not usage:
+                break
+            max_u = max(usage.values())
+            if max_u <= 0:
+                break
+            for e, u in usage.items():
+                cumulative[e] += u / max_u
+
+            mw = {e: math.exp(epsilon * cumulative[e]) for e in gc.edges()}
+            s = sum(mw.values())
+            if s > 0:
+                for e in gc.edges():
+                    gc.edges[e]["cost"] = mw[e] / s
+
+            # Assertion: edge costs must sum to one.
+            cost_sum = sum(float(gc.edges[e]["cost"]) for e in gc.edges())
+            self.assertAlmostEqual(
+                cost_sum,
+                1.0,
+                places=6,
+                msg=f"Iteration {iteration}: costs sum to {cost_sum}",
+            )
+
+    def test_routing_usage_dimensionless(self):
+        """Usage values are non-negative, non-NaN (sanity check)."""
+        g = self._triangle_graph()
+        hosts = {"h1", "h3"}
+        dists, phys = all_pairs_paths(g)
+        frt = _frt_decompose(list(g.nodes()), dists, rng=random.Random(42))
+        usage, pruned, ptable = _build_routing_usage(g, frt, hosts, phys)
+
+        self.assertIsNotNone(pruned)
+        self.assertGreater(len(usage), 0)
+        for (_u, _v), val in usage.items():
+            self.assertGreaterEqual(val, 0.0)
+            self.assertFalse(math.isnan(val))
+
+    # -- Raecke scheme invariants -------------------------------------------
+
+    def test_raecke_produces_weighted_scheme(self):
+        g = self._triangle_graph()
+        scheme = _raecke_paths(g, {"h1", "h3"}, seed=42)
+
+        self.assertIn(("h1", "h3"), scheme)
+        self.assertGreater(len(scheme[("h1", "h3")]), 0)
+
+    def test_raecke_probabilities_sum_to_one(self):
+        g = self._triangle_graph()
+        scheme = _raecke_paths(g, {"h1", "h3"}, seed=42)
+
+        for paths in scheme.values():
+            total = sum(paths.values())
+            self.assertAlmostEqual(total, 1.0, places=6)
+
+    def test_raecke_paths_are_valid(self):
+        """Every emitted path starts/ends at commodity hosts and uses real edges."""
+        g = self._triangle_graph()
+        scheme = _raecke_paths(g, {"h1", "h3"}, seed=42)
+
+        for (src, dst), pps in scheme.items():
+            for path in pps:
+                self.assertEqual(path[0], src, f"Path starts at wrong node: {path}")
+                self.assertEqual(path[-1], dst, f"Path ends at wrong node: {path}")
+                for i in range(len(path) - 1):
+                    self.assertTrue(
+                        g.has_edge(path[i], path[i + 1]),
+                        f"Missing edge {path[i]}→{path[i+1]} in path {path}",
+                    )
+
+    def test_raecke_deterministic_seed(self):
+        """Same seed produces identical schemes."""
+        g = self._triangle_graph()
+        s1 = _raecke_paths(g, {"h1", "h3"}, seed=99)
+        s2 = _raecke_paths(g, {"h1", "h3"}, seed=99)
+
+        self.assertEqual(set(s1.keys()), set(s2.keys()))
+        for comm in s1:
+            self.assertEqual(
+                {p: round(v, 10) for p, v in s1[comm].items()},
+                {p: round(v, 10) for p, v in s2[comm].items()},
+            )
+
+    def test_raecke_multiple_seeds_produce_valid_paths(self):
+        """Multiple different seeds all produce valid, non-empty path sets."""
+        g = self._triangle_graph()
+        for seed in (1, 2, 3, 7, 13):
+            s = _raecke_paths(g, {"h1", "h3"}, seed=seed)
+            pps = s[("h1", "h3")]
+            self.assertGreater(len(pps), 0, f"No paths with seed {seed}")
+            for path in pps:
+                self.assertEqual(path[0], "h1")
+                self.assertEqual(path[-1], "h3")
+                for i in range(len(path) - 1):
+                    self.assertTrue(g.has_edge(path[i], path[i + 1]))
+            total = sum(pps.values())
+            self.assertAlmostEqual(total, 1.0, places=6)
+
+    # -- capacity scale invariance ------------------------------------------
+
+    def test_raecke_scale_invariance(self):
+        """Scaling all capacities by a constant should not change scheme."""
+
+        def _make(cap_factor):
+            g = nx.DiGraph()
+            for n in ("h1", "s1", "s2", "h2"):
+                g.add_node(n, type="host" if n.startswith("h") else "switch")
+            base = 1000.0 * cap_factor
+            g.add_edge("h1", "s1", cost=1.0, capacity=base * 100)
+            g.add_edge("s1", "h1", cost=1.0, capacity=base * 100)
+            g.add_edge("s1", "s2", cost=1.0, capacity=base)
+            g.add_edge("s2", "s1", cost=1.0, capacity=base)
+            g.add_edge("s2", "h2", cost=1.0, capacity=base * 100)
+            g.add_edge("h2", "s2", cost=1.0, capacity=base * 100)
+            return g
+
+        g1 = _make(1.0)  # small units
+        g2 = _make(1e9)  # large units
+        s1 = _raecke_paths(g1, {"h1", "h2"}, seed=123)
+        s2 = _raecke_paths(g2, {"h1", "h2"}, seed=123)
+
+        self.assertEqual(set(s1[("h1", "h2")].keys()), set(s2[("h1", "h2")].keys()))
+        for path in s1[("h1", "h2")]:
+            self.assertAlmostEqual(
+                s1[("h1", "h2")][path], s2[("h1", "h2")][path], places=10
+            )
+
+    # -- budget pruning -----------------------------------------------------
+
+    def test_prune_scheme_respects_budget(self):
+        scheme = {
+            ("h1", "h2"): {
+                ("h1", "s1", "s2", "h2"): 0.5,
+                ("h1", "s1", "s3", "s4", "h2"): 0.3,
+                ("h1", "s1", "s2", "s3", "s4", "h2"): 0.2,
+            }
+        }
+        pruned = _prune_scheme(scheme, budget=2)
+        self.assertEqual(len(pruned[("h1", "h2")]), 2)
+        # Top two by probability should be the first two.
+        self.assertEqual(pruned[("h1", "h2")][0], ("h1", "s1", "s2", "h2"))
+        self.assertEqual(pruned[("h1", "h2")][1], ("h1", "s1", "s3", "s4", "h2"))
+
+    def test_prune_scheme_keeps_all_when_budget_exceeds(self):
+        scheme = {("h1", "h2"): {("h1", "s1", "h2"): 1.0}}
+        pruned = _prune_scheme(scheme, budget=10)
+        self.assertEqual(len(pruned[("h1", "h2")]), 1)
+
+    # -- normalization ------------------------------------------------------
+
+    def test_normalize_scheme_sums_to_one(self):
+        scheme = {
+            ("h1", "h2"): {("h1", "s1", "h2"): 0.2, ("h1", "s2", "h2"): 0.4},
+        }
+        norm = _normalize_scheme(scheme)
+        self.assertAlmostEqual(sum(norm[("h1", "h2")].values()), 1.0, places=6)
+        self.assertAlmostEqual(norm[("h1", "h2")][("h1", "s1", "h2")], 1 / 3, places=6)
+        self.assertAlmostEqual(norm[("h1", "h2")][("h1", "s2", "h2")], 2 / 3, places=6)
+
+    def test_normalize_scheme_zero_sum(self):
+        scheme = {("h1", "h2"): {}}
+        norm = _normalize_scheme(scheme)
+        self.assertEqual(norm[("h1", "h2")], {})
+
+    # -- FT fault-tolerance envelope ----------------------------------------
+
+    def test_ft_envelope_no_baseline(self):
+        """FT envelope merges only failure schemes, no separate baseline."""
+        g = self._triangle_graph()
+        ft = _oblivious_paths_ft(g, {"h1", "h3"})
+
+        # FT should produce non-empty path sets.
+        self.assertIn(("h1", "h3"), ft)
+        self.assertGreater(len(ft[("h1", "h3")]), 0)
+
+    def test_ft_envelope_probabilities_sum_to_one(self):
+        g = self._triangle_graph()
+        ft = _oblivious_paths_ft(g, {"h1", "h3"})
+
+        for paths in ft.values():
+            total = sum(paths.values())
+            self.assertAlmostEqual(total, 1.0, places=6)
+
+    def test_ft_envelope_paths_are_valid(self):
+        g = self._triangle_graph()
+        ft = _oblivious_paths_ft(g, {"h1", "h3"})
+
+        for (src, dst), pps in ft.items():
+            for path in pps:
+                self.assertEqual(path[0], src)
+                self.assertEqual(path[-1], dst)
+                for i in range(len(path) - 1):
+                    self.assertTrue(g.has_edge(path[i], path[i + 1]))
+
+    # -- end-to-end evaluation ----------------------------------------------
+
+    def test_semimcfraeke_budget_caps_path_count(self):
+        result = self._new_eval("-semimcfraeke", budget=1)
+        # With budget=1, each commodity should have at most 1 path in the MCF.
+        self.assertGreater(result.num_paths, 0)
+        self.assertLessEqual(result.num_paths, 2)  # 2 commodities, 1 path each
+
+    def test_semimcfraekeft_budget_caps_path_count(self):
+        result = self._new_eval("-semimcfraekeft", budget=1)
+        self.assertGreater(result.num_paths, 0)
+        self.assertLessEqual(result.num_paths, 2)
+
+    # -- helpers ------------------------------------------------------------
+
+    def _new_eval(self, method, budget=3):
+        """Run evaluate on a fresh temp topology."""
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            topo = root / "t.dot"
+            hosts = root / "t.hosts"
+            matrix = root / "t.tm"
+            topo.write_text(
+                """digraph topology {
+h1 [type=host]; h2 [type=host];
+s1 [type=switch]; s2 [type=switch]; s3 [type=switch]; s4 [type=switch];
+h1 -> s1 [cost=1, capacity="100Gbps"];
+s1 -> s2 [cost=1, capacity="100Gbps"];
+s1 -> s3 [cost=1, capacity="100Gbps"];
+s2 -> s4 [cost=1, capacity="100Gbps"];
+s3 -> s4 [cost=1, capacity="100Gbps"];
+s4 -> h2 [cost=1, capacity="100Gbps"];
+h2 -> s4 [cost=1, capacity="100Gbps"];
+s4 -> s2 [cost=1, capacity="100Gbps"];
+s4 -> s3 [cost=1, capacity="100Gbps"];
+s2 -> s1 [cost=1, capacity="100Gbps"];
+s3 -> s1 [cost=1, capacity="100Gbps"];
+s1 -> h1 [cost=1, capacity="100Gbps"];
+}
+""",
+                encoding="utf-8",
+            )
+            hosts.write_text("h1\nh2\n", encoding="utf-8")
+            matrix.write_text("0 60 60 0", encoding="utf-8")
+            return evaluate(
+                str(topo),
+                str(matrix),
+                str(hosts),
+                method,
+                str(root / "results"),
+                budget=budget,
+            )
 
 
 if __name__ == "__main__":

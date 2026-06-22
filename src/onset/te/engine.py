@@ -1,4 +1,4 @@
-"""ECMP/MCF routing and legacy-compatible statistics generation."""
+"""TE routing: ECMP, MCF, and SMORE/Raecke semi-oblivious MCF."""
 
 from __future__ import annotations
 
@@ -11,7 +11,6 @@ from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 import networkx as nx
 import numpy as np
@@ -231,50 +230,72 @@ def _mcf_routes(
 # Semi-oblivious MCF (SMORE / YATES)
 # ---------------------------------------------------------------------------
 #
-# SMORE (Semi-oblivious MCF with Raecke decomposition) is a two-phase traffic
-# engineering system from Cornell:
-#   https://www.cs.cornell.edu/~praveenk/smore/
-#   https://cornell-netlab.github.io/yates/
-#   https://github.com/cornell-netlab/yates
-#
-# "Semi-oblivious Traffic Engineering: The Road Not Taken"
-#   Praveen Kumar, Yang Yuan, Chris Yu, Nate Foster, Robert Kleinberg,
-#   Petr Lapukhov, Chiun Lin Lim, and Robert Soule.
-#   USENIX NSDI, April 2018.
+# SMORE (Semi-oblivious MCF with Raecke decomposition):
+#   "Semi-oblivious Traffic Engineering: The Road Not Taken"
+#   Praveen Kumar et al., USENIX NSDI, April 2018.
 #   https://www.cs.cornell.edu/~praveenk/papers/smore-nsdi18.pdf
 #
-# Phase 1 (oblivious): Raecke's hierarchical tree decomposition (FRT) with
-# multiplicative weights.  Random FRT trees are built, each routing all
-# commodities up/down the tree.  MW iterates, reweighting edges by
-# exponential cumulative usage, producing a probability distribution over
-# routing trees.  Final candidate paths are the union of all physical
-# paths from all trees.
+# Phase 1 (oblivious): Raecke's FRT tree decomposition with multiplicative
+# weights.  Each MW iteration builds a random FRT tree, computes
+# boundary-capacity edge usage (dimensionless, scale-invariant), and
+# reweights graph edges via normalized exponential cumulative usage.
+# Produces a probability-weighted scheme: each commodity gets a
+# distribution over candidate physical paths.
 #
-# Phase 2 (semi-oblivious / rate adaptation): Solve a restricted MCF LP
-# over the pre-selected paths to minimize max link utilization for the
-# given traffic matrix.  This matches the YATES SemiMcf.solve LP.
+# Phase 2 (semi-oblivious / rate adaptation): Restricted MCF LP over the
+# pruned path set (top-k by probability) to minimize max link
+# utilization for the current traffic matrix.
 #
-# semimcfraeke  - Raecke FRT+MW path selection on original topology.
-# semimcfraekeft - Same, with a fault-tolerance envelope: path selection
-#                  is repeated on every single-link-failure topology and
-#                  the resulting path sets are merged (YATES all_failures_envelope).
+# The implementation targets YATES compatibility:
+#   external/yates/lib/routing/Yates_Frt.ml
+#   external/yates/lib/routing/Yates_Mw.ml
+#   external/yates/lib/routing/Raeke.ml
+#   external/yates/lib/routing/Util.ml
+#   external/yates/lib/solvers/Helper.ml
 #
-# Parameters (from YATES Raeke.ml):
+# Parameters:
 #   epsilon = 0.1           MW learning rate
 #   beta     ~ Uniform[1,2)  FRT distance scaling factor per tree
+#
+# Type aliases
+# ------------
+# FRTNode = tuple[str, str, set[str], list]   # ("node"|"leaf", center, set, [children])
+# WeightedScheme = dict[Commodity, dict[tuple[str, ...], float]]
+#   commodity -> {physical_path: probability}
+
+
+# Weighted scheme: commodity -> {physical_path: probability}
+WeightedScheme = dict[tuple[str, str], dict[tuple[str, ...], float]]
+
+
+def _all_pairs_paths(
+    graph: nx.DiGraph,
+) -> tuple[
+    dict[tuple[str, str], float],
+    dict[tuple[str, str], list[str]],
+]:
+    """All-pairs shortest-path distances and physical paths on *graph*."""
+    dists: dict[tuple[str, str], float] = {}
+    paths: dict[tuple[str, str], list[str]] = {}
+    for src in graph.nodes():
+        try:
+            result: tuple[dict[str, float], dict[str, list[str]]] = (
+                nx.single_source_dijkstra(  # type: ignore[assignment]
+                    graph, src, weight="cost"
+                )
+            )
+            for dst in result[1]:
+                dists[(src, dst)] = result[0][dst]
+                paths[(src, dst)] = result[1][dst]
+        except (nx.NetworkXNoPath, nx.NodeNotFound):
+            pass
+    return dists, paths
 
 
 def _all_pairs_dist(
     graph: nx.DiGraph,
 ) -> dict[tuple[str, str], float]:
-    dists: dict[tuple[str, str], float] = {}
-    for src in graph.nodes():
-        try:
-            lengths = nx.single_source_dijkstra_path_length(graph, src, weight="cost")
-            for dst, length in lengths.items():
-                dists[(src, dst)] = length
-        except (nx.NetworkXNoPath, nx.NodeNotFound):
-            pass
+    dists, _ = _all_pairs_paths(graph)
     return dists
 
 
@@ -282,26 +303,30 @@ def _frt_decompose(
     vertices: list[str],
     dists: dict[tuple[str, str], float],
     beta: float | None = None,
-) -> Any:
+    rng: random.Random | None = None,
+) -> tuple:
     """FRT hierarchical tree decomposition (YATES Yates_Frt.make_frt_tree).
 
     Returns a nested tree: ("node", center, cluster_set, [children])
     or ("leaf", center, {singleton}).
     """
+    if rng is None:
+        rng = random.Random()
+
     if beta is None:
-        beta = math.exp(random.random() * math.log(2.0))
+        beta = math.exp(rng.random() * math.log(2.0))
 
     if not vertices:
         return ("leaf", "", set())
 
     # Random permutation determines cluster-assignment priority
     order = list(vertices)
-    random.shuffle(order)
+    rng.shuffle(order)
 
     max_diameter = max(dists.values(), default=0.0)
     initial_i = int(math.floor(math.log2(max_diameter))) if max_diameter > 0 else 0
 
-    def _level(i: int, center: str, cset: set[str]):
+    def _level(i: int, center: str, cset: set[str]) -> tuple:
         beta_i = 2.0 ** (i - 1) * beta
         partition: dict[str, set[str]] = {}
         for v in cset:
@@ -323,13 +348,13 @@ def _frt_decompose(
 
 
 def _frt_paths(
-    tree,
+    tree: tuple,
     src: str,
     dst: str,
 ) -> list[str]:
     """Compute the tree path between src and dst by walking up to LCA."""
 
-    def _find_leaf(t, target: str) -> list[str]:
+    def _find_leaf(t: tuple, target: str) -> list[str]:
         if t[0] == "leaf":
             return [t[1]] if target in t[2] else []
         for child in t[3]:
@@ -357,189 +382,317 @@ def _frt_paths(
     return up + down
 
 
+def _boundary_capacity(
+    graph: nx.DiGraph,
+    cluster: set[str],
+) -> float:
+    """Sum of capacities of directed edges from inside *cluster* to outside."""
+    total = 0.0
+    for u in cluster:
+        for v in graph.successors(u):
+            if v not in cluster:
+                total += float(graph.edges[u, v]["capacity"])
+    return total
+
+
+def _build_routing_usage(
+    graph: nx.DiGraph,
+    frt_tree: tuple,
+    endpoints: set[str],
+    phys_paths: dict[tuple[str, str], list[str]],
+) -> tuple[dict[Edge, float], tuple | None, dict[tuple[str, str], list[str]]]:
+    """Walk the FRT tree and compute YATES-compatible boundary-capacity usage.
+
+    Two passes (matching Yates_Frt.ml generate_rt):
+      1. Prune: keep only FRT subtrees that contain at least one endpoint.
+      2. Charge: for each retained parent→child edge, compute the boundary
+         capacity of the *pruned* child set, then charge it to every physical
+         edge on the child→parent shortest path and its inverse (once each).
+
+    Returns (usage_dimensionless, pruned_tree, path_table) where
+    *usage_dimensionless* is accumulated B(C) / edge capacity.
+    """
+    # ---- pass 1: endpoint pruning ------------------------------------------
+
+    def _prune(node: tuple) -> tuple | None:
+        tag, center, cset = node[0], node[1], node[2]
+        if tag == "leaf":
+            my_eps = cset & endpoints
+            return ("leaf", center, my_eps) if my_eps else None
+        children = node[3]
+        kept: list[tuple] = []
+        for child in children:
+            pruned = _prune(child)
+            if pruned is not None:
+                kept.append(pruned)
+        my_eps = cset & endpoints
+        if not my_eps and not kept:
+            return None
+        return ("node", center, my_eps, kept)
+
+    pruned_root = _prune(frt_tree)
+    if pruned_root is None:
+        return {}, None, {}
+
+    # ---- pass 2: boundary-capacity usage -----------------------------------
+
+    usage_abs: dict[Edge, float] = defaultdict(float)
+    path_table: dict[tuple[str, str], list[str]] = {}
+
+    def _charge(node: tuple) -> None:
+        tag, center, _cset = node[0], node[1], node[2]
+        if tag == "leaf":
+            return
+        for child in node[3]:
+            child_center = child[1]
+            child_set = child[2]  # pruned endpoint set (YATES c_set)
+
+            # Store both tree-edge directions in the path table
+            # (needed for _frt_paths which walks up and down).
+            for key in ((child_center, center), (center, child_center)):
+                seg = phys_paths.get(key)
+                if seg is not None:
+                    path_table[key] = seg
+
+            # Boundary capacity of the *pruned* child set
+            bcap = _boundary_capacity(graph, child_set)
+
+            # Charge only path_up (child → parent) — one mirrored charge
+            path_up = phys_paths.get((child_center, center))
+            if path_up is not None:
+                for i in range(len(path_up) - 1):
+                    e = (path_up[i], path_up[i + 1])
+                    usage_abs[e] += bcap
+                    inv = (path_up[i + 1], path_up[i])
+                    if graph.has_edge(*inv):
+                        usage_abs[inv] += bcap
+
+            _charge(child)
+
+    _charge(pruned_root)
+
+    # Convert absolute boundary capacity to dimensionless usage
+    usage: dict[Edge, float] = {}
+    for e, abs_u in usage_abs.items():
+        cap = float(graph.edges[e]["capacity"])
+        usage[e] = abs_u / cap
+
+    return usage, pruned_root, path_table
+
+
+def _tree_to_physical(
+    tree_path: list[str],
+    path_table: dict[tuple[str, str], list[str]],
+    graph: nx.DiGraph,
+) -> list[str]:
+    """Convert a tree-centre path to a physical path using *path_table*.
+
+    Returns an empty list when any segment is unroutable (e.g. disconnected
+    failure topology).
+    """
+    if not tree_path:
+        return []
+    result = [tree_path[0]]
+    for i in range(len(tree_path) - 1):
+        a, b = tree_path[i], tree_path[i + 1]
+        seg = path_table.get((a, b))
+        if seg is None:
+            try:
+                seg = nx.shortest_path(graph, a, b, weight="cost")
+            except (nx.NetworkXNoPath, nx.NodeNotFound):
+                return []
+        result.extend(seg[1:])
+    return result
+
+
+def _normalize_scheme(scheme: WeightedScheme) -> WeightedScheme:
+    """Ensure each commodity's path probabilities sum to 1."""
+    result: WeightedScheme = {}
+    for comm, pps in scheme.items():
+        total = sum(pps.values())
+        if total <= 0:
+            result[comm] = dict(pps)
+        else:
+            result[comm] = {path: prob / total for path, prob in pps.items()}
+    return result
+
+
+def _prune_scheme(
+    scheme: WeightedScheme,
+    budget: int,
+) -> dict[Commodity, list[tuple[str, ...]]]:
+    """Keep at most *budget* highest-probability paths per commodity.
+
+    Returns a mapping from commodity to a list of path tuples suitable
+    for the restricted-MCF phase.
+    """
+    result: dict[Commodity, list[tuple[str, ...]]] = {}
+    for comm, pps in scheme.items():
+        sorted_paths = sorted(pps.items(), key=lambda kv: kv[1], reverse=True)
+        top = sorted_paths[:budget]
+        result[comm] = [path for path, _ in top]
+    return result
+
+
 def _raecke_paths(
     graph: nx.DiGraph,
     hosts: set[str],
     *,
     epsilon: float = 0.1,
     seed: int | None = None,
-) -> dict[Commodity, set[tuple[str, ...]]]:
+) -> WeightedScheme:
     """Raecke oblivious routing: FRT trees + multiplicative weights.
 
-    Iteratively builds random FRT routing trees, computes edge usage,
-    updates edge weights via MW, and accumulates a probability distribution
-    over trees.  MW weights are applied to edge ``cost`` attributes so each
-    successive FRT tree is biased away from previously congested edges.
+    Iteratively builds random FRT routing trees, computes boundary-capacity
+    edge usage (dimensionless, scale-invariant), and reweights graph edges
+    via normalised exponential cumulative usage.  Produces a probability
+    distribution over trees.
 
-    Returns the union of all distinct physical paths from all weighted
-    trees for each commodity.
+    Returns a weighted scheme: commodity → {physical_path: probability}.
 
     Matches YATES Raeke.solve + Yates_Mw.hedge_iterations.
     """
-    if seed is not None:
-        random.seed(seed)
+    rng = random.Random(seed)
 
     commodities = [(s, t) for s in sorted(hosts) for t in sorted(hosts) if s != t]
-    all_paths: dict[Commodity, set[tuple[str, ...]]] = {
-        comm: set() for comm in commodities
-    }
+    scheme: WeightedScheme = {comm: {} for comm in commodities}
 
     vertices = list(graph.nodes())
-    num_edges = graph.number_of_edges()
-    if num_edges == 0:
-        return all_paths
+    if graph.number_of_edges() == 0:
+        return scheme
 
-    # Work on a copy to avoid mutating the caller's graph with MW cost updates.
+    # Work on a copy whose edge costs will be modified via MW.
     g = graph.copy()
 
-    # Save original costs for restoration.
-    _orig_cost: dict[Edge, float] = {}
-    for u, v in g.edges():
-        _orig_cost[(u, v)] = float(g.edges[u, v].get("cost", 1.0))
-
-    # Cumulative MW usage table.
-    usage_table: dict[Edge, float] = {edge: 0.0 for edge in g.edges()}
+    # Cumulative MW usage — initialised with zero for every edge so
+    # the first weight vector sums to one (YATES Yates_Mw.ml lines 106-108).
+    cumulative: dict[Edge, float] = {e: 0.0 for e in g.edges()}
 
     acc_weight = 0.0
     max_iterations = 64
 
     for _ in range(max_iterations):
         # 1. Build random FRT tree on the current weighted graph.
-        dists = _all_pairs_dist(g)
-        tree = _frt_decompose(vertices, dists)
+        #    Both distances *and* physical paths come from the reweighted
+        #    topology so the next routing tree reflects MW cost updates
+        #    (YATES Raeke.ml select_structure → make_frt_tree → generate_rt).
+        dists, phys_paths = _all_pairs_paths(g)
+        frt = _frt_decompose(vertices, dists, rng=rng)
 
-        # 2. Compute edge usage: count commodity traversals, normalized
-        #    by capacity.  (The vendored YATES uses cluster-boundary
-        #    capacity; commodity-count/capacity is a tractable proxy.)
-        edge_usage: dict[Edge, float] = defaultdict(float)
-        for src, dst in commodities:
-            tree_path = _frt_paths(tree, src, dst)
-            if len(tree_path) < 2:
-                continue
-            for i in range(len(tree_path) - 1):
-                a, b = tree_path[i], tree_path[i + 1]
-                try:
-                    phys = nx.shortest_path(g, a, b, weight="cost")
-                    for j in range(len(phys) - 1):
-                        edge = (phys[j], phys[j + 1])
-                        if g.has_edge(*edge):
-                            cap = float(g.edges[edge].get("capacity", 1.0))
-                            edge_usage[edge] += 1.0 / max(cap, 1.0)
-                except (nx.NetworkXNoPath, nx.NodeNotFound):
-                    pass
+        # 2. Build routing tree and compute boundary-capacity usage.
+        edge_usage, pruned_tree, path_table = _build_routing_usage(
+            graph, frt, hosts, phys_paths
+        )
 
         if not edge_usage:
             continue
 
         # 3. Tree weight = 1 / max_usage.
         max_u = max(edge_usage.values())
+        if max_u <= 0:
+            continue
         w = 1.0 / max_u
 
-        # 4. Stopping condition.
+        def _host_padded(phys: list[str], src: str, dst: str) -> tuple[str, ...] | None:
+            """Extend physical path to include host access links."""
+            p = list(phys)
+            if p[0] != src and g.has_edge(src, p[0]):
+                p.insert(0, src)
+            if p[-1] != dst and g.has_edge(p[-1], dst):
+                p.append(dst)
+            if len(p) >= 2 and p[0] == src and p[-1] == dst:
+                return tuple(p)
+            return None
+
+        # 4. Stopping condition — clip final weight so sum of weights = 1.
         if acc_weight + w >= 1.0:
             final_w = 1.0 - acc_weight
-            if final_w > 0:
+            if final_w > 0 and pruned_tree is not None:
                 for src, dst in commodities:
-                    tp = _frt_paths(tree, src, dst)
+                    tp = _frt_paths(pruned_tree, src, dst)
                     if len(tp) >= 2:
-                        try:
-                            phys = _tree_to_physical(g, tp)
-                            all_paths[(src, dst)].add(tuple(phys))
-                        except (nx.NetworkXNoPath, nx.NodeNotFound):
-                            pass
+                        phys = _tree_to_physical(tp, path_table, g)
+                        if phys:
+                            padded = _host_padded(phys, src, dst)
+                            if padded is not None:
+                                scheme[(src, dst)][padded] = (
+                                    scheme[(src, dst)].get(padded, 0.0) + final_w
+                                )
             break
 
-        # 5. Collect paths from this tree.
-        for src, dst in commodities:
-            tp = _frt_paths(tree, src, dst)
-            if len(tp) >= 2:
-                try:
-                    phys = _tree_to_physical(g, tp)
-                    all_paths[(src, dst)].add(tuple(phys))
-                except (nx.NetworkXNoPath, nx.NodeNotFound):
-                    pass
+        # 5. Collect weighted paths from this tree.
+        if pruned_tree is not None:
+            for src, dst in commodities:
+                tp = _frt_paths(pruned_tree, src, dst)
+                if len(tp) >= 2:
+                    phys = _tree_to_physical(tp, path_table, g)
+                    if phys:
+                        padded = _host_padded(phys, src, dst)
+                        if padded is not None:
+                            scheme[(src, dst)][padded] = (
+                                scheme[(src, dst)].get(padded, 0.0) + w
+                            )
 
         acc_weight += w
 
-        # 6. Scale usage so max = 1 and update cumulative table.
+        # 6. Scale usage so max = 1, add to cumulative.
         for e, u in edge_usage.items():
-            usage_table[e] = usage_table.get(e, 0.0) + u / max_u
+            cumulative[e] += u / max_u
 
-        # 7. Apply MW exponential weights to graph edge costs.
-        #    Edges with high cumulative usage get higher cost, steering
-        #    the next FRT tree toward less-congested paths.
-        sum_exp = 0.0
-        mw: dict[Edge, float] = {}
-        for e in usage_table:
-            mw[e] = math.exp(epsilon * usage_table[e])
-            sum_exp += mw[e]
+        # 7. MW exponential reweighting — every edge participates so the
+        #    weight vector sums to one (YATES Yates_Mw.ml lines 67-73).
+        mw: dict[Edge, float] = {
+            e: math.exp(epsilon * cumulative[e]) for e in g.edges()
+        }
+        sum_exp = sum(mw.values())
         if sum_exp > 0:
             for e in g.edges():
-                multiplier = mw.get(e, 1.0) / (sum_exp / len(mw))
-                base = _orig_cost.get(e, 1.0)
-                g.edges[e]["cost"] = base * multiplier
+                g.edges[e]["cost"] = mw[e] / sum_exp
 
-    return all_paths
-
-
-def _tree_to_physical(
-    graph: nx.DiGraph,
-    tree_path: list[str],
-) -> list[str]:
-    """Convert a tree-node path to a concatenated physical shortest path."""
-    result: list[str] = [tree_path[0]]
-    for i in range(len(tree_path) - 1):
-        a, b = tree_path[i], tree_path[i + 1]
-        segment = nx.shortest_path(graph, a, b, weight="cost")
-        result.extend(segment[1:])
-    return result
-
-
-def _oblivious_paths(
-    graph: nx.DiGraph,
-    hosts: set[str],
-) -> dict[Commodity, list[tuple[str, ...]]]:
-    """Select diverse candidate paths via Raecke FRT + MW decomposition.
-
-    Traffic-oblivious: no demand information is used.  Returns a set of
-    physical paths per commodity.  Matches YATES Raeke.solve Phase 1.
-    """
-    raw = _raecke_paths(graph, hosts)
-    return {comm: list(pset) for comm, pset in raw.items()}
+    return _normalize_scheme(scheme)
 
 
 def _oblivious_paths_ft(
     graph: nx.DiGraph,
     hosts: set[str],
-) -> dict[Commodity, list[tuple[str, ...]]]:
-    """Fault-tolerant variant: merge paths from every single-link-failure topology.
+) -> WeightedScheme:
+    """Fault-tolerant envelope: merge weighted schemes from single-link failures.
 
-    For each switch-to-switch edge, removes the edge, checks connectivity,
-    runs Raecke path selection, and unions all resulting path sets.
+    For each unique switch-switch physical link (both directions removed),
+    runs Raecke path selection and merges the resulting weighted schemes.
     Matches YATES all_failures_envelope for semimcfraekeft.
     """
-    all_paths: dict[Commodity, set[tuple[str, ...]]] = {
-        (s, t): set() for s in sorted(hosts) for t in sorted(hosts) if s != t
-    }
+    commodities = [(s, t) for s in sorted(hosts) for t in sorted(hosts) if s != t]
+    merged: WeightedScheme = {comm: {} for comm in commodities}
 
-    switch_edges = [
+    switch_edges: list[Edge] = [
         (u, v)
         for u, v in graph.edges()
         if graph.nodes[u].get("type") == "switch"
         and graph.nodes[v].get("type") == "switch"
     ]
+
+    handled: set[Edge] = set()
     for u, v in switch_edges:
+        if (u, v) in handled:
+            continue
+        inv = (v, u)
+        handled.add((u, v))
+        handled.add(inv)
+
         fail_graph = graph.copy()
         fail_graph.remove_edge(u, v)
         if fail_graph.has_edge(v, u):
             fail_graph.remove_edge(v, u)
         if not nx.is_strongly_connected(fail_graph):
             continue
-        fail_paths = _oblivious_paths(fail_graph, hosts)
-        for comm, plist in fail_paths.items():
-            all_paths[comm].update(plist)
 
-    return {comm: list(pset) for comm, pset in all_paths.items()}
+        fail_scheme = _raecke_paths(fail_graph, hosts)
+        for comm, pps in fail_scheme.items():
+            for path, prob in pps.items():
+                merged[comm][path] = merged[comm].get(path, 0.0) + prob
+
+    return _normalize_scheme(merged)
 
 
 def _semimcf_routes(
@@ -846,9 +999,10 @@ def evaluate(
     elif method in ("semimcfraeke", "semimcfraekeft"):
         hosts = {node for commodity in demands for node in commodity}
         if method == "semimcfraeke":
-            cand = _oblivious_paths(graph, hosts)
+            scheme = _raecke_paths(graph, hosts)
         else:
-            cand = _oblivious_paths_ft(graph, hosts)
+            scheme = _oblivious_paths_ft(graph, hosts)
+        cand = _prune_scheme(scheme, budget)
         routes = _semimcf_routes(graph, demands, cand)
     else:
         raise ValueError(
