@@ -31,9 +31,8 @@ def _evaluate_te(
     shakeroute,
     hosts_file,
     te_method,
-    exit_early,
     network_name,
-) -> float | str:
+) -> float:
     if shakeroute:
         result_path = os.path.join(network_name, result_path)
     result = evaluate(
@@ -46,9 +45,6 @@ def _evaluate_te(
     )
     max_congestion = result.max_congestion
     logger.info(f"Max congestion: {max_congestion}")
-    if exit_early and float(max_congestion) == 1.0:
-        logger.info("Max Congestion has reached 1. Ending simulation.")
-        return "SIG_EXIT"
     return max_congestion
 
 
@@ -69,7 +65,6 @@ def evaluate_performance_from_adding_link(
     traffic_file,
     shakeroute,
     hosts_file,
-    exit_early,
     circuits_to_add=1,
 ):
     from onset.utilities.plotters import (
@@ -97,20 +92,15 @@ def evaluate_performance_from_adding_link(
     )
     Gml_to_dot(initial_graph, INITIAL_GRAPH_PATH)
 
-    if (
-        _evaluate_te(
-            INITIAL_GRAPH_PATH,
-            INITIAL_RESULTS_REL_PATH,
-            traffic_file,
-            shakeroute,
-            hosts_file,
-            te_method,
-            exit_early,
-            network_name,
-        )
-        == "SIG_EXIT"
-    ):
-        return
+    _evaluate_te(
+        INITIAL_GRAPH_PATH,
+        INITIAL_RESULTS_REL_PATH,
+        traffic_file,
+        shakeroute,
+        hosts_file,
+        te_method,
+        network_name,
+    )
 
     PATH_DIFF_FOLDER = os.path.join(experiment_absolute_path, "path_diff")
     CONGESTION_DIFF_FOLDER = os.path.join(experiment_absolute_path, "congestion_diff")
@@ -151,20 +141,15 @@ def evaluate_performance_from_adding_link(
             G=test_alpwolf.logical_graph,
         )
 
-        if (
-            _evaluate_te(
-                TEST_GRAPH_PATH,
-                TEST_RESULTS_REL_PATH,
-                traffic_file,
-                shakeroute,
-                hosts_file,
-                te_method,
-                exit_early,
-                network_name,
-            )
-            == "SIG_EXIT"
-        ):
-            return
+        _evaluate_te(
+            TEST_GRAPH_PATH,
+            TEST_RESULTS_REL_PATH,
+            traffic_file,
+            shakeroute,
+            hosts_file,
+            te_method,
+            network_name,
+        )
 
         TEST_PATHS = os.path.join(
             experiment_absolute_path,

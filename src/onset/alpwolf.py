@@ -804,13 +804,9 @@ class AlpWolf:
         if not self.bandwidth_restricted:
             print("Bandwidth is not restricted, nothing to do.")
             return
-        else:
-            self.bandwidth_restricted = False
-            for u, v in self.logical_graph.edges:
-                self.logical_graph[u][v]["capacity"] = self.logical_graph[u][v][
-                    "capacity"
-                ]
-            return
+        self.bandwidth_restricted = False
+        for u, v in self.logical_graph.edges:
+            self.logical_graph[u][v]["capacity"] = self.initial_bandwidth_dict[u][v]
 
     def cli(self):
         """Starts the AlpWolf command line interface for issuing topology change commands."""

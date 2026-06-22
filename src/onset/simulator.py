@@ -157,7 +157,6 @@ class Simulation:
         self.congestion_threshold_upper_bound = congestion_threshold_upper_bound
         self.congestion_threshold_lower_bound = congestion_threshold_lower_bound
         self.line_code = line_code
-        self.exit_early = False
         self.attack_proportion = attack_proportion
         self.shakeroute = shakeroute
         self.net_dir = net_dir
@@ -243,7 +242,6 @@ class Simulation:
             shakeroute=self.shakeroute,
             hosts_file=self.hosts_file,
             te_method=self.te_method,
-            exit_early=self.exit_early,
             network_name=self.network_name,
         )
 
@@ -258,7 +256,6 @@ class Simulation:
             traffic_file=self.traffic_file,
             shakeroute=self.shakeroute,
             hosts_file=self.hosts_file,
-            exit_early=self.exit_early,
             circuits_to_add=circuits_to_add,
         )
 
@@ -475,10 +472,8 @@ class Simulation:
                 ),
                 multi_sol_best_mlu=getattr(self, "multi_sol_best_mlu", "NaN"),
             )
-            if iter_congestion == "SIG_EXIT":
-                return None
 
-            congestion = float(iter_congestion)
+            congestion = iter_congestion
 
             if congestion >= self.congestion_threshold_upper_bound:
                 self.sig_add_circuits = True
