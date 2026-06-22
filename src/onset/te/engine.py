@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import itertools
+import math
+import random
 import re
 import time
 from collections import defaultdict
@@ -228,7 +230,7 @@ def _mcf_routes(
 # Semi-oblivious MCF (SMORE / YATES)
 # ---------------------------------------------------------------------------
 #
-# SMORE (Semi-oblivious MCF with Räcke decomposition) is a two-phase traffic
+# SMORE (Semi-oblivious MCF with Raecke decomposition) is a two-phase traffic
 # engineering system from Cornell:
 #   https://www.cs.cornell.edu/~praveenk/smore/
 #   https://cornell-netlab.github.io/yates/
@@ -236,61 +238,264 @@ def _mcf_routes(
 #
 # "Semi-oblivious Traffic Engineering: The Road Not Taken"
 #   Praveen Kumar, Yang Yuan, Chris Yu, Nate Foster, Robert Kleinberg,
-#   Petr Lapukhov, Chiun Lin Lim, and Robert Soulé.
+#   Petr Lapukhov, Chiun Lin Lim, and Robert Soule.
 #   USENIX NSDI, April 2018.
 #   https://www.cs.cornell.edu/~praveenk/papers/smore-nsdi18.pdf
 #
-# Phase 1 (oblivious): Select a static set of diverse paths per commodity,
-# independent of traffic.  The original SMORE uses Räcke's hierarchical
-# tree decomposition with multiplicative weights.  We approximate this
-# with NetworkX k-shortest simple paths, which yields diverse, low-stretch
-# candidate paths — a technique used by YATES' semimcfksp variant.
+# Phase 1 (oblivious): Raecke's hierarchical tree decomposition (FRT) with
+# multiplicative weights.  Random FRT trees are built, each routing all
+# commodities up/down the tree.  MW iterates, reweighting edges by
+# exponential cumulative usage, producing a probability distribution over
+# routing trees.  Final candidate paths are the union of all physical
+# paths from all trees.
 #
 # Phase 2 (semi-oblivious / rate adaptation): Solve a restricted MCF LP
 # over the pre-selected paths to minimize max link utilization for the
 # given traffic matrix.  This matches the YATES SemiMcf.solve LP.
 #
-# semimcfraeke  - Raecke-style path selection on original topology.
+# semimcfraeke  - Raecke FRT+MW path selection on original topology.
 # semimcfraekeft - Same, with a fault-tolerance envelope: path selection
 #                  is repeated on every single-link-failure topology and
 #                  the resulting path sets are merged (YATES all_failures_envelope).
+#
+# Parameters (from YATES Raeke.ml):
+#   epsilon = 0.1           MW learning rate
+#   beta     ~ Uniform[1,2)  FRT distance scaling factor per tree
 
 
-def _k_shortest_paths(
+def _all_pairs_dist(
     graph: nx.DiGraph,
-    source: str,
-    target: str,
-    k: int = 4,
-) -> list[tuple[str, ...]]:
-    paths: list[tuple[str, ...]] = []
-    try:
-        for path in nx.shortest_simple_paths(
-            graph, source, target, weight="cost"
-        ):
-            paths.append(tuple(path))
-            if len(paths) >= k:
-                break
-    except (nx.NetworkXNoPath, nx.NodeNotFound):
-        pass
-    return paths
+) -> dict[tuple[str, str], float]:
+    dists: dict[tuple[str, str], float] = {}
+    for src in graph.nodes():
+        try:
+            lengths = nx.single_source_dijkstra_path_length(
+                graph, src, weight="cost"
+            )
+            for dst, length in lengths.items():
+                dists[(src, dst)] = length
+        except (nx.NetworkXNoPath, nx.NodeNotFound):
+            pass
+    return dists
+
+
+def _frt_decompose(
+    vertices: list[str],
+    dists: dict[tuple[str, str], float],
+    beta: float | None = None,
+) -> tuple[str, list]:
+    """FRT hierarchical tree decomposition (YATES Yates_Frt.make_frt_tree).
+
+    Returns a nested tree: ("node", center, cluster_set, [children])
+    or ("leaf", center, {singleton}).
+    """
+    if beta is None:
+        beta = math.exp(random.random() * math.log(2.0))
+
+    if not vertices:
+        return ("leaf", "", set())
+
+    # Random permutation determines cluster-assignment priority
+    order = list(vertices)
+    random.shuffle(order)
+
+    max_diameter = max(dists.values(), default=0.0)
+    initial_i = (
+        int(math.floor(math.log2(max_diameter))) if max_diameter > 0 else 0
+    )
+
+    def _level(i: int, center: str, cset: set[str]):
+        beta_i = 2.0 ** (i - 1) * beta
+        partition: dict[str, set[str]] = {}
+        for v in cset:
+            for h in order:
+                if dists.get((h, v), float("inf")) <= beta_i:
+                    partition.setdefault(h, set()).add(v)
+                    break
+
+        children = []
+        for ctr, child_set in partition.items():
+            if len(child_set) <= 1 or i <= 0:
+                children.append(("leaf", ctr, child_set))
+            else:
+                children.append(_level(i - 1, ctr, child_set))
+        return ("node", center, cset, children)
+
+    head = order[0]
+    return _level(initial_i, head, set(vertices))
+
+
+def _frt_paths(
+    tree,
+    src: str,
+    dst: str,
+) -> list[str]:
+    """Compute the tree path between src and dst by walking up to LCA."""
+
+    def _find_leaf(t, target: str):
+        if t[0] == "leaf":
+            return [t[1]] if target in t[2] else []
+        for child in t[3]:
+            result = _find_leaf(child, target)
+            if result:
+                return [t[1], *result]
+        return []
+
+    src_path = _find_leaf(tree, src)
+    dst_path = _find_leaf(tree, dst)
+    if not src_path or not dst_path:
+        return []
+
+    # Find LCA: last common element
+    lca_idx = 0
+    for i, (a, b) in enumerate(zip(src_path, dst_path, strict=False)):
+        if a == b:
+            lca_idx = i
+        else:
+            break
+
+    # Up from src leaf (deepest) to LCA, then down to dst
+    up = list(reversed(src_path))  # leaf...lca
+    down = dst_path[lca_idx + 1:]  # lca...leaf (sans lca itself)
+    return up + down
+
+
+def _raecke_paths(
+    graph: nx.DiGraph,
+    hosts: set[str],
+    *,
+    epsilon: float = 0.1,
+) -> dict[Commodity, set[tuple[str, ...]]]:
+    """Raecke oblivious routing: FRT trees + multiplicative weights.
+
+    Iteratively builds random FRT routing trees, computes edge usage,
+    updates edge weights via MW, and accumulates a probability distribution
+    over trees.  Returns the union of all physical paths from all weighted
+    trees for each commodity.
+
+    Matches YATES Raeke.solve + Yates_Mw.hedge_iterations.
+    """
+    commodities = [
+        (s, t) for s in sorted(hosts) for t in sorted(hosts) if s != t
+    ]
+    all_paths: dict[Commodity, set[tuple[str, ...]]] = {
+        comm: set() for comm in commodities
+    }
+
+    vertices = list(graph.nodes())
+    num_edges = graph.number_of_edges()
+    if num_edges == 0:
+        return all_paths
+
+    # Edge weight table: cumulative usage for MW
+    usage_table: dict[Edge, float] = {
+        edge: 0.0 for edge in graph.edges()
+    }
+
+    acc_weight = 0.0
+    max_iterations = 64
+
+    for _ in range(max_iterations):
+        # 1. Build random FRT tree
+        dists = _all_pairs_dist(graph)
+        tree = _frt_decompose(vertices, dists)
+
+        # 2. Compute edge usage for this tree (route all commodities)
+        edge_usage: dict[Edge, float] = defaultdict(float)
+        for src, dst in commodities:
+            tree_path = _frt_paths(tree, src, dst)
+            if len(tree_path) < 2:
+                continue
+            # Map tree-node path to physical shortest-path edges
+            for i in range(len(tree_path) - 1):
+                a, b = tree_path[i], tree_path[i + 1]
+                # Physical shortest path between these cluster centers
+                try:
+                    phys = nx.shortest_path(graph, a, b, weight="cost")
+                    for j in range(len(phys) - 1):
+                        edge = (phys[j], phys[j + 1])
+                        if graph.has_edge(*edge):
+                            edge_usage[edge] += 1.0
+                except (nx.NetworkXNoPath, nx.NodeNotFound):
+                    pass
+
+        if not edge_usage:
+            continue
+
+        # 3. Scale usage so max = 1.0
+        max_u = max(edge_usage.values())
+        scaled: dict[Edge, float] = {
+            e: u / max_u for e, u in edge_usage.items()
+        }
+
+        # 4. Tree weight = 1 / max_usage
+        w = 1.0 / max_u
+
+        # 5. Stopping condition
+        if acc_weight + w >= 1.0:
+            final_w = 1.0 - acc_weight
+            if final_w > 0:
+                for src, dst in commodities:
+                    tp = _frt_paths(tree, src, dst)
+                    if len(tp) >= 2:
+                        try:
+                            phys = _tree_to_physical(graph, tp)
+                            all_paths[(src, dst)].add(tuple(phys))
+                        except (nx.NetworkXNoPath, nx.NodeNotFound):
+                            pass
+            break
+
+        # 6. Update cumulative usage
+        for e, u in scaled.items():
+            usage_table[e] = usage_table.get(e, 0.0) + u
+
+        # 7. Update edge weights via MW
+        sum_exp = 0.0
+        exp_weights: dict[Edge, float] = {}
+        for e in usage_table:
+            ew = math.exp(epsilon * usage_table[e])
+            exp_weights[e] = ew
+            sum_exp += ew
+
+        # 8. Collect paths from this tree
+        for src, dst in commodities:
+            tp = _frt_paths(tree, src, dst)
+            if len(tp) >= 2:
+                try:
+                    phys = _tree_to_physical(graph, tp)
+                    all_paths[(src, dst)].add(tuple(phys))
+                except (nx.NetworkXNoPath, nx.NodeNotFound):
+                    pass
+
+        acc_weight += w
+
+    return all_paths
+
+
+def _tree_to_physical(
+    graph: nx.DiGraph,
+    tree_path: list[str],
+) -> list[str]:
+    """Convert a tree-node path to a concatenated physical shortest path."""
+    result: list[str] = [tree_path[0]]
+    for i in range(len(tree_path) - 1):
+        a, b = tree_path[i], tree_path[i + 1]
+        segment = nx.shortest_path(graph, a, b, weight="cost")
+        result.extend(segment[1:])
+    return result
 
 
 def _oblivious_paths(
     graph: nx.DiGraph,
     hosts: set[str],
 ) -> dict[Commodity, list[tuple[str, ...]]]:
-    """Select diverse candidate paths oblivious to traffic demand.
+    """Select diverse candidate paths via Raecke FRT + MW decomposition.
 
-    Uses k-shortest simple paths as a practical approximation of Räcke's
-    oblivious routing decomposition (SMORE / YATES Phase 1).
+    Traffic-oblivious: no demand information is used.  Returns a set of
+    physical paths per commodity.  Matches YATES Raeke.solve Phase 1.
     """
-    commodities = [
-        (s, t) for s in sorted(hosts) for t in sorted(hosts) if s != t
-    ]
-    paths: dict[Commodity, list[tuple[str, ...]]] = {}
-    for src, dst in commodities:
-        paths[(src, dst)] = _k_shortest_paths(graph, src, dst)
-    return paths
+    raw = _raecke_paths(graph, hosts)
+    return {comm: list(pset) for comm, pset in raw.items()}
 
 
 def _oblivious_paths_ft(
@@ -300,8 +505,8 @@ def _oblivious_paths_ft(
     """Fault-tolerant variant: merge paths from every single-link-failure topology.
 
     For each switch-to-switch edge, removes the edge, checks connectivity,
-    runs oblivious path selection, and unions all resulting path sets.
-    Matches YATES' all_failures_envelope for semimcfraekeft.
+    runs Raecke path selection, and unions all resulting path sets.
+    Matches YATES all_failures_envelope for semimcfraekeft.
     """
     all_paths: dict[Commodity, set[tuple[str, ...]]] = {
         (s, t): set() for s in sorted(hosts) for t in sorted(hosts) if s != t
