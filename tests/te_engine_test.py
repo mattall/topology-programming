@@ -94,6 +94,41 @@ s1 -> h1 [cost=1, capacity="100Gbps"];
             [(("h1", "s1", "s2", "s4", "h2"), 1.0)],
         )
 
+    def test_semimcfraeke_finds_feasible_routes(self):
+        result = self.evaluate("-semimcfraeke")
+
+        self.assertAlmostEqual(result.max_congestion, 30 / (100 * 2**30))
+        self.assertEqual(result.throughput, 1.0)
+        self.assertGreater(result.num_paths, 0)
+
+    def test_semimcfraekeft_finds_feasible_routes(self):
+        result = self.evaluate("-semimcfraekeft")
+
+        self.assertAlmostEqual(result.max_congestion, 30 / (100 * 2**30))
+        self.assertEqual(result.throughput, 1.0)
+        self.assertGreater(result.num_paths, 0)
+
+    def test_semimcfraeke_handles_overload(self):
+        self.matrix.write_text("0 300000000000 300000000000 0", encoding="utf-8")
+        result = self.evaluate("-semimcfraeke")
+
+        expected_throughput = 2 * (100 * 2**30) / 300000000000
+        self.assertGreater(result.max_congestion, 1.0)
+        self.assertAlmostEqual(result.throughput, expected_throughput)
+
+    def test_semimcfraeke_distinguishes_unroutable_demand(self):
+        text = self.topology.read_text(encoding="utf-8")
+        text = text.replace('s1 -> s3 [cost=1, capacity="100Gbps"];', "")
+        text = text.replace('s1 -> s2 [cost=1, capacity="100Gbps"];', "")
+        self.topology.write_text(text, encoding="utf-8")
+        self.matrix.write_text("0 60 0 0", encoding="utf-8")
+
+        result = self.evaluate("-semimcfraeke")
+
+        self.assertEqual(result.throughput, 0.0)
+        self.assertEqual(result.congestion_loss, 0.0)
+        self.assertEqual(result.failure_loss, 1.0)
+
 
 if __name__ == "__main__":
     unittest.main()

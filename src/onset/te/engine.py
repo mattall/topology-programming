@@ -224,6 +224,227 @@ def _mcf_routes(
     return routes
 
 
+# ---------------------------------------------------------------------------
+# Semi-oblivious MCF (SMORE / YATES)
+# ---------------------------------------------------------------------------
+#
+# SMORE (Semi-oblivious MCF with Räcke decomposition) is a two-phase traffic
+# engineering system from Cornell:
+#   https://www.cs.cornell.edu/~praveenk/smore/
+#   https://cornell-netlab.github.io/yates/
+#   https://github.com/cornell-netlab/yates
+#
+# "Semi-oblivious Traffic Engineering: The Road Not Taken"
+#   Praveen Kumar, Yang Yuan, Chris Yu, Nate Foster, Robert Kleinberg,
+#   Petr Lapukhov, Chiun Lin Lim, and Robert Soulé.
+#   USENIX NSDI, April 2018.
+#   https://www.cs.cornell.edu/~praveenk/papers/smore-nsdi18.pdf
+#
+# Phase 1 (oblivious): Select a static set of diverse paths per commodity,
+# independent of traffic.  The original SMORE uses Räcke's hierarchical
+# tree decomposition with multiplicative weights.  We approximate this
+# with NetworkX k-shortest simple paths, which yields diverse, low-stretch
+# candidate paths — a technique used by YATES' semimcfksp variant.
+#
+# Phase 2 (semi-oblivious / rate adaptation): Solve a restricted MCF LP
+# over the pre-selected paths to minimize max link utilization for the
+# given traffic matrix.  This matches the YATES SemiMcf.solve LP.
+#
+# semimcfraeke  - Raecke-style path selection on original topology.
+# semimcfraekeft - Same, with a fault-tolerance envelope: path selection
+#                  is repeated on every single-link-failure topology and
+#                  the resulting path sets are merged (YATES all_failures_envelope).
+
+
+def _k_shortest_paths(
+    graph: nx.DiGraph,
+    source: str,
+    target: str,
+    k: int = 4,
+) -> list[tuple[str, ...]]:
+    paths: list[tuple[str, ...]] = []
+    try:
+        for path in nx.shortest_simple_paths(
+            graph, source, target, weight="cost"
+        ):
+            paths.append(tuple(path))
+            if len(paths) >= k:
+                break
+    except (nx.NetworkXNoPath, nx.NodeNotFound):
+        pass
+    return paths
+
+
+def _oblivious_paths(
+    graph: nx.DiGraph,
+    hosts: set[str],
+) -> dict[Commodity, list[tuple[str, ...]]]:
+    """Select diverse candidate paths oblivious to traffic demand.
+
+    Uses k-shortest simple paths as a practical approximation of Räcke's
+    oblivious routing decomposition (SMORE / YATES Phase 1).
+    """
+    commodities = [
+        (s, t) for s in sorted(hosts) for t in sorted(hosts) if s != t
+    ]
+    paths: dict[Commodity, list[tuple[str, ...]]] = {}
+    for src, dst in commodities:
+        paths[(src, dst)] = _k_shortest_paths(graph, src, dst)
+    return paths
+
+
+def _oblivious_paths_ft(
+    graph: nx.DiGraph,
+    hosts: set[str],
+) -> dict[Commodity, list[tuple[str, ...]]]:
+    """Fault-tolerant variant: merge paths from every single-link-failure topology.
+
+    For each switch-to-switch edge, removes the edge, checks connectivity,
+    runs oblivious path selection, and unions all resulting path sets.
+    Matches YATES' all_failures_envelope for semimcfraekeft.
+    """
+    all_paths: dict[Commodity, set[tuple[str, ...]]] = {
+        (s, t): set() for s in sorted(hosts) for t in sorted(hosts) if s != t
+    }
+
+    baseline = _oblivious_paths(graph, hosts)
+    for comm, plist in baseline.items():
+        all_paths[comm].update(plist)
+
+    switch_edges = [
+        (u, v)
+        for u, v in graph.edges()
+        if graph.nodes[u].get("type") == "switch"
+        and graph.nodes[v].get("type") == "switch"
+    ]
+    for u, v in switch_edges:
+        fail_graph = graph.copy()
+        fail_graph.remove_edge(u, v)
+        if fail_graph.has_edge(v, u):
+            fail_graph.remove_edge(v, u)
+        if not nx.is_strongly_connected(fail_graph):
+            continue
+        fail_paths = _oblivious_paths(fail_graph, hosts)
+        for comm, plist in fail_paths.items():
+            all_paths[comm].update(plist)
+
+    return {comm: list(pset) for comm, pset in all_paths.items()}
+
+
+def _semimcf_routes(
+    graph: nx.DiGraph,
+    demands: Mapping[Commodity, float],
+    candidate_paths: dict[Commodity, list[tuple[str, ...]]],
+) -> dict[Commodity, list[Route]]:
+    """Restricted MCF over pre-selected candidate paths (SMORE Phase 2).
+
+    Solves a path-based LP: for each commodity, allocate flow across its
+    candidate paths to minimize the maximum link utilization.  Uses the
+    HiGHS LP solver (scipy.optimize.linprog).
+
+    This is the same formulation as YATES SemiMcf.solve.
+    """
+    all_commodities = sorted(demands)
+    active = [
+        (s, t)
+        for s, t in all_commodities
+        if demands[(s, t)] > 0 and candidate_paths.get((s, t))
+    ]
+    if not active:
+        return {commodity: [] for commodity in all_commodities}
+
+    # Build variable index: one flow variable per (commodity, path)
+    var_index: dict[tuple[Commodity, int], int] = {}
+    path_map: dict[Commodity, list[tuple[str, ...]]] = {}
+    idx = 0
+    for comm in active:
+        path_map[comm] = candidate_paths[comm]
+        for pi in range(len(path_map[comm])):
+            var_index[(comm, pi)] = idx
+            idx += 1
+    z_index = idx  # max-congestion variable
+    variable_count = idx + 1
+
+    # Build per-edge path membership
+    edge_path_vars: dict[Edge, list[int]] = defaultdict(list)
+    for comm, paths in path_map.items():
+        for pi, path in enumerate(paths):
+            for edge in itertools.pairwise(path):
+                edge_path_vars[edge].append(var_index[(comm, pi)])
+
+    edges = sorted(graph.edges())
+    commodity_count = len(active)
+    edge_count = len(edges)
+
+    # Capacity constraints: sum(flows using edge) - Z * capacity <= 0
+    ub_rows: list[int] = []
+    ub_cols: list[int] = []
+    ub_data: list[float] = []
+    for edge_i, edge in enumerate(edges):
+        for var_i in edge_path_vars.get(edge, []):
+            ub_rows.append(edge_i)
+            ub_cols.append(var_i)
+            ub_data.append(1.0)
+        ub_rows.append(edge_i)
+        ub_cols.append(z_index)
+        ub_data.append(-float(graph.edges[edge]["capacity"]))
+
+    # Demand constraints: sum(flows for commodity) >= demand
+    eq_rows: list[int] = []
+    eq_cols: list[int] = []
+    eq_data: list[float] = []
+    b_eq: list[float] = []
+    for k, comm in enumerate(active):
+        for pi in range(len(path_map[comm])):
+            eq_rows.append(k)
+            eq_cols.append(var_index[(comm, pi)])
+            eq_data.append(1.0)
+        b_eq.append(demands[comm])
+
+    bounds = [(0.0, None)] * idx + [(0.0, None)]  # Z unbounded above
+
+    objective = np.zeros(variable_count)
+    objective[z_index] = 1.0
+
+    solution = linprog(
+        objective,
+        A_ub=coo_matrix(
+            (ub_data, (ub_rows, ub_cols)),
+            shape=(edge_count, variable_count),
+        ),
+        b_ub=np.zeros(edge_count),
+        A_eq=coo_matrix(
+            (eq_data, (eq_rows, eq_cols)),
+            shape=(commodity_count, variable_count),
+        ),
+        b_eq=np.array(b_eq),
+        bounds=bounds,
+        method="highs",
+    )
+    if not solution.success:
+        raise RuntimeError(f"Semimcf solve failed: {solution.message}")
+
+    routes: dict[Commodity, list[Route]] = {
+        commodity: [] for commodity in all_commodities
+    }
+    tolerance = max(demands.values(), default=1.0) * 1e-9
+    for comm in active:
+        total = sum(
+            solution.x[var_index[(comm, pi)]]
+            for pi in range(len(path_map[comm]))
+        )
+        for pi, path in enumerate(path_map[comm]):
+            flow = solution.x[var_index[(comm, pi)]]
+            if flow > tolerance and total > tolerance:
+                routes[comm].append((path, flow / total))
+        if not routes[comm]:
+            routes[comm] = [
+                (path, 1.0 / len(paths))
+                for path in path_map[comm]
+            ] if path_map[comm] else []
+    return routes
+
+
 def _fair_share(
     capacity: float, flows: Sequence[tuple[int, float]]
 ) -> dict[int, float]:
@@ -411,6 +632,13 @@ def evaluate(
         routes = _ecmp_routes(graph, demands, budget)
     elif method == "mcf":
         routes = _mcf_routes(graph, demands)
+    elif method in ("semimcfraeke", "semimcfraekeft"):
+        hosts = {node for commodity in demands for node in commodity}
+        if method == "semimcfraeke":
+            cand = _oblivious_paths(graph, hosts)
+        else:
+            cand = _oblivious_paths_ft(graph, hosts)
+        routes = _semimcf_routes(graph, demands, cand)
     else:
         raise ValueError(
             f"Unsupported in-process TE method {te_method!r}; supported methods are -ecmp and -mcf"
