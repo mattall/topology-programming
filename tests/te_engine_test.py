@@ -357,7 +357,7 @@ class RaeckeTest(unittest.TestCase):
         return leaves
 
     def test_frt_every_leaf_is_singleton(self):
-        """Every terminal leaf in an FRT tree contains exactly one vertex."""
+        """Every terminal leaf is centered on its sole vertex."""
         g = self._triangle_graph()
         dists, _phys = all_pairs_paths(g)
         for seed in (0, 1, 7, 42, 99):
@@ -365,11 +365,12 @@ class RaeckeTest(unittest.TestCase):
             frt = _frt_decompose(list(g.nodes()), dists, rng=rng)
             for leaf in self._all_frt_leaves(frt):
                 cset = leaf[2]
-                self.assertLessEqual(
+                self.assertEqual(
                     len(cset),
                     1,
                     f"Seed {seed}: leaf {leaf[1]} has {len(cset)} vertices: {cset}",
                 )
+                self.assertEqual(leaf[1], next(iter(cset)))
 
     def test_frt_clustered_endpoints_separate(self):
         """Two endpoints clustered together at level zero are separated."""
@@ -399,6 +400,32 @@ class RaeckeTest(unittest.TestCase):
         self.assertIn(("h1", "h3"), scheme)
         total = sum(scheme[("h1", "h3")].values())
         self.assertAlmostEqual(total, 1.0, places=6)
+
+    def test_raecke_returns_raw_complete_mass(self):
+        """A converged triangle scheme needs no post-hoc normalization."""
+        g = self._triangle_graph()
+        scheme = _raecke_paths(g, {"h1", "h3"}, seed=42)
+
+        for commodity in (("h1", "h3"), ("h3", "h1")):
+            self.assertTrue(scheme[commodity])
+            self.assertTrue(
+                math.isclose(
+                    sum(scheme[commodity].values()),
+                    1.0,
+                    rel_tol=1e-9,
+                    abs_tol=1e-9,
+                )
+            )
+
+    def test_raecke_disconnected_commodity_remains_empty(self):
+        g = nx.DiGraph()
+        g.add_node("h1", type="host")
+        g.add_node("h2", type="host")
+
+        scheme = _raecke_paths(g, {"h1", "h2"}, seed=42)
+
+        self.assertEqual(scheme[("h1", "h2")], {})
+        self.assertEqual(scheme[("h2", "h1")], {})
 
     # -- Raecke scheme invariants -------------------------------------------
 

@@ -337,8 +337,9 @@ def _frt_decompose(
 
         children = []
         for ctr, child_set in partition.items():
-            if len(child_set) <= 1:
-                children.append(("leaf", ctr, child_set))
+            if len(child_set) == 1:
+                leaf_center = next(iter(child_set))
+                children.append(("leaf", leaf_center, child_set))
             else:
                 children.append(_level(i - 1, ctr, child_set))
         return ("node", center, cset, children)
@@ -659,7 +660,20 @@ def _raecke_paths(
             f"{acc_weight:.4f} after {_safety} iterations"
         )
 
-    return _normalize_scheme(scheme)
+    for (src, dst), paths in scheme.items():
+        total = sum(paths.values())
+        if nx.has_path(graph, src, dst):
+            if not math.isclose(total, 1.0, rel_tol=1e-9, abs_tol=1e-9):
+                raise RuntimeError(
+                    f"Raecke scheme for {src}->{dst} has probability mass "
+                    f"{total:.12g}, expected 1"
+                )
+        elif paths:
+            raise RuntimeError(
+                f"Raecke scheme for disconnected commodity {src}->{dst} is nonempty"
+            )
+
+    return scheme
 
 
 def _oblivious_paths_ft(
