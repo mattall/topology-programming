@@ -5,8 +5,8 @@ Programming (OTP).
 
 ## Installation
 
-Python 3.11 through 3.13 is supported. All commands assume they are run from
-the repository root.
+The minimum supported version is Python 3.13. All commands assume they are run
+from the repository root.
 
 ```bash
 git clone --recurse-submodules https://github.com/mattall/topology-programming.git

@@ -7,7 +7,7 @@ name = "topology-programming"
 description = "Simulator for optical topology programming research"
 authors = [{name = "mattall", email = "mhhall92@gmail.com"}]
 license = {text = "MIT"}
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.13"
 readme = "README.md"
 version = "0.1.0"
 
@@ -52,7 +52,7 @@ python_files = ["test_*.py", "*_test.py"]
 norecursedirs = ["dist", "build", ".tox"]
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py313"
 line-length = 88
 include = [
     "src/onset/alpwolf.py",
@@ -92,7 +92,7 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.13"
 strict = false
 warn_unused_ignores = true
 warn_return_any = true

@@ -66,12 +66,12 @@ printf "Checking topology-programming environment...\n"
 if command -v "$python_bin" >/dev/null 2>&1 || [ -x "$python_bin" ]; then
     printf "ok: python -> %s\n" "$("$python_bin" -c 'import sys; print(sys.executable)')"
 else
-    printf "missing: python -> %s\n  Install Python 3.11, 3.12, or 3.13 and activate the project environment.\n" "$python_bin"
+    printf "missing: python -> %s\n  Install Python 3.13 and activate the project environment.\n" "$python_bin"
     status=1
 fi
 
-if ! "$python_bin" -c 'import sys; raise SystemExit(not ((3, 11) <= sys.version_info[:2] < (3, 14)))'; then
-    printf "unsupported: %s\n  Use Python 3.11, 3.12, or 3.13.\n" "$python_bin"
+if ! "$python_bin" -c 'import sys; raise SystemExit(sys.version_info[:2] < (3, 13))'; then
+    printf "unsupported: %s\n  Use Python 3.13 or newer.\n" "$python_bin"
     status=1
 fi
 
