@@ -337,7 +337,7 @@ def _frt_decompose(
 
         children = []
         for ctr, child_set in partition.items():
-            if len(child_set) <= 1 or i <= 0:
+            if len(child_set) <= 1:
                 children.append(("leaf", ctr, child_set))
             else:
                 children.append(_level(i - 1, ctr, child_set))
@@ -569,9 +569,12 @@ def _raecke_paths(
     cumulative: dict[Edge, float] = {e: 0.0 for e in g.edges()}
 
     acc_weight = 0.0
-    max_iterations = 64
 
-    for _ in range(max_iterations):
+    # YATES iterates until accumulated tree weight reaches one
+    # (Yates_Mw.ml lines 98-105).  A generous safety bound guards
+    # against a non-converging pathological topology.
+    _safety = 1024
+    for _iter in range(_safety):
         # 1. Build random FRT tree on the current weighted graph.
         #    Both distances *and* physical paths come from the reweighted
         #    topology so the next routing tree reflects MW cost updates
@@ -648,6 +651,13 @@ def _raecke_paths(
         if sum_exp > 0:
             for e in g.edges():
                 g.edges[e]["cost"] = mw[e] / sum_exp
+    else:
+        # Loop exhausted without convergence — YATES always converges
+        # under the MW guarantee; this signals a defect or pathology.
+        raise RuntimeError(
+            f"Raecke MW did not converge: accumulated weight "
+            f"{acc_weight:.4f} after {_safety} iterations"
+        )
 
     return _normalize_scheme(scheme)
 

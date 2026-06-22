@@ -344,6 +344,62 @@ class RaeckeTest(unittest.TestCase):
             self.assertGreaterEqual(val, 0.0)
             self.assertFalse(math.isnan(val))
 
+    # -- FRT tree invariants ------------------------------------------------
+
+    def _all_frt_leaves(self, tree):
+        """Recursively collect all leaves from an FRT tree."""
+        leaves: list[tuple] = []
+        if tree[0] == "leaf":
+            leaves.append(tree)
+        else:
+            for child in tree[3]:
+                leaves.extend(self._all_frt_leaves(child))
+        return leaves
+
+    def test_frt_every_leaf_is_singleton(self):
+        """Every terminal leaf in an FRT tree contains exactly one vertex."""
+        g = self._triangle_graph()
+        dists, _phys = all_pairs_paths(g)
+        for seed in (0, 1, 7, 42, 99):
+            rng = random.Random(seed)
+            frt = _frt_decompose(list(g.nodes()), dists, rng=rng)
+            for leaf in self._all_frt_leaves(frt):
+                cset = leaf[2]
+                self.assertLessEqual(
+                    len(cset),
+                    1,
+                    f"Seed {seed}: leaf {leaf[1]} has {len(cset)} vertices: {cset}",
+                )
+
+    def test_frt_clustered_endpoints_separate(self):
+        """Two endpoints clustered together at level zero are separated."""
+        # Build a graph where two hosts are adjacent (distance 1) and
+        # max_diameter is small, forcing initial_i = 0.  The FRT must still
+        # decompose the two-host cluster into singletons.
+        g = nx.DiGraph()
+        g.add_node("h1", type="host")
+        g.add_node("h2", type="host")
+        g.add_edge("h1", "h2", cost=1.0, capacity=100.0)
+        g.add_edge("h2", "h1", cost=1.0, capacity=100.0)
+        dists, _phys = all_pairs_paths(g)
+        frt = _frt_decompose(list(g.nodes()), dists, rng=random.Random(1))
+        leaves = self._all_frt_leaves(frt)
+        self.assertEqual(len(leaves), 2)
+        for leaf in leaves:
+            self.assertEqual(len(leaf[2]), 1)
+
+    # -- MW convergence ------------------------------------------------------
+
+    def test_mw_converges(self):
+        """MW loop reaches total weight 1 via natural stopping condition."""
+        g = self._triangle_graph()
+        # The triangle with seed=42 should converge well within the safety
+        # bound without hitting the RuntimeError guard.
+        scheme = _raecke_paths(g, {"h1", "h3"}, seed=42)
+        self.assertIn(("h1", "h3"), scheme)
+        total = sum(scheme[("h1", "h3")].values())
+        self.assertAlmostEqual(total, 1.0, places=6)
+
     # -- Raecke scheme invariants -------------------------------------------
 
     def test_raecke_produces_weighted_scheme(self):
