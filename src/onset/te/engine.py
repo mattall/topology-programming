@@ -676,6 +676,20 @@ def _raecke_paths(
     return scheme
 
 
+def _all_hosts_connected(
+    graph: nx.DiGraph,
+    hosts: set[str],
+) -> bool:
+    """Check all ordered host-pair directed paths exist (YATES
+    all_pairs_connectivity).  Only host-pair reachability is considered;
+    isolated switch-only vertices do not disqualify a failure scenario."""
+    for src in hosts:
+        for dst in hosts:
+            if src != dst and not nx.has_path(graph, src, dst):
+                return False
+    return True
+
+
 def _oblivious_paths_ft(
     graph: nx.DiGraph,
     hosts: set[str],
@@ -708,8 +722,17 @@ def _oblivious_paths_ft(
         fail_graph.remove_edge(u, v)
         if fail_graph.has_edge(v, u):
             fail_graph.remove_edge(v, u)
-        if not nx.is_strongly_connected(fail_graph):
+        if not _all_hosts_connected(fail_graph, hosts):
             continue
+
+        # Restrict to the strongly connected component shared by the hosts.
+        # Vertices outside it cannot participate in any host-to-host path and
+        # can prevent the FRT/MW decomposition from reaching complete mass.
+        anchor = min(hosts)
+        relevant = {anchor} | (
+            nx.descendants(fail_graph, anchor) & nx.ancestors(fail_graph, anchor)
+        )
+        fail_graph = fail_graph.subgraph(relevant)
 
         fail_scheme = _raecke_paths(fail_graph, hosts)
         for comm, pps in fail_scheme.items():

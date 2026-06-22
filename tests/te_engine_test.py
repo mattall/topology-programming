@@ -3,6 +3,7 @@ import random
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import networkx as nx
 
@@ -580,6 +581,180 @@ class RaeckeTest(unittest.TestCase):
             for path in pps:
                 self.assertEqual(path[0], src)
                 self.assertEqual(path[-1], dst)
+                for i in range(len(path) - 1):
+                    self.assertTrue(g.has_edge(path[i], path[i + 1]))
+
+    # -- FT envelope oracle tests -------------------------------------------
+    #
+    # Deterministic tests for _oblivious_paths_ft (YATES
+    # all_failures_envelope semantics).  Monkeypatched _raecke_paths for
+    # oracle assertions; one end-to-end regression runs the real solver.
+
+    @staticmethod
+    def _add_ss_edges(g, pairs, cap=float(2**30)):
+        """Add bidirectional switch-switch edges."""
+        for a, b in pairs:
+            g.add_edge(a, b, cost=1.0, capacity=cap)
+            g.add_edge(b, a, cost=1.0, capacity=cap)
+
+    @staticmethod
+    def _add_host_links(g, pairs, cap=None):
+        """Add host-to-switch access links (both directions)."""
+        if cap is None:
+            cap = float(2**30) * 100.0
+        for src, sw in pairs:
+            g.add_edge(src, sw, cost=1.0, capacity=cap)
+            g.add_edge(sw, src, cost=1.0, capacity=cap)
+
+    def _empty_scheme(self, hosts):
+        return {(s, t): {} for s in sorted(hosts) for t in sorted(hosts) if s != t}
+
+    def test_ft_each_link_once(self):
+        """(1) Each bidirectional switch-switch link yields exactly one call."""
+        g = nx.DiGraph()
+        for n in ("h1", "h2", "s1", "s2", "s3", "s4"):
+            g.add_node(n, type="host" if n.startswith("h") else "switch")
+        self._add_ss_edges(g, [("s1", "s2"), ("s1", "s3"), ("s2", "s4"), ("s3", "s4")])
+        self._add_host_links(g, [("h1", "s1"), ("h2", "s4")])
+        hosts = {"h1", "h2"}
+
+        n = 0
+
+        def mc(*a, **kw):
+            nonlocal n
+            n += 1
+            return self._empty_scheme(hosts)
+
+        with patch("onset.te.engine._raecke_paths", side_effect=mc):
+            _oblivious_paths_ft(g, hosts)
+        self.assertEqual(n, 4)
+
+    def test_ft_filter_host_pair_reachability(self):
+        """(2) Filter uses host-pair reachability, not full strong connectivity."""
+        g = nx.DiGraph()
+        for n in ("h1", "h3", "s1", "s2", "s3", "s4"):
+            g.add_node(n, type="host" if n.startswith("h") else "switch")
+        self._add_ss_edges(g, [("s1", "s2"), ("s2", "s3"), ("s3", "s4")])
+        self._add_host_links(g, [("h1", "s1"), ("h3", "s3")])
+        hosts = {"h1", "h3"}
+
+        seen_fails = []
+
+        def track(gf, *a, **kw):
+            full_ss = {
+                (u, v)
+                for u, v in g.edges()
+                if g.nodes[u].get("type") == "switch"
+                and g.nodes[v].get("type") == "switch"
+            }
+            cur_ss = {
+                (u, v)
+                for u, v in gf.edges()
+                if gf.nodes[u].get("type") == "switch"
+                and gf.nodes[v].get("type") == "switch"
+            }
+            seen_fails.append(full_ss - cur_ss)
+            return self._empty_scheme(hosts)
+
+        with patch("onset.te.engine._raecke_paths", side_effect=track):
+            _oblivious_paths_ft(g, hosts)
+
+        s3_s4_gone = {("s3", "s4"), ("s4", "s3")}
+        self.assertTrue(
+            any(s3_s4_gone.issubset(m) for m in seen_fails),
+            "s3-s4 failure (isolates switch-only s4) must be included",
+        )
+
+    def test_ft_disconnecting_failures_skipped(self):
+        """(3) Failures that disconnect any host pair are skipped."""
+        g = nx.DiGraph()
+        for n in ("h1", "h2", "s1", "s2"):
+            g.add_node(n, type="host" if n.startswith("h") else "switch")
+        self._add_ss_edges(g, [("s1", "s2")])
+        self._add_host_links(g, [("h1", "s1"), ("h2", "s2")])
+
+        n = 0
+
+        def mc(*a, **kw):
+            nonlocal n
+            n += 1
+            return self._empty_scheme({"h1", "h2"})
+
+        with patch("onset.te.engine._raecke_paths", side_effect=mc):
+            _oblivious_paths_ft(g, {"h1", "h2"})
+        self.assertEqual(n, 0)
+
+    def test_ft_accumulate_then_normalize(self):
+        """(4) Duplicate paths accumulate probs then normalise."""
+        g = nx.DiGraph()
+        for n in ("h1", "h2", "s1", "s2", "s3", "s4"):
+            g.add_node(n, type="host" if n.startswith("h") else "switch")
+        self._add_ss_edges(g, [("s1", "s2"), ("s1", "s3"), ("s2", "s4"), ("s3", "s4")])
+        self._add_host_links(g, [("h1", "s1"), ("h2", "s4")])
+        hosts = {"h1", "h2"}
+
+        up = ("h1", "s1", "s2", "s4", "h2")
+        lo = ("h1", "s1", "s3", "s4", "h2")
+        up_r = ("h2", "s4", "s2", "s1", "h1")
+        lo_r = ("h2", "s4", "s3", "s1", "h1")
+        probs = iter([(0.8, 0.2), (0.3, 0.7), (0.5, 0.5), (0.6, 0.4)])
+
+        def mk(*a, **kw):
+            up_val, lo_val = next(probs)
+            return {
+                ("h1", "h2"): {up: up_val, lo: lo_val},
+                ("h2", "h1"): {up_r: up_val, lo_r: lo_val},
+            }
+
+        with patch("onset.te.engine._raecke_paths", side_effect=mk):
+            ft = _oblivious_paths_ft(g, hosts)
+
+        self.assertAlmostEqual(ft[("h1", "h2")][up], 0.55, places=6)
+        self.assertAlmostEqual(ft[("h1", "h2")][lo], 0.45, places=6)
+        self.assertAlmostEqual(ft[("h2", "h1")][up_r], 0.55, places=6)
+        self.assertAlmostEqual(ft[("h2", "h1")][lo_r], 0.45, places=6)
+
+    def test_ft_no_baseline(self):
+        """(5) No separate baseline (no-failure) scheme is merged."""
+        g = nx.DiGraph()
+        for n in ("h1", "h3", "s1", "s2", "s3"):
+            g.add_node(n, type="host" if n.startswith("h") else "switch")
+        self._add_ss_edges(g, [("s1", "s2"), ("s2", "s3"), ("s3", "s1")])
+        self._add_host_links(g, [("h1", "s1"), ("h3", "s3")])
+        hosts = {"h1", "h3"}
+        full_edges = set(g.edges())
+
+        with patch(
+            "onset.te.engine._raecke_paths", return_value=self._empty_scheme(hosts)
+        ) as m:
+            _oblivious_paths_ft(g, hosts)
+
+        self.assertEqual(m.call_count, 3)  # 3 SS pairs
+        for ca in m.call_args_list:
+            self.assertNotEqual(set(ca[0][0].edges()), full_edges)
+
+    def test_ft_e2e_line_ghost(self):
+        """End-to-end: _oblivious_paths_ft on line+ghost produces complete,
+        valid scheme (regression: isolated switch-only vertex)."""
+        g = nx.DiGraph()
+        for n in ("h1", "h3", "s1", "s2", "s3", "s4"):
+            g.add_node(n, type="host" if n.startswith("h") else "switch")
+        self._add_ss_edges(g, [("s1", "s2"), ("s2", "s3"), ("s3", "s4")])
+        self._add_host_links(g, [("h1", "s1"), ("h3", "s3")])
+
+        ft = _oblivious_paths_ft(g, {"h1", "h3"})
+
+        for comm in (("h1", "h3"), ("h3", "h1")):
+            self.assertIn(comm, ft)
+            pps = ft[comm]
+            self.assertGreater(len(pps), 0)
+            total = sum(pps.values())
+            self.assertAlmostEqual(
+                total, 1.0, places=6, msg=f"{comm} mass after FT envelope"
+            )
+            for path in pps:
+                self.assertEqual(path[0], comm[0])
+                self.assertEqual(path[-1], comm[1])
                 for i in range(len(path) - 1):
                     self.assertTrue(g.has_edge(path[i], path[i + 1]))
 
