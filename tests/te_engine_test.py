@@ -2,7 +2,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from onset.te.engine import _ecmp_routes, _load_topology, evaluate
+from onset.te.engine import (
+    _ecmp_routes,
+    _frt_paths,
+    _load_topology,
+    evaluate,
+)
 
 
 class TeEngineTest(unittest.TestCase):
@@ -127,6 +132,41 @@ s1 -> h1 [cost=1, capacity="100Gbps"];
 
         self.assertGreaterEqual(result.failure_loss, 0.0)
         self.assertLessEqual(result.throughput, 1.0)
+
+    def test_frt_paths_non_root_lca(self):
+        """_frt_paths must stop at the LCA, not traverse up to root."""
+        tree = (
+            "node",
+            "r",
+            {"a", "b", "c"},
+            [
+                ("leaf", "a", {"a"}),
+                (
+                    "node",
+                    "x",
+                    {"b", "c"},
+                    [
+                        ("leaf", "b", {"b"}),
+                        ("leaf", "c", {"c"}),
+                    ],
+                ),
+            ],
+        )
+        result = _frt_paths(tree, "b", "c")
+        self.assertEqual(result, ["b", "x", "c"])
+
+    def test_frt_paths_root_lca(self):
+        tree = (
+            "node",
+            "r",
+            {"a", "b"},
+            [
+                ("leaf", "a", {"a"}),
+                ("leaf", "b", {"b"}),
+            ],
+        )
+        result = _frt_paths(tree, "a", "b")
+        self.assertEqual(result, ["a", "r", "b"])
 
 
 if __name__ == "__main__":

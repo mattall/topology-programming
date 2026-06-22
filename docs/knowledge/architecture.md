@@ -75,14 +75,16 @@ evaluated topology, the simulator passes topology, traffic, hosts, `te_method`,
 and result path. The engine writes path assignments and metrics such as MLU,
 loss, throughput, and path counts under `data/results/`.
 
-The experiment scripts primarily exercise `-ecmp` and `-mcf`. Some historical
-paths name `-semimcfraeke`, `-semimcfraekeft`, and `-semimcfecmp`; these legacy
-methods invoke the external YATES OCaml TE engine (see
-`docs/knowledge/data-and-environment.md`) and are not implemented by the
-internal engine, which raises a clear error when they are requested. YATES is
-retained in `external/yates/` for historical reproducibility only and is not
-required for the current pipeline. In `onset_v3`, ECMP candidate topologies are
-ranked in parallel through the same internal evaluator.
+The experiment scripts primarily exercise `-ecmp`, `-mcf`,
+`-semimcfraeke`, and `-semimcfraekeft`.  The `semimcf*` methods implement
+SMORE semi-oblivious MCF with Raecke decomposition (FRT + multiplicative
+weights for path selection, restricted MCF LP over those paths).  Some
+historical paths name `-semimcfecmp`; this legacy method invoked the
+external YATES OCaml TE engine and is not implemented by the internal
+engine, which raises a clear error when it is requested. YATES is
+retained in `external/yates/` for historical reproducibility only and is
+not required for the current pipeline. In `onset_v3`, ECMP candidate
+topologies are ranked in parallel through the same internal evaluator.
 
 Compatibility details are deliberate: capacity suffixes use YATES's binary
 multipliers, non-switch access links receive its historical 100x multiplier,

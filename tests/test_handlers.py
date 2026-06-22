@@ -19,9 +19,7 @@ _run_otp = _METHOD_REGISTRY["OTP"].handler
 _run_tbe = _METHOD_REGISTRY["TBE"].handler
 
 
-def _write_congestion_file(
-    path: str, edges: list[tuple[str, str, float]]
-) -> str:
+def _write_congestion_file(path: str, edges: list[tuple[str, str, float]]) -> str:
     """Write a minimal EdgeCongestionVsIterations.dat file.
 
     Each edge is (node_u, node_v, congestion_float).

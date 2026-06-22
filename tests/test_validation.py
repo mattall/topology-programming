@@ -75,18 +75,14 @@ class TestVerifyTraffic:
         (traffic_dir / "testnet.txt").write_text(
             "10 20 30 40\n10 20 30 40\n10 20 30 40\n"
         )
-        result = validation.verify_traffic(
-            "testnet", "", False, 2, 2, 100
-        )
+        result = validation.verify_traffic("testnet", "", False, 2, 2, 100)
         assert result.endswith("testnet.txt")
 
     def test_explicit_traffic_file(self, tmp_path, monkeypatch):
         monkeypatch.setattr(validation, "SCRIPT_HOME", str(tmp_path))
         tf = tmp_path / "custom.tm"
         tf.write_text("10 20 30 40\n10 20 30 40\n")
-        result = validation.verify_traffic(
-            "testnet", str(tf), False, 2, 2, 100
-        )
+        result = validation.verify_traffic("testnet", str(tf), False, 2, 2, 100)
         assert result == str(tf)
 
 
@@ -100,9 +96,7 @@ class TestValidateSimulationInputs:
             d.mkdir(parents=True)
         (gml_dir / "testnet.gml").write_text("graph [ ]")
         (hosts_dir / "testnet.hosts").write_text("h1\nh2\n")
-        (traffic_dir / "testnet.txt").write_text(
-            "10 20 30 40\n10 20 30 40\n"
-        )
+        (traffic_dir / "testnet.txt").write_text("10 20 30 40\n10 20 30 40\n")
         topo, hosts, traffic = validation.validate_simulation_inputs(
             network_name="testnet",
             shakeroute=False,

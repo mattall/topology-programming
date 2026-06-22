@@ -38,12 +38,11 @@ The simulator expects:
 The `external/yates/` directory contains the OCaml YATES traffic engineering
 engine. It is **not required** for the current active pipeline. It was used
 historically with TE methods such as `-semimcfraeke` and `-semimcfraekeft`
-(Semi-Oblivious MCF with Racke decomposition, akin to SMORE-style traffic
-patterns).
-
-The internal TE engine (`src/onset/te/engine.py`) handles `-ecmp` and `-mcf`
-and raises a clear error for legacy YATES TE methods. The YATES source is
-retained for historical reproducibility of older experiment campaigns.
+(Semi-Oblivious MCF with Raecke decomposition, akin to SMORE-style traffic
+patterns).  These methods are now implemented natively in the internal TE
+engine (`src/onset/te/engine.py`) using the same FRT + multiplicative-weights
+Raecke decomposition and restricted MCF LP.  The YATES source is retained for
+historical reproducibility of older experiment campaigns.
 
 `src/onset/constants.py` sets `SCRIPT_HOME` to `os.path.abspath(".")`, so many
 paths assume commands are run from the repository root.
