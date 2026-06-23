@@ -693,35 +693,35 @@ def _all_hosts_connected(
 def _oblivious_paths_ft(
     graph: nx.DiGraph,
     hosts: set[str],
+    *,
+    seed: int | None = None,
 ) -> WeightedScheme:
     """Fault-tolerant envelope: merge weighted schemes from single-link failures.
 
-    For each unique switch-switch physical link (both directions removed),
-    runs Raecke path selection and merges the resulting weighted schemes.
+    For each unique bidirectional switch-switch physical link,
+    runs Raecke path selection (with a derived reproducible child seed)
+    and merges the resulting weighted schemes.
     Matches YATES all_failures_envelope for semimcfraekeft.
     """
     commodities = [(s, t) for s in sorted(hosts) for t in sorted(hosts) if s != t]
     merged: WeightedScheme = {comm: {} for comm in commodities}
 
-    switch_edges: list[Edge] = [
-        (u, v)
-        for u, v in graph.edges()
-        if graph.nodes[u].get("type") == "switch"
-        and graph.nodes[v].get("type") == "switch"
-    ]
+    switch_links: list[Edge] = sorted(
+        {
+            tuple(sorted((u, v)))
+            for u, v in graph.edges()
+            if graph.nodes[u].get("type") == "switch"
+            and graph.nodes[v].get("type") == "switch"
+            and graph.has_edge(v, u)
+        }
+    )
 
-    handled: set[Edge] = set()
-    for u, v in switch_edges:
-        if (u, v) in handled:
-            continue
-        inv = (v, u)
-        handled.add((u, v))
-        handled.add(inv)
-
+    rng = random.Random(seed)
+    used_child_seeds: set[int] = set()
+    for u, v in switch_links:
         fail_graph = graph.copy()
         fail_graph.remove_edge(u, v)
-        if fail_graph.has_edge(v, u):
-            fail_graph.remove_edge(v, u)
+        fail_graph.remove_edge(v, u)
         if not _all_hosts_connected(fail_graph, hosts):
             continue
 
@@ -734,7 +734,13 @@ def _oblivious_paths_ft(
         )
         fail_graph = fail_graph.subgraph(relevant)
 
-        fail_scheme = _raecke_paths(fail_graph, hosts)
+        # Resolve the vanishingly unlikely RNG collision deterministically so
+        # every surviving failure is guaranteed a distinct child stream.
+        child_seed = rng.getrandbits(64)
+        while child_seed in used_child_seeds:
+            child_seed = (child_seed + 1) % (2**64)
+        used_child_seeds.add(child_seed)
+        fail_scheme = _raecke_paths(fail_graph, hosts, seed=child_seed)
         for comm, pps in fail_scheme.items():
             for path, prob in pps.items():
                 merged[comm][path] = merged[comm].get(path, 0.0) + prob
@@ -1033,6 +1039,8 @@ def evaluate(
     te_method: str,
     result_path: str,
     budget: int = 3,
+    *,
+    seed: int | None = None,
 ) -> EvaluationResult:
     """Evaluate one traffic matrix and write the historical result-file contract."""
     graph = _load_topology(topo_file)
@@ -1046,9 +1054,9 @@ def evaluate(
     elif method in ("semimcfraeke", "semimcfraekeft"):
         hosts = {node for commodity in demands for node in commodity}
         if method == "semimcfraeke":
-            scheme = _raecke_paths(graph, hosts)
+            scheme = _raecke_paths(graph, hosts, seed=seed)
         else:
-            scheme = _oblivious_paths_ft(graph, hosts)
+            scheme = _oblivious_paths_ft(graph, hosts, seed=seed)
         cand = _prune_scheme(scheme, budget)
         routes = _semimcf_routes(graph, demands, cand)
     else:

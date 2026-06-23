@@ -758,6 +758,86 @@ class RaeckeTest(unittest.TestCase):
                 for i in range(len(path) - 1):
                     self.assertTrue(g.has_edge(path[i], path[i + 1]))
 
+    # -- FT seed reproducibility --------------------------------------------
+
+    def test_ft_same_seed_identical_scheme(self):
+        """Same seed produces identical FT scheme."""
+        g = nx.DiGraph()
+        for n in ("h1", "h2", "s1", "s2", "s3", "s4"):
+            g.add_node(n, type="host" if n.startswith("h") else "switch")
+        self._add_ss_edges(g, [("s1", "s2"), ("s1", "s3"), ("s2", "s4"), ("s3", "s4")])
+        self._add_host_links(g, [("h1", "s1"), ("h2", "s4")])
+        hosts = {"h1", "h2"}
+
+        ft1 = _oblivious_paths_ft(g, hosts, seed=42)
+        ft2 = _oblivious_paths_ft(g, hosts, seed=42)
+
+        for comm in ft1:
+            self.assertEqual(
+                {p: round(v, 10) for p, v in ft1[comm].items()},
+                {p: round(v, 10) for p, v in ft2[comm].items()},
+                f"Mismatch for {comm}",
+            )
+
+    def test_ft_different_per_failure_child_seeds(self):
+        """Each surviving failure gets a distinct child seed when top-level seed
+        is provided.  Monkeypatches _raecke_paths to capture child seeds."""
+        g = nx.DiGraph()
+        for n in ("h1", "h2", "s1", "s2", "s3", "s4"):
+            g.add_node(n, type="host" if n.startswith("h") else "switch")
+        self._add_ss_edges(g, [("s1", "s2"), ("s1", "s3"), ("s2", "s4"), ("s3", "s4")])
+        self._add_host_links(g, [("h1", "s1"), ("h2", "s4")])
+        hosts = {"h1", "h2"}
+
+        captured_seeds: list[int | None] = []
+
+        def capture(*args, seed=None, **kwargs):
+            captured_seeds.append(seed)
+            return self._empty_scheme(hosts)
+
+        with patch("onset.te.engine._raecke_paths", side_effect=capture):
+            _oblivious_paths_ft(g, hosts, seed=123)
+
+        # All 4 switch-switch links survive -> 4 calls
+        self.assertEqual(len(captured_seeds), 4)
+        # Every seed must be distinct
+        self.assertEqual(len(set(captured_seeds)), 4, "Child seeds must be distinct")
+        # Every seed must be a valid int (not None) since top-level seed is set
+        for s in captured_seeds:
+            self.assertIsInstance(s, int)
+
+    def test_ft_same_seed_same_failure_assignment(self):
+        """Failure-to-seed assignment is stable across edge insertion order."""
+        pairs = [("s1", "s2"), ("s1", "s3"), ("s2", "s4"), ("s3", "s4")]
+        hosts = {"h1", "h2"}
+        assignments: list[dict[frozenset[tuple[str, str]], int | None]] = []
+
+        def make_capture(full_edges, captured):
+            def capture(fail_graph, *args, seed=None, **kwargs):
+                removed = frozenset(full_edges - set(fail_graph.edges()))
+                captured[removed] = seed
+                return self._empty_scheme(hosts)
+
+            return capture
+
+        for ordered_pairs in (pairs, list(reversed(pairs))):
+            g = nx.DiGraph()
+            for n in ("h1", "h2", "s1", "s2", "s3", "s4"):
+                g.add_node(n, type="host" if n.startswith("h") else "switch")
+            self._add_ss_edges(g, ordered_pairs)
+            self._add_host_links(g, [("h1", "s1"), ("h2", "s4")])
+            full_edges = set(g.edges())
+            captured: dict[frozenset[tuple[str, str]], int | None] = {}
+
+            with patch(
+                "onset.te.engine._raecke_paths",
+                side_effect=make_capture(full_edges, captured),
+            ):
+                _oblivious_paths_ft(g, hosts, seed=42)
+            assignments.append(captured)
+
+        self.assertEqual(assignments[0], assignments[1])
+
     # -- end-to-end evaluation ----------------------------------------------
 
     def test_semimcfraeke_budget_caps_path_count(self):

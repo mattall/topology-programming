@@ -52,6 +52,7 @@ class Simulation:
         top_k=100,
         optimizer_time_limit_minutes=1,
         parallel_path_computation=True,
+        te_seed: int | None = None,
     ):
         """Simulation initializer
 
@@ -104,6 +105,10 @@ class Simulation:
                 Used when fallow_tx_allocation_strategy = "file", contains a path to a file that explicitly states the number of fallow transponders per node.
 
             salt (str, optional): Used to generate unique file name for temp files when experiments with similar parameters are running simultaneously. Defaults to "".
+
+            te_seed (int | None, optional): Seed for reproducible SMORE/Raecke
+                execution.  None means unseeded (current default behaviour).
+                When non-None the seed is included in identity/path naming.
         """
         makedirs(".temp", exist_ok=True)
         self.nonce = (
@@ -133,6 +138,7 @@ class Simulation:
                             top_k,
                             optimizer_time_limit_minutes,
                             salt,
+                            te_seed,
                         ]
                     ]
                 ).encode()
@@ -166,6 +172,7 @@ class Simulation:
         self.top_k = top_k
         self.optimizer_time_limit_minutes = optimizer_time_limit_minutes
         self.parallel_path_computation = parallel_path_computation
+        self.te_seed = te_seed
         self.topo_solved = None
         self.optimization_result = None
         self._applied_solution: TopologySolution | None = None
@@ -174,31 +181,35 @@ class Simulation:
         self.multi_sol_best_mlu = "NaN"
         # Set Experiment ID
         if self.use_heuristic.isdigit():
-            self.EXPERIMENT_ID = "_".join(
-                [
-                    network_name,
-                    test_name,
-                    str(fallow_transponders),
-                    self.attack_proportion,
-                    self.te_method,
-                    str(self.top_k),
-                ]
-            ).replace("heuristic", f"heuristic_{self.use_heuristic}")
-        else:
-            self.EXPERIMENT_ID = "_".join(
-                [
-                    network_name,
-                    test_name,
-                    fallow_tx_allocation_strategy,
-                    str(fallow_transponders),
-                    topology_programming_method,
-                    candidate_link_choice_method,
-                    str(optimizer_time_limit_minutes),
-                    self.attack_proportion,
-                    self.te_method,
-                    str(top_k),
-                ]
+            parts = [
+                network_name,
+                test_name,
+                str(fallow_transponders),
+                self.attack_proportion,
+                self.te_method,
+                str(self.top_k),
+            ]
+            if te_seed is not None:
+                parts.append(f"seed{te_seed}")
+            self.EXPERIMENT_ID = "_".join(parts).replace(
+                "heuristic", f"heuristic_{self.use_heuristic}"
             )
+        else:
+            parts = [
+                network_name,
+                test_name,
+                fallow_tx_allocation_strategy,
+                str(fallow_transponders),
+                topology_programming_method,
+                candidate_link_choice_method,
+                str(optimizer_time_limit_minutes),
+                self.attack_proportion,
+                self.te_method,
+                str(top_k),
+            ]
+            if te_seed is not None:
+                parts.append(f"seed{te_seed}")
+            self.EXPERIMENT_ID = "_".join(parts)
 
         # Set Experiment absolute path
         if self.net_dir:
@@ -243,6 +254,7 @@ class Simulation:
             hosts_file=self.hosts_file,
             te_method=self.te_method,
             network_name=self.network_name,
+            te_seed=self.te_seed,
         )
 
     def evaluate_performance_from_adding_link(self, circuits_to_add=1):
@@ -257,6 +269,7 @@ class Simulation:
             shakeroute=self.shakeroute,
             hosts_file=self.hosts_file,
             circuits_to_add=circuits_to_add,
+            te_seed=self.te_seed,
         )
 
     def export_logical_topo_to_gml(self, name, G=None):
@@ -277,7 +290,8 @@ class Simulation:
         self.unit = unit
         self.circuits = circuits
         self.demand_factor = demand_factor
-        sim_param_tag = f"{self.circuits}_{start_iter}_{end_iter}_{int(repeat)}_{unit}_{self.demand_factor:.1f}"
+        seed_tag = f"_seed{self.te_seed}" if self.te_seed is not None else ""
+        sim_param_tag = f"{self.circuits}_{start_iter}_{end_iter}_{int(repeat)}_{unit}_{self.demand_factor:.1f}{seed_tag}"
         self.new_circuit: list[object] = []
         self.chaff: list[object] = []
         if end_iter is None:

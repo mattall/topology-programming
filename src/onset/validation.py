@@ -32,6 +32,7 @@ def _evaluate_te(
     hosts_file,
     te_method,
     network_name,
+    te_seed=None,
 ) -> float:
     if shakeroute:
         result_path = os.path.join(network_name, result_path)
@@ -42,6 +43,7 @@ def _evaluate_te(
         te_method=te_method,
         result_path=result_path,
         budget=3,
+        seed=te_seed,
     )
     max_congestion = result.max_congestion
     logger.info(f"Max congestion: {max_congestion}")
@@ -66,6 +68,7 @@ def evaluate_performance_from_adding_link(
     shakeroute,
     hosts_file,
     circuits_to_add=1,
+    te_seed=None,
 ):
     from onset.utilities.plotters import (
         cdf_average_congestion,
@@ -100,6 +103,7 @@ def evaluate_performance_from_adding_link(
         hosts_file,
         te_method,
         network_name,
+        te_seed,
     )
 
     PATH_DIFF_FOLDER = os.path.join(experiment_absolute_path, "path_diff")
@@ -149,6 +153,7 @@ def evaluate_performance_from_adding_link(
             hosts_file,
             te_method,
             network_name,
+            te_seed,
         )
 
         TEST_PATHS = os.path.join(

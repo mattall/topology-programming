@@ -14,6 +14,16 @@ import onset.validation as validation
 from onset.simulator import Simulation
 
 
+def _monkeypatch_script_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Patch SCRIPT_HOME across all relevant modules to point to *tmp_path*."""
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    for module in (preprocessing, simulator_module, te_engine, validation):
+        monkeypatch.setattr(module, "SCRIPT_HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "data" / "graphs" / "gml").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ".temp").mkdir(exist_ok=True)
+
+
 @pytest.fixture
 def simulation_inputs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Create a complete three-router experiment without repository data files."""
@@ -177,3 +187,109 @@ def test_apply_and_revert_solution(simulation_inputs: Path) -> None:
     assert simulation.circuits_added
     edges_restored = set(simulation.wolf.logical_graph.edges())
     assert edges_restored == edges_after
+
+
+# ---------------------------------------------------------------------------
+# SMORE (-semimcfraeke / -semimcfraekeft) integration via perform_sim
+# ---------------------------------------------------------------------------
+
+
+def _diamond_gml(path: Path) -> None:
+    """Write an undirected 4-switch diamond GML (1-2-4, 1-3-4)."""
+    g = nx.Graph()
+    for n in ("1", "2", "3", "4"):
+        g.add_node(n, Longitude=0.0, Latitude=float(n))
+    for a, b in (("1", "2"), ("1", "3"), ("2", "4"), ("3", "4")):
+        g.add_edge(a, b, capacity=100)
+    nx.write_gml(g, path / "data" / "graphs" / "gml" / "diamond.gml")
+
+
+def _diamond_traffic(path: Path) -> Path:
+    """4-host TM: 100 Gbps from h1 -> h4, zero elsewhere."""
+    tm = path / "diamond.tm"
+    # 4 hosts → 16 entries; h1→h4 = 100e9, everything else 0
+    tm.write_text(
+        "0 0 0 100000000000 " "0 0 0 0 " "0 0 0 0 " "0 0 0 0\n",
+        encoding="utf-8",
+    )
+    return tm
+
+
+def _make_smore_simulation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    te_method: str,
+    te_seed: int | None = None,
+) -> Simulation:
+    _monkeypatch_script_home(tmp_path, monkeypatch)
+    _diamond_gml(tmp_path)
+    traffic = _diamond_traffic(tmp_path)
+    return Simulation(
+        "diamond",
+        4,
+        f"pipeline_{te_method.lstrip('-')}",
+        iterations=1,
+        te_method=te_method,
+        traffic_file=str(traffic),
+        topology_programming_method="baseline",
+        fallow_transponders=1,
+        candidate_link_choice_method="max",
+        optimizer_time_limit_minutes=0.1,
+        parallel_path_computation=False,
+        te_seed=te_seed,
+    )
+
+
+@pytest.mark.parametrize(
+    ("te_method", "routing_label"),
+    [
+        ("-semimcfraeke", "SEMIMCFRAEKE"),
+        ("-semimcfraekeft", "SEMIMCFRAEKEFT"),
+    ],
+)
+def test_perform_sim_smore_pipeline_is_seeded_and_reproducible(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    te_method: str,
+    routing_label: str,
+) -> None:
+    """Both SMORE methods run end-to-end and reproduce seeded results."""
+    sim1 = _make_smore_simulation(tmp_path / "run1", monkeypatch, te_method, te_seed=42)
+    result1 = sim1.perform_sim(start_iter=1, end_iter=2)
+
+    assert isinstance(result1, dict)
+    assert result1["Routing"] == [routing_label]
+    assert result1["Throughput"] == [1.0]
+    assert result1["Loss"] == [0.0]
+    assert "seed42" in sim1.EXPERIMENT_ID
+    assert "seed42" in sim1.ITERATION_ID
+
+    # Check result files exist
+    iter_dir = Path(sim1.ITERATION_ABS_PATH)
+    assert (iter_dir / "MaxExpCongestionVsIterations.dat").is_file()
+    assert (iter_dir / "TotalThroughputVsIterations.dat").is_file()
+    assert (iter_dir / "NumPathsVsIterations.dat").is_file()
+    paths_dir = iter_dir / "paths"
+    assert paths_dir.is_dir()
+    path_snapshot1 = {
+        path.relative_to(paths_dir): path.read_text(encoding="utf-8")
+        for path in paths_dir.rglob("*")
+        if path.is_file()
+    }
+    assert path_snapshot1
+
+    # Use a separate root so this cannot pass by rereading overwritten files.
+    sim2 = _make_smore_simulation(tmp_path / "run2", monkeypatch, te_method, te_seed=42)
+    result2 = sim2.perform_sim(start_iter=1, end_iter=2)
+    assert isinstance(result2, dict)
+    assert result2["Throughput"] == result1["Throughput"]
+    assert result2["Loss"] == result1["Loss"]
+    assert result2["Congestion"] == result1["Congestion"]
+
+    paths_dir2 = Path(sim2.ITERATION_ABS_PATH) / "paths"
+    path_snapshot2 = {
+        path.relative_to(paths_dir2): path.read_text(encoding="utf-8")
+        for path in paths_dir2.rglob("*")
+        if path.is_file()
+    }
+    assert path_snapshot2 == path_snapshot1
